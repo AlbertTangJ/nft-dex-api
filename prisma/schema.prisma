@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model UserFollowing {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String   @db.VarChar
+  followerAddress String   @db.VarChar
+  status          Int
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+  followerUser    User     @relation("followers", fields: [followerAddress], references: [userAddress])
+  followingUser   User     @relation("followings", fields: [userAddress], references: [userAddress])
+
+  @@unique([userAddress, followerAddress])
+}
+
+model User {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String          @unique @db.VarChar(255)
+  status          Int             @default(1)
+  isDeleted       Int             @default(0)
+  createTime      DateTime        @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime        @db.Timestamp(6)
+  updateTimestamp Int
+  followers       UserFollowing[] @relation("followers")
+  followings      UserFollowing[] @relation("followings")
+  userInfo        UserInfo?
+}
+
+model UserInfo {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress String  @unique @db.VarChar
+  nonce       Int     @default(dbgenerated("floor((random() * (1000000)::double precision))"))
+  username    String  @unique @db.VarChar
+  about       String?
+  user        User    @relation(fields: [userAddress], references: [userAddress])
+}
