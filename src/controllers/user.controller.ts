@@ -2,15 +2,25 @@ import {
   JsonController,
   Get,
   QueryParam,
+  Post,
+  BodyParam,
+  Authorized,
+  Param,
+  Body,
 } from "routing-controllers";
 import { UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 
+type CreateUserInfoBody = {
+  userAddress: string,
+  username: string,
+  nonce: number
+}
 @JsonController()
 @Service()
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService) { }
 
   @Get("/user/find")
   async getUserByAddress(@QueryParam("address") address: string) {
@@ -28,5 +38,101 @@ export class UserController {
     } else {
       return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
     }
+  }
+
+
+  @Authorized(["auth-token", "username", "about"])
+  @Post("/user/update")
+  async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
+    if (username != "") {
+      const exist_user = await this.userService.findUsersInfoByAddress(userAddress);
+      if (exist_user.username != username) {
+        let check_username_exist = await this.userService.checkUserName(username);
+        if (check_username_exist != null) {
+          return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`${username} already have user used`).toObject();
+        }
+      }
+    }
+
+    let user = { username: username, about: about };
+    let result = await this.userService.updateUserService(userAddress, user);
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData({
+        id: result.id,
+        userAddress: result.userAddress,
+        nonce: result.nonce,
+        username: result.username,
+        about: result.about,
+      });
+    }
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`unKnow reason`).toObject();;
+  }
+
+  async findUserByName(username: string) {
+    let result = await this.userService.checkUserName(username);
+    return result;
+  }
+
+  @Get("/user")
+  async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
+    let result = await this.userService.findUsersInfoByAddress(userAddress.toLowerCase());
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+
+  @Post("/user")
+  async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
+    let result = await this.userService.createUserInfoService(userAddress);
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/following/:user/:pageNo/:pageSize")
+  async following(@Param("user") user: string, @Param("pageNo") pageNo: number, @Param("pageSize") pageSize: number) {
+    let result = await this.userService.followingList(user, pageNo, pageSize);
+    return new ApiResponse(ResponseStatus.Success).setData(result);
+  }
+
+  @Get("/followers/:user/:pageNo/:pageSize")
+  async followers(@Param("user") user: string, @Param("pageNo") pageNo: number, @Param("pageSize") pageSize: number) {
+    let result = await this.userService.followList(user, pageNo, pageSize);
+    return new ApiResponse(ResponseStatus.Success).setData(result);
+  }
+
+  @Authorized("auth-token")
+  @Post("/user/follow")
+  async follow(@BodyParam("user", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
+    let result = await this.userService.followUser(user, follower);
+    if (result) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Authorized("auth-token")
+  @Post("/user/unfollow")
+  async unFollower(@BodyParam("user", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
+    let result = await this.userService.unFollowUser(user, follower);
+    if (result) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Post("/user/auth")
+  async authUser(@BodyParam("signature") signature: string, @BodyParam("publicAddress") publicAddress: string) {
+    let result = await this.userService.authUserService(
+      signature,
+      publicAddress
+    );
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData({ token: result }).toObject();
+    }
+    return new ApiResponse(ResponseStatus.Failure);
   }
 }
