@@ -47,50 +47,6 @@ export const routingConfigs: RoutingControllersOptions = {
         }
         tasks.push(checkAuthToken)
       }
-
-      if (role == 'username') {
-        let checkUserName = function (callback: (error: any, data: CheckResult) => void) {
-          let username = action.request.body.username;
-          let checkMessage = ""
-          let checkUserNameResult = false
-          if (username == "" || username == null) {
-            checkUserNameResult = true;
-          } else {
-            var patten = /^[a-zA-Z0-9_]{5,10}$/;
-            let result = patten.test(username);
-            if (!result) {
-              checkUserNameResult = false;
-              checkMessage = "username must be 5-10 characters"
-            } else {
-              checkUserNameResult = true
-            }
-          }
-          let checkResult: CheckResult = { result: checkUserNameResult, message: checkMessage };
-          callback(null, checkResult);
-        }
-        tasks.push(checkUserName)
-      }
-
-      if (role == 'about') {
-        let checkAbout = function (callback: (error: any, data: CheckResult) => void) {
-          const about = action.request.body.about;
-          let checkAboutResult = false
-          let checkMessage = ""
-          if (about == "" || about == null) {
-            checkAboutResult = true;
-          } else {
-            if (about.length >= 0 && about.length <= 200) {
-              checkAboutResult = true;
-            } else {
-              checkMessage = "about can not over 200 characters"
-              checkAboutResult = false
-            }
-          }
-          let checkResult: CheckResult = { result: checkAboutResult, message: checkMessage }
-          callback(null, checkResult);
-        }
-        tasks.push(checkAbout);
-      }
     }
 
     let result = true

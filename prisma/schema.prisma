@@ -44,3 +44,17 @@ model UserInfo {
   about       String?
   user        User    @relation(fields: [userAddress], references: [userAddress])
 }
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model BadWords {
+  id   String? @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  word String? @db.VarChar
+
+  @@ignore
+}
+
+model UserEventsLog {
+  id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event Json?
+  name  String? @db.VarChar
+}

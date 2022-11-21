@@ -1,6 +1,7 @@
 import { Service } from "typedi";
 import prisma from "../helpers/client";
 import { Prisma, UserInfo } from "@prisma/client";
+
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
 @Service()
@@ -22,7 +23,7 @@ export class UserService {
 
   // 获取follow 我的所有人
   async followList(userAddress: string, pageNo: number, pageSize: number) {
-    let fans_list = await prisma.userFollowing.findMany({
+    let fansList = await prisma.userFollowing.findMany({
       where: {
         userAddress: userAddress.toLowerCase(),
       },
@@ -30,8 +31,8 @@ export class UserService {
       skip: pageNo
     });
     let result = [];
-    for (let i = 0; i < fans_list.length; i++) {
-      const follower = fans_list[i];
+    for (let i = 0; i < fansList.length; i++) {
+      const follower = fansList[i];
       result.push({
         id: follower.id,
         userAddress: follower.userAddress,
@@ -43,7 +44,7 @@ export class UserService {
   }
 
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
-    let follow_list = await prisma.userFollowing.findMany({
+    let followList = await prisma.userFollowing.findMany({
       where: {
         userAddress: userAddress.toLowerCase(),
       },
@@ -52,8 +53,8 @@ export class UserService {
     });
 
     let result = [];
-    for (let i = 0; i < follow_list.length; i++) {
-      const follower = follow_list[i];
+    for (let i = 0; i < followList.length; i++) {
+      const follower = followList[i];
       result.push({
         id: follower.id,
         userAddress: follower.userAddress,
@@ -119,9 +120,13 @@ export class UserService {
     return haveFollowed;
   }
 
+  async saveEvent(name: string, params: any) {
+    await prisma.userEventsLog.create({ data: { name: name, event: params } })
+  }
+
   async authUserService(signature: string, publicAddress: string) {
     // let that = this;
-    let access_token = await prisma.userInfo.findUnique({
+    let accessToken = await prisma.userInfo.findUnique({
       where: { userAddress: publicAddress },
     })
       ////////////////////////////////////////////////////
@@ -183,7 +188,7 @@ export class UserService {
           .createCustomToken(user.userAddress);
         return firebaseToken;
       });
-    return access_token;
+    return accessToken;
   }
 
 
@@ -206,11 +211,11 @@ export class UserService {
   }
 
   async checkUserName(username: string) {
-    const update_user_info = await prisma.userInfo.findUnique({
+    const updateUserInfo = await prisma.userInfo.findUnique({
       where: { username: username },
     });
 
-    return update_user_info;
+    return updateUserInfo;
   }
 
   async updateUserService(userAddress: string, data: any) {
@@ -229,9 +234,9 @@ export class UserService {
 
   async createUserInfoService(regUserAddress: string) {
     let userAddress = regUserAddress.toLowerCase();
-    let exist_user = await this.findUsersInfoByAddress(userAddress);
-    if (exist_user != null) {
-      return exist_user;
+    let existUser = await this.findUsersInfoByAddress(userAddress);
+    if (existUser != null) {
+      return existUser;
     }
     let currentDateTime = new Date()
       .toISOString();
@@ -246,6 +251,7 @@ export class UserService {
     let userInfo: Prisma.UserInfoCreateInput = {
       username: '',
       nonce: Math.floor(Math.random() * 1000000),
+      about: '',
       user: {
         connectOrCreate: {
           where: {

@@ -40,19 +40,58 @@ export class UserController {
     }
   }
 
+  checkUserName(username: string) {
+    let checkMessage = ""
+    let checkUserNameResult = false
+    if (username == "" || username == null) {
+      checkUserNameResult = true;
+    } else {
+      var patten = /^[a-zA-Z0-9_]{3,30}$/;
+      let result = patten.test(username);
+      if (!result) {
+        checkUserNameResult = false;
+        checkMessage = "username must be 5-10 characters"
+      } else {
+        checkUserNameResult = true
+      }
+    }
+    let check = { result: checkUserNameResult, message: checkMessage };
+    throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
+  }
 
-  @Authorized(["auth-token", "username", "about"])
+  checkAbout(about: string) {
+    let checkAboutResult = false
+    let checkMessage = ""
+    if (about == "" || about == null) {
+      checkAboutResult = true;
+    } else {
+      if (about.length >= 0 && about.length <= 200) {
+        checkAboutResult = true;
+      } else {
+        checkMessage = "about can not over 200 characters"
+        checkAboutResult = false
+      }
+    }
+    let check = { result: checkAboutResult, message: checkMessage }
+    throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
+  }
+
+
+  @Authorized(["auth-token"])
   @Post("/user/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
     if (username != "") {
-      const exist_user = await this.userService.findUsersInfoByAddress(userAddress);
-      if (exist_user.username != username) {
-        let check_username_exist = await this.userService.checkUserName(username);
-        if (check_username_exist != null) {
+      const existUser = await this.userService.findUsersInfoByAddress(userAddress);
+      if (existUser.username != username) {
+        let checkUsernameExist = await this.userService.checkUserName(username);
+        if (checkUsernameExist != null) {
           return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`${username} already have user used`).toObject();
         }
       }
     }
+
+    this.checkUserName(username);
+    this.checkAbout(about);
 
     let user = { username: username, about: about };
     let result = await this.userService.updateUserService(userAddress, user);
@@ -134,5 +173,11 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Success).setData({ token: result }).toObject();
     }
     return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Post("/user/event")
+  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any) {
+    await this.userService.saveEvent(name, event);
+    return new ApiResponse(ResponseStatus.Success).toObject();
   }
 }
