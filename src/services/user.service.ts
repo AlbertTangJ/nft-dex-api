@@ -219,14 +219,10 @@ export class UserService {
   }
 
   async updateUserService(userAddress: string, data: any) {
-
     const result = await prisma.userInfo.update(
       {
         where: { userAddress: userAddress.toLowerCase() },
-        data: {
-          about: data.about,
-          username: data.username
-        }
+        data: data
       },
     );
     return result;
@@ -252,6 +248,11 @@ export class UserService {
       username: '',
       nonce: Math.floor(Math.random() * 1000000),
       about: '',
+      updateNameTimes: 0,
+      createTime: currentDateTime,
+      createTimestamp: currentTimestamp,
+      updateTime: currentDateTime,
+      updateTimestamp: currentTimestamp,
       user: {
         connectOrCreate: {
           where: {

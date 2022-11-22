@@ -17,6 +17,7 @@ type CreateUserInfoBody = {
   username: string,
   nonce: number
 }
+
 @JsonController()
 @Service()
 export class UserController {
@@ -56,7 +57,9 @@ export class UserController {
       }
     }
     let check = { result: checkUserNameResult, message: checkMessage };
-    throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
+    if (!check.result) {
+      throw new ApiResponse(ResponseStatus.UsernameWrong).setErrorMessage(check.message);
+    }
   }
 
   checkAbout(about: string) {
@@ -73,27 +76,59 @@ export class UserController {
       }
     }
     let check = { result: checkAboutResult, message: checkMessage }
-    throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
+    if (!check.result) {
+      throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
+    }
   }
 
 
-  @Authorized(["auth-token"])
+  // @Authorized(["auth-token"])
   @Post("/user/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
-    if (username != "") {
-      const existUser = await this.userService.findUsersInfoByAddress(userAddress);
-      if (existUser.username != username) {
+    let isUpdateUsername = false;
+    if (username != "" && username != null) {
+      var existUser = await this.userService.findUsersInfoByAddress(userAddress);
+      if (existUser != null && existUser.username != username) {
         let checkUsernameExist = await this.userService.checkUserName(username);
         if (checkUsernameExist != null) {
           return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`${username} already have user used`).toObject();
+        } else {
+          isUpdateUsername = true;
         }
       }
     }
 
-    this.checkUserName(username);
-    this.checkAbout(about);
+    if (username == null) {
+      username = ''
+    }
+    if (about == null) {
+      about = ''
+    }
 
-    let user = { username: username, about: about };
+    try {
+      this.checkUserName(username);
+      this.checkAbout(about);
+    } catch (error) {
+      throw error;
+    }
+
+    let currentDateTime = new Date();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    let user: any = { username: username, about: about };
+    if (isUpdateUsername) {
+      var currentDate = new Date();
+      let currentYear = currentDate.getFullYear();
+      let lastTimeUpdateYear = existUser.updateTime;
+      let updateTimes = existUser.updateNameTimes + 1
+      if (lastTimeUpdateYear.getFullYear() < currentYear) {
+        updateTimes = 1
+      } else {
+        if (updateTimes > 3) {
+          return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
+        }
+      }
+      user = { username: username, about: about, updateNameTimes: updateTimes, updateTimestamp: currentTimestamp, updateTime: currentDateTime }
+    }
     let result = await this.userService.updateUserService(userAddress, user);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData({

@@ -25,4 +25,5 @@ export class ApiResponse {
 export enum ResponseStatus {
   Success = 0,
   Failure = 1,
+  UsernameWrong = -4
 }
