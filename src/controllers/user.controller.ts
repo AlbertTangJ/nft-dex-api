@@ -7,10 +7,13 @@ import {
   Authorized,
   Param,
   Body,
+  Res,
+  Req,
 } from "routing-controllers";
 import { UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
+import { Client, auth } from "twitter-api-sdk";
 
 type CreateUserInfoBody = {
   userAddress: string,
@@ -21,7 +24,7 @@ type CreateUserInfoBody = {
 @JsonController()
 @Service()
 export class UserController {
-  constructor(private userService: UserService) { }
+  constructor(private userService: UserService) {}
 
   @Get("/user/find")
   async getUserByAddress(@QueryParam("address") address: string) {
@@ -40,6 +43,8 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
     }
   }
+
+
 
   checkUserName(username: string) {
     let checkMessage = ""
@@ -82,7 +87,7 @@ export class UserController {
   }
 
 
-  // @Authorized(["auth-token"])
+  @Authorized(["auth-token"])
   @Post("/user/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
     let isUpdateUsername = false;
