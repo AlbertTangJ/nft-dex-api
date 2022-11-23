@@ -4,7 +4,6 @@ import * as middlewares from './routing.middlewares'
 import * as interceptors from './interceptors'
 import { dictToArray } from './utils'
 import { Action } from 'routing-controllers';
-import async from 'async';
 import { ApiResponse, ResponseStatus } from 'src/helpers/apiResponse'
 type CheckResult = { result: boolean, message: string };
 export const routingConfigs: RoutingControllersOptions = {
@@ -19,47 +18,34 @@ export const routingConfigs: RoutingControllersOptions = {
   validation: true,
 
   authorizationChecker: async (action: Action, roles: string[]) => {
-    let tasks = []
-
     for (let i = 0; i < roles.length; i++) {
       const role = roles[i];
       if (role == 'auth-token') {
         let checkMessage = "";
         let checkTokenResult = true;
-        let checkAuthToken = function (callback: (error: any, data: CheckResult) => void) {
-          const token = action.request.headers['auth-token'];
-          console.log(token)
-          const userAddress = action.request.body.userAddress;
-          try {
-            let decodedToken = global.firebaseAdmin
-              .auth()
-              .verifyIdToken(token);
-            if (decodedToken.uid != userAddress) {
-              checkTokenResult = false;
-              checkMessage = `Failed token is not right`;
-            }
-          } catch (error) {
-            checkMessage = error.message;
+        const token = action.request.headers['auth-token'];
+        const userAddress = action.request.body.userAddress.toLowerCase();
+        try {
+          let decodedToken = await global.firebaseAdmin
+            .auth()
+            .verifyIdToken(token);
+          console.log(decodedToken)
+          console.log(userAddress)
+          if (decodedToken.uid != userAddress) {
             checkTokenResult = false;
+            checkMessage = `Failed token is not right`;
           }
-          let checkResult: CheckResult = { result: checkTokenResult, message: checkMessage };
-          callback(null, checkResult);
+        } catch (error) {
+          checkMessage = error.message;
+          checkTokenResult = false;
         }
-        tasks.push(checkAuthToken)
+        let checkResult: CheckResult = { result: checkTokenResult, message: checkMessage };
+        if (!checkResult.result) {
+          throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(checkResult.message);
+        }
       }
     }
 
-    let result = true
-    async.parallel(tasks, function (error, results: CheckResult[]) {
-      console.log(results);
-      for (let i = 0; i < results.length; i++) {
-        let check: CheckResult = results[i];
-        if (!check.result) {
-          result = check.result;
-          throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
-        }
-      }
-    });
-    return result
+    return true
   },
 }

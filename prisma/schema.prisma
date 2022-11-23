@@ -1,11 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["api", "public"]
 }
 
 model UserFollowing {
@@ -32,10 +33,10 @@ model User {
   createTimestamp Int
   updateTime      DateTime          @db.Timestamp(6)
   updateTimestamp Int
+  userAchievement UserAchievement[]
   followers       UserFollowing[]   @relation("followers")
   followings      UserFollowing[]   @relation("followings")
   userInfo        UserInfo?
-  userAchievement UserAchievement[]
 }
 
 model UserInfo {
@@ -44,12 +45,12 @@ model UserInfo {
   nonce           Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
   username        String    @unique @db.VarChar
   about           String?
-  points          Int       @default(0)
   updateNameTimes Int?      @default(0)
   updateTimestamp Int?
   createTimestamp Int?
   updateTime      DateTime? @db.Timestamp(6)
   createTime      DateTime? @default(now()) @db.Timestamp(6)
+  points          Int       @default(0)
   user            User      @relation(fields: [userAddress], references: [userAddress])
 }
 
@@ -72,14 +73,14 @@ model Achievement {
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
-  isGlobal            Boolean           @default(false)
   points              Int
   redeemLimit         Int               @default(1)
   repeatPeriod        RepeatPeriod
-  enabled             Boolean           @default(true)
-  latestCompletedTime DateTime?         @db.Timestamp(6)
   createTime          DateTime          @default(now()) @db.Timestamp(6)
   updateTime          DateTime          @db.Timestamp(6)
+  isGlobal            Boolean           @default(false)
+  enabled             Boolean           @default(true)
+  latestCompletedTime DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 }
 
@@ -90,8 +91,8 @@ model UserAchievement {
   pointEarned   Int
   createTime    DateTime    @default(now()) @db.Timestamp(6)
   updateTime    DateTime    @db.Timestamp(6)
-  user          User        @relation(fields: [userAddress], references: [userAddress])
   achievement   Achievement @relation(fields: [achievementId], references: [id])
+  user          User        @relation(fields: [userAddress], references: [userAddress])
 }
 
 enum RepeatPeriod {

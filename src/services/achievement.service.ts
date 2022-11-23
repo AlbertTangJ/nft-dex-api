@@ -68,48 +68,48 @@ export class AchievementService {
 
   async completeAchievement(walletAddress: string, achievement: Achievement) {
     const now = new Date();
-    const nowTimestamp = Math.floor(now.getTime() / 1000);
-    return await prisma.$transaction(async (tx) => {
-      const updatedUserInfos = await tx.userInfo.updateMany({
-        data: {
-          points: {
-            increment: achievement.points,
-          },
-          updateTime: now,
-          updateTimestamp: nowTimestamp,
-        },
-        where: {
-          userAddress: walletAddress,
-        },
-      });
+    // const nowTimestamp = Math.floor(now.getTime() / 1000);
+    // return await prisma.$transaction(async (tx) => {
+    //   const updatedUserInfos = await tx.userInfo.updateMany({
+    //     data: {
+    //       points: {
+    //         increment: achievement.points,
+    //       },
+    //       updateTime: now,
+    //       updateTimestamp: nowTimestamp,
+    //     },
+    //     where: {
+    //       userAddress: walletAddress,
+    //     },
+    //   });
 
-      const updatedAchievements = await tx.achievement.updateMany({
-        data: {
-          latestCompletedTime: now,
-          updateTime: now,
-        },
-        where: {
-          id: achievement.id,
-          latestCompletedTime: achievement.latestCompletedTime,
-        },
-      });
+    //   const updatedAchievements = await tx.achievement.updateMany({
+    //     data: {
+    //       latestCompletedTime: now,
+    //       updateTime: now,
+    //     },
+    //     where: {
+    //       id: achievement.id,
+    //       latestCompletedTime: achievement.latestCompletedTime,
+    //     },
+    //   });
 
-      if (updatedUserInfos.count === 0 || updatedAchievements.count === 0) {
-        throw new Error(`Please try again.`);
-      }
+    //   if (updatedUserInfos.count === 0 || updatedAchievements.count === 0) {
+    //     throw new Error(`Please try again.`);
+    //   }
 
-      const completedAchievement = tx.userAchievement.create({
-        data: {
-          userAddress: walletAddress,
-          achievementId: achievement.id,
-          pointEarned: achievement.points,
-          createTime: now,
-          updateTime: now,
-        },
-      });
+    //   const completedAchievement = tx.userAchievement.create({
+    //     data: {
+    //       userAddress: walletAddress,
+    //       achievementId: achievement.id,
+    //       pointEarned: achievement.points,
+    //       createTime: now,
+    //       updateTime: now,
+    //     },
+    //   });
 
-      return completedAchievement;
-    });
+    //   return completedAchievement;
+    // });
   }
 
   async isEligibleForAchievement(
