@@ -26,7 +26,7 @@ type CreateUserInfoBody = {
 export class UserController {
   constructor(private userService: UserService) {}
 
-  @Get("/user/find")
+  @Get("/users/find")
   async getUserByAddress(@QueryParam("address") address: string) {
     if (!address) {
       return new ApiResponse(ResponseStatus.Failure)
@@ -88,7 +88,7 @@ export class UserController {
 
 
   @Authorized(["auth-token"])
-  @Post("/user/update")
+  @Post("/users/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
     let isUpdateUsername = false;
     if (username != "" && username != null) {
