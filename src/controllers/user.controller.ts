@@ -13,7 +13,6 @@ import {
 import { UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
-import { Client, auth } from "twitter-api-sdk";
 
 type CreateUserInfoBody = {
   userAddress: string,
@@ -26,7 +25,7 @@ type CreateUserInfoBody = {
 export class UserController {
   constructor(private userService: UserService) {}
 
-  @Get("/users/find")
+  @Get("/user/find")
   async getUserByAddress(@QueryParam("address") address: string) {
     if (!address) {
       return new ApiResponse(ResponseStatus.Failure)
@@ -88,7 +87,7 @@ export class UserController {
 
 
   @Authorized(["auth-token"])
-  @Post("/users/update")
+  @Post("/user/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
     let isUpdateUsername = false;
     if (username != "" && username != null) {
@@ -127,11 +126,13 @@ export class UserController {
       let updateTimes = existUser.updateNameTimes + 1
       if (lastTimeUpdateYear.getFullYear() < currentYear) {
         updateTimes = 1
-      } else {
-        if (updateTimes > 3) {
-          return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
-        }
-      }
+      } 
+      // 说移除一年改3次的限制, DB相关数据保留
+      // else {
+      //   if (updateTimes > 3) {
+      //     return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
+      //   }
+      // }
       user = { username: username, about: about, updateNameTimes: updateTimes, updateTimestamp: currentTimestamp, updateTime: currentDateTime }
     }
     let result = await this.userService.updateUserService(userAddress, user);
@@ -152,7 +153,16 @@ export class UserController {
     return result;
   }
 
-  @Get("/users")
+  @Post("/user/search")
+  async search(@BodyParam("keyword") keyword: string, @BodyParam("userAddress") userAddress: string) {
+    let result = await this.userService.searchAddressUsername(keyword, userAddress);
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/user")
   async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
     let result = await this.userService.findUsersInfoByAddress(userAddress.toLowerCase());
     if (result != null) {
@@ -162,7 +172,7 @@ export class UserController {
   }
 
 
-  @Post("/users")
+  @Post("/user")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
     let result = await this.userService.createUserInfoService(userAddress);
     if (result != null) {
@@ -184,7 +194,7 @@ export class UserController {
   }
 
   @Authorized("auth-token")
-  @Post("/users/follow")
+  @Post("/user/follow")
   async follow(@BodyParam("user", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
     if (result) {
@@ -194,7 +204,7 @@ export class UserController {
   }
 
   @Authorized("auth-token")
-  @Post("/users/unfollow")
+  @Post("/user/unfollow")
   async unFollower(@BodyParam("user", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
@@ -203,7 +213,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Post("/users/auth")
+  @Post("/user/auth")
   async authUser(@BodyParam("signature") signature: string, @BodyParam("publicAddress") publicAddress: string) {
     let result = await this.userService.authUserService(
       signature,
@@ -215,7 +225,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Post("/users/event")
+  @Post("/user/event")
   async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any) {
     await this.userService.saveEvent(name, event);
     return new ApiResponse(ResponseStatus.Success).toObject();

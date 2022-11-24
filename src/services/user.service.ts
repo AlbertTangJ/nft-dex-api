@@ -218,6 +218,28 @@ export class UserService {
     return updateUserInfo;
   }
 
+  async searchAddressUsername(keyword: string, userAddress: string) {
+   let result = await prisma.userInfo.findMany(
+      {
+        where: {
+          OR: [
+            {
+              username: {
+                contains: keyword,
+              },
+            },
+            {
+              userAddress:
+                { contains: keyword }
+            },
+          ],
+        },
+      }
+    )
+
+    return result;
+  }
+
   async updateUserService(userAddress: string, data: any) {
     const result = await prisma.userInfo.update(
       {
