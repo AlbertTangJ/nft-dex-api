@@ -46,7 +46,7 @@ export class UserService {
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
     let followList = await prisma.userFollowing.findMany({
       where: {
-        userAddress: userAddress.toLowerCase(),
+        userAddress: userAddress.toLowerCase()
       },
       take: pageSize,
       skip: pageNo
@@ -55,6 +55,11 @@ export class UserService {
     let result = [];
     for (let i = 0; i < followList.length; i++) {
       const follower = followList[i];
+      await prisma.userFollowing.findMany({
+        where: {
+          userAddress: userAddress
+        }
+      })
       result.push({
         id: follower.id,
         userAddress: follower.userAddress,
@@ -91,8 +96,23 @@ export class UserService {
           }
         }
       };
-      let result = await prisma.userFollowing.create({ data: follow });
-      return result
+     let result = await prisma.$transaction(async (tx) => {
+        let result = tx.userFollowing.create({ data: follow });
+        if (result!=null) {
+          let userInfo = await tx.userInfo.findUnique({
+            where: {
+              userAddress: userAddress.toLowerCase()
+            }
+          });
+          let followers = userInfo.followers + 1;
+          let updateFollowers = await tx.userInfo.update({
+            where: { userAddress: userAddress },
+            data: { followers: followers }
+          })
+          return updateFollowers;
+        }
+      })
+      return result;
     }
     return haveFollowed;
   }
@@ -219,7 +239,7 @@ export class UserService {
   }
 
   async searchAddressUsername(keyword: string, userAddress: string) {
-   let result = await prisma.userInfo.findMany(
+    let result = await prisma.userInfo.findMany(
       {
         where: {
           OR: [

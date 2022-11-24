@@ -1,12 +1,12 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions", "multiSchema"]
+  previewFeatures = ["multiSchema","interactiveTransactions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["api", "public"]
+  schemas  = ["api"]
 }
 
 model UserFollowing {
@@ -22,6 +22,7 @@ model UserFollowing {
   followingUser   User     @relation("followings", fields: [userAddress], references: [userAddress])
 
   @@unique([userAddress, followerAddress])
+  @@schema("api")
 }
 
 model User {
@@ -37,6 +38,8 @@ model User {
   followers       UserFollowing[]   @relation("followers")
   followings      UserFollowing[]   @relation("followings")
   userInfo        UserInfo?
+
+  @@schema("api")
 }
 
 model UserInfo {
@@ -51,7 +54,10 @@ model UserInfo {
   updateTime      DateTime? @db.Timestamp(6)
   createTime      DateTime? @default(now()) @db.Timestamp(6)
   points          Int       @default(0)
+  followers       Int       @default(0)
   user            User      @relation(fields: [userAddress], references: [userAddress])
+
+  @@schema("api")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -60,12 +66,15 @@ model BadWords {
   word String? @db.VarChar
 
   @@ignore
+  @@schema("api")
 }
 
 model UserEventsLog {
   id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   event Json?
   name  String? @db.VarChar
+
+  @@schema("api")
 }
 
 model Achievement {
@@ -82,6 +91,8 @@ model Achievement {
   enabled             Boolean           @default(true)
   latestCompletedTime DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
+
+  @@schema("api")
 }
 
 model UserAchievement {
@@ -93,6 +104,8 @@ model UserAchievement {
   updateTime    DateTime    @db.Timestamp(6)
   achievement   Achievement @relation(fields: [achievementId], references: [id])
   user          User        @relation(fields: [userAddress], references: [userAddress])
+
+  @@schema("api")
 }
 
 enum RepeatPeriod {
@@ -101,4 +114,6 @@ enum RepeatPeriod {
   Weekly
   Monthly
   Yearly
+
+  @@schema("api")
 }
