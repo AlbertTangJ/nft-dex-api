@@ -162,7 +162,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Get("/user")
+  @Get("/users")
   async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
     let result = await this.userService.findUsersInfoByAddress(userAddress.toLowerCase());
     if (result != null) {
