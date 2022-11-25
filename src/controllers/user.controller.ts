@@ -25,7 +25,7 @@ type CreateUserInfoBody = {
 export class UserController {
   constructor(private userService: UserService) {}
 
-  @Get("/user/find")
+  @Get("/users/find")
   async getUserByAddress(@QueryParam("address") address: string) {
     if (!address) {
       return new ApiResponse(ResponseStatus.Failure)
@@ -87,7 +87,7 @@ export class UserController {
 
 
   @Authorized(["auth-token"])
-  @Post("/user/update")
+  @Post("/users/update")
   async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
     let isUpdateUsername = false;
     if (username != "" && username != null) {
@@ -153,7 +153,7 @@ export class UserController {
     return result;
   }
 
-  @Post("/user/search")
+  @Post("/users/search")
   async search(@BodyParam("keyword") keyword: string, @BodyParam("userAddress") userAddress: string) {
     let result = await this.userService.searchAddressUsername(keyword, userAddress);
     if (result != null) {
@@ -194,7 +194,7 @@ export class UserController {
   }
 
   // @Authorized("auth-token")
-  @Post("/user/follow")
+  @Post("/users/follow")
   async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
     if (result) {
@@ -204,7 +204,7 @@ export class UserController {
   }
 
   @Authorized("auth-token")
-  @Post("/user/unfollow")
+  @Post("/users/unfollow")
   async unFollower(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("follower", { required: true }) follower: string) {
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
@@ -213,7 +213,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Post("/user/auth")
+  @Post("/users/auth")
   async authUser(@BodyParam("signature") signature: string, @BodyParam("publicAddress") publicAddress: string) {
     let result = await this.userService.authUserService(
       signature,
@@ -225,7 +225,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Post("/user/event")
+  @Post("/users/event")
   async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any) {
     await this.userService.saveEvent(name, event);
     return new ApiResponse(ResponseStatus.Success).toObject();
