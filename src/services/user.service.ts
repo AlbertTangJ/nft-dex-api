@@ -4,6 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
+type Follower = { userAddress: string, followerAddress: string, followers: number, ranking: number }
 @Service()
 export class UserService {
   constructor() { }
@@ -44,30 +45,12 @@ export class UserService {
   }
 
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
-    let followList = await prisma.userFollowing.findMany({
-      where: {
-        userAddress: userAddress.toLowerCase()
-      },
-      take: pageSize,
-      skip: pageNo
-    });
-
-    let result = [];
-    for (let i = 0; i < followList.length; i++) {
-      const follower = followList[i];
-      await prisma.userFollowing.findMany({
-        where: {
-          userAddress: userAddress
-        }
-      })
-      result.push({
-        id: follower.id,
-        userAddress: follower.userAddress,
-        followerAddress: follower.followerAddress,
-        status: follower.status,
-      });
+    if (pageNo > 0) {
+        pageNo = pageNo - 1
+        pageNo = pageNo * pageSize
     }
-    return result;
+    let followList:Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    return followList;
   }
 
   async followUser(userAddress: string, followerAddress: string) {
@@ -80,35 +63,28 @@ export class UserService {
       let currentDateTime = new Date()
         .toISOString();
       let currentTimestamp = Math.floor(Date.now() / 1000);
-      let follow: Prisma.UserFollowingCreateInput = {
+      let follow = {
         status: 1,
         createTimestamp: currentTimestamp,
         updateTime: currentDateTime,
         updateTimestamp: currentTimestamp,
-        followerUser: {
-          connect: {
-            userAddress: userAddress.toLowerCase()
-          }
-        },
-        followingUser: {
-          connect: {
-            userAddress: followerAddress.toLowerCase()
-          }
-        }
+        userAddress: userAddress.toLowerCase(),
+        followerAddress: followerAddress.toLowerCase()
       };
-     let result = await prisma.$transaction(async (tx) => {
-        let result = tx.userFollowing.create({ data: follow });
-        if (result!=null) {
-          let userInfo = await tx.userInfo.findUnique({
+      let result = await prisma.$transaction(async (tx) => {
+        let result = await tx.userFollowing.create({ data: follow });
+        if (result != null) {
+          let resultUserInfo = await tx.userInfo.findUnique({
             where: {
               userAddress: userAddress.toLowerCase()
             }
           });
-          let followers = userInfo.followers + 1;
+          let followers = resultUserInfo.followers + 1;
           let updateFollowers = await tx.userInfo.update({
-            where: { userAddress: userAddress },
+            where: { userAddress: userAddress.toLowerCase() },
             data: { followers: followers }
           })
+
           return updateFollowers;
         }
       })
@@ -127,14 +103,22 @@ export class UserService {
       },
     });
     if (haveFollowed != null) {
-      let result = await prisma.userFollowing.delete({
-        where: {
-          userAddress_followerAddress: {
-            userAddress: userAddress.toLowerCase(),
-            followerAddress: followerAddress.toLowerCase(),
+      let result = await prisma.$transaction(async (tx) => {
+        let result = await tx.userFollowing.delete({
+          where: {
+            userAddress_followerAddress: {
+              userAddress: userAddress.toLowerCase(),
+              followerAddress: followerAddress.toLowerCase(),
+            }
           }
+        });
+        if (result != null) {
+          let userInfo = await tx.userInfo.findUnique({ where: { userAddress: userAddress.toLowerCase() } })
+          let followers = userInfo.followers - 1
+          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { followers: followers } })
+          return userUpdateResult;
         }
-      });
+      })
       return result;
     }
     return haveFollowed;
