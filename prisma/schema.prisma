@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema","interactiveTransactions"]
+  previewFeatures = ["interactiveTransactions", "multiSchema"]
 }
 
 datasource db {
@@ -20,7 +20,7 @@ model UserFollowing {
   updateTimestamp Int
   followerUser    User     @relation("followers", fields: [followerAddress], references: [userAddress])
   followingUser   User     @relation("followings", fields: [userAddress], references: [userAddress])
-  
+
   @@unique([userAddress, followerAddress])
   @@schema("api")
 }
@@ -55,6 +55,7 @@ model UserInfo {
   createTime      DateTime? @default(now()) @db.Timestamp(6)
   points          Int       @default(0)
   followers       Int       @default(0)
+  ranking         Int       @default(0)
   user            User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")

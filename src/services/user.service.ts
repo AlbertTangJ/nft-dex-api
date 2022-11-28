@@ -206,7 +206,7 @@ export class UserService {
   }
 
   async findUsersInfoByAddress(updateUserAddress: string) {
-    let userInfo = await prisma.userInfo.findUnique({
+    let userInfo = await prisma.userInfo.findFirst({
       where: {
         userAddress: updateUserAddress.toLowerCase()
       },
@@ -215,7 +215,7 @@ export class UserService {
   }
 
   async checkUserName(username: string) {
-    const updateUserInfo = await prisma.userInfo.findUnique({
+    const updateUserInfo = await prisma.userInfo.findFirst({
       where: { username: username },
     });
 
@@ -256,6 +256,7 @@ export class UserService {
 
   async createUserInfoService(regUserAddress: string) {
     let userAddress = regUserAddress.toLowerCase();
+    console.log(userAddress);
     let existUser = await this.findUsersInfoByAddress(userAddress);
     if (existUser != null) {
       return existUser;
