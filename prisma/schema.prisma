@@ -20,7 +20,7 @@ model UserFollowing {
   updateTimestamp Int
   followerUser    User     @relation("followers", fields: [followerAddress], references: [userAddress])
   followingUser   User     @relation("followings", fields: [userAddress], references: [userAddress])
-
+  
   @@unique([userAddress, followerAddress])
   @@schema("api")
 }
@@ -46,7 +46,7 @@ model UserInfo {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userAddress     String    @unique @db.VarChar
   nonce           Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
-  username        String    @unique @db.VarChar
+  username        String    @db.VarChar
   about           String?
   updateNameTimes Int?      @default(0)
   updateTimestamp Int?
