@@ -172,7 +172,7 @@ export class UserController {
   }
 
 
-  @Post("/user")
+  @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
     let result = await this.userService.createUserInfoService(userAddress);
     if (result != null) {
