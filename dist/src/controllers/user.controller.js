@@ -48,18 +48,95 @@ let UserController = class UserController {
             }
         });
     }
+    checkUserName(username) {
+        let checkMessage = "";
+        let checkUserNameResult = false;
+        if (username == "" || username == null) {
+            checkUserNameResult = true;
+        }
+        else {
+            var patten = /^[a-zA-Z0-9_]{3,30}$/;
+            let result = patten.test(username);
+            if (!result) {
+                checkUserNameResult = false;
+                checkMessage = "username must be 5-10 characters";
+            }
+            else {
+                checkUserNameResult = true;
+            }
+        }
+        let check = { result: checkUserNameResult, message: checkMessage };
+        if (!check.result) {
+            throw new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.UsernameWrong).setErrorMessage(check.message);
+        }
+    }
+    checkAbout(about) {
+        let checkAboutResult = false;
+        let checkMessage = "";
+        if (about == "" || about == null) {
+            checkAboutResult = true;
+        }
+        else {
+            if (about.length >= 0 && about.length <= 200) {
+                checkAboutResult = true;
+            }
+            else {
+                checkMessage = "about can not over 200 characters";
+                checkAboutResult = false;
+            }
+        }
+        let check = { result: checkAboutResult, message: checkMessage };
+        if (!check.result) {
+            throw new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Failure).setErrorMessage(check.message);
+        }
+    }
     updateUser(username, userAddress, about) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (username != "") {
-                const exist_user = yield this.userService.findUsersInfoByAddress(userAddress);
-                if (exist_user.username != username) {
-                    let check_username_exist = yield this.userService.checkUserName(username);
-                    if (check_username_exist != null) {
+            let isUpdateUsername = false;
+            if (username != "" && username != null) {
+                var existUser = yield this.userService.findUsersInfoByAddress(userAddress);
+                if (existUser != null && existUser.username != username) {
+                    let checkUsernameExist = yield this.userService.checkUserName(username);
+                    if (checkUsernameExist != null) {
                         return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Failure).setErrorMessage(`${username} already have user used`).toObject();
+                    }
+                    else {
+                        isUpdateUsername = true;
                     }
                 }
             }
+            if (username == null) {
+                username = '';
+            }
+            if (about == null) {
+                about = '';
+            }
+            try {
+                this.checkUserName(username);
+                this.checkAbout(about);
+            }
+            catch (error) {
+                throw error;
+            }
+            let currentDateTime = new Date();
+            let currentTimestamp = Math.floor(Date.now() / 1000);
             let user = { username: username, about: about };
+            if (isUpdateUsername) {
+                var currentDate = new Date();
+                let currentYear = currentDate.getFullYear();
+                let lastTimeUpdateYear = existUser.updateTime;
+                let updateTimes = existUser.updateNameTimes + 1;
+                if (lastTimeUpdateYear.getFullYear() < currentYear) {
+                    updateTimes = 1;
+                }
+                // 说移除一年改3次的限制, DB相关数据保留
+                // else {
+                //   if (updateTimes > 3) {
+                //     return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
+                //   }
+                // }
+                user = { username: username, about: about, updateNameTimes: updateTimes, updateTimestamp: currentTimestamp, updateTime: currentDateTime };
+            }
             let result = yield this.userService.updateUserService(userAddress, user);
             if (result != null) {
                 return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Success).setData({
@@ -78,6 +155,15 @@ let UserController = class UserController {
         return __awaiter(this, void 0, void 0, function* () {
             let result = yield this.userService.checkUserName(username);
             return result;
+        });
+    }
+    search(keyword, userAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let result = yield this.userService.searchAddressUsername(keyword, userAddress);
+            if (result != null) {
+                return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Success).setData(result);
+            }
+            return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Failure);
         });
     }
     findUser(userAddress) {
@@ -110,6 +196,7 @@ let UserController = class UserController {
             return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Success).setData(result);
         });
     }
+    // @Authorized("auth-token")
     follow(user, follower) {
         return __awaiter(this, void 0, void 0, function* () {
             let result = yield this.userService.followUser(user, follower);
@@ -119,6 +206,7 @@ let UserController = class UserController {
             return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Failure);
         });
     }
+    // @Authorized("auth-token")
     unFollower(user, follower) {
         return __awaiter(this, void 0, void 0, function* () {
             let result = yield this.userService.unFollowUser(user, follower);
@@ -137,17 +225,23 @@ let UserController = class UserController {
             return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Failure);
         });
     }
+    eventLog(name, event) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.userService.saveEvent(name, event);
+            return new apiResponse_1.ApiResponse(apiResponse_1.ResponseStatus.Success).toObject();
+        });
+    }
 };
 __decorate([
-    (0, routing_controllers_1.Get)("/user/find"),
+    (0, routing_controllers_1.Get)("/users/find"),
     __param(0, (0, routing_controllers_1.QueryParam)("address")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "getUserByAddress", null);
 __decorate([
-    (0, routing_controllers_1.Authorized)(["auth-token", "username", "about"]),
-    (0, routing_controllers_1.Post)("/user/update"),
+    (0, routing_controllers_1.Authorized)(["auth-token"]),
+    (0, routing_controllers_1.Post)("/users/update"),
     __param(0, (0, routing_controllers_1.BodyParam)("username")),
     __param(1, (0, routing_controllers_1.BodyParam)("userAddress")),
     __param(2, (0, routing_controllers_1.BodyParam)("about")),
@@ -156,14 +250,22 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "updateUser", null);
 __decorate([
-    (0, routing_controllers_1.Get)("/user"),
+    (0, routing_controllers_1.Post)("/users/search"),
+    __param(0, (0, routing_controllers_1.BodyParam)("keyword")),
+    __param(1, (0, routing_controllers_1.BodyParam)("userAddress")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "search", null);
+__decorate([
+    (0, routing_controllers_1.Get)("/users"),
     __param(0, (0, routing_controllers_1.QueryParam)("publicAddress", { required: true })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "findUser", null);
 __decorate([
-    (0, routing_controllers_1.Post)("/user"),
+    (0, routing_controllers_1.Post)("/users"),
     __param(0, (0, routing_controllers_1.BodyParam)("userAddress", { required: true })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -188,31 +290,37 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "followers", null);
 __decorate([
-    (0, routing_controllers_1.Authorized)("auth-token"),
-    (0, routing_controllers_1.Post)("/user/follow"),
-    __param(0, (0, routing_controllers_1.BodyParam)("user", { required: true })),
-    __param(1, (0, routing_controllers_1.BodyParam)("follower", { required: true })),
+    (0, routing_controllers_1.Post)("/users/follow"),
+    __param(0, (0, routing_controllers_1.BodyParam)("userAddress", { required: true })),
+    __param(1, (0, routing_controllers_1.BodyParam)("followerAddress", { required: true })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "follow", null);
 __decorate([
-    (0, routing_controllers_1.Authorized)("auth-token"),
-    (0, routing_controllers_1.Post)("/user/unfollow"),
-    __param(0, (0, routing_controllers_1.BodyParam)("user", { required: true })),
-    __param(1, (0, routing_controllers_1.BodyParam)("follower", { required: true })),
+    (0, routing_controllers_1.Post)("/users/unfollow"),
+    __param(0, (0, routing_controllers_1.BodyParam)("userAddress", { required: true })),
+    __param(1, (0, routing_controllers_1.BodyParam)("followerAddress", { required: true })),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "unFollower", null);
 __decorate([
-    (0, routing_controllers_1.Post)("/user/auth"),
+    (0, routing_controllers_1.Post)("/users/auth"),
     __param(0, (0, routing_controllers_1.BodyParam)("signature")),
     __param(1, (0, routing_controllers_1.BodyParam)("publicAddress")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], UserController.prototype, "authUser", null);
+__decorate([
+    (0, routing_controllers_1.Post)("/users/event"),
+    __param(0, (0, routing_controllers_1.BodyParam)("name", { required: true })),
+    __param(1, (0, routing_controllers_1.BodyParam)("params", { required: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UserController.prototype, "eventLog", null);
 UserController = __decorate([
     (0, routing_controllers_1.JsonController)(),
     (0, typedi_1.Service)(),

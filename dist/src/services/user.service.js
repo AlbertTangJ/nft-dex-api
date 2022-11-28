@@ -47,7 +47,7 @@ let UserService = class UserService {
     // 获取follow 我的所有人
     followList(userAddress, pageNo, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
-            let fans_list = yield client_1.default.userFollowing.findMany({
+            let fansList = yield client_1.default.userFollowing.findMany({
                 where: {
                     userAddress: userAddress.toLowerCase(),
                 },
@@ -55,8 +55,8 @@ let UserService = class UserService {
                 skip: pageNo
             });
             let result = [];
-            for (let i = 0; i < fans_list.length; i++) {
-                const follower = fans_list[i];
+            for (let i = 0; i < fansList.length; i++) {
+                const follower = fansList[i];
                 result.push({
                     id: follower.id,
                     userAddress: follower.userAddress,
@@ -69,24 +69,12 @@ let UserService = class UserService {
     }
     followingList(userAddress, pageNo, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
-            let follow_list = yield client_1.default.userFollowing.findMany({
-                where: {
-                    userAddress: userAddress.toLowerCase(),
-                },
-                take: pageSize,
-                skip: pageNo
-            });
-            let result = [];
-            for (let i = 0; i < follow_list.length; i++) {
-                const follower = follow_list[i];
-                result.push({
-                    id: follower.id,
-                    userAddress: follower.userAddress,
-                    followerAddress: follower.followerAddress,
-                    status: follower.status,
-                });
+            if (pageNo > 0) {
+                pageNo = pageNo - 1;
+                pageNo = pageNo * pageSize;
             }
-            return result;
+            let followList = yield client_1.default.$queryRaw `SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+            return followList;
         });
     }
     followUser(userAddress, followerAddress) {
@@ -105,18 +93,25 @@ let UserService = class UserService {
                     createTimestamp: currentTimestamp,
                     updateTime: currentDateTime,
                     updateTimestamp: currentTimestamp,
-                    followerUser: {
-                        connect: {
-                            userAddress: userAddress.toLowerCase()
-                        }
-                    },
-                    followingUser: {
-                        connect: {
-                            userAddress: followerAddress.toLowerCase()
-                        }
-                    }
+                    userAddress: userAddress.toLowerCase(),
+                    followerAddress: followerAddress.toLowerCase()
                 };
-                let result = yield client_1.default.userFollowing.create({ data: follow });
+                let result = yield client_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    let result = yield tx.userFollowing.create({ data: follow });
+                    if (result != null) {
+                        let resultUserInfo = yield tx.userInfo.findUnique({
+                            where: {
+                                userAddress: userAddress.toLowerCase()
+                            }
+                        });
+                        let followers = resultUserInfo.followers + 1;
+                        let updateFollowers = yield tx.userInfo.update({
+                            where: { userAddress: userAddress.toLowerCase() },
+                            data: { followers: followers }
+                        });
+                        return updateFollowers;
+                    }
+                }));
                 return result;
             }
             return haveFollowed;
@@ -133,23 +128,36 @@ let UserService = class UserService {
                 },
             });
             if (haveFollowed != null) {
-                let result = yield client_1.default.userFollowing.delete({
-                    where: {
-                        userAddress_followerAddress: {
-                            userAddress: userAddress.toLowerCase(),
-                            followerAddress: followerAddress.toLowerCase(),
+                let result = yield client_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    let result = yield tx.userFollowing.delete({
+                        where: {
+                            userAddress_followerAddress: {
+                                userAddress: userAddress.toLowerCase(),
+                                followerAddress: followerAddress.toLowerCase(),
+                            }
                         }
+                    });
+                    if (result != null) {
+                        let userInfo = yield tx.userInfo.findUnique({ where: { userAddress: userAddress.toLowerCase() } });
+                        let followers = userInfo.followers - 1;
+                        let userUpdateResult = yield tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { followers: followers } });
+                        return userUpdateResult;
                     }
-                });
+                }));
                 return result;
             }
             return haveFollowed;
         });
     }
+    saveEvent(name, params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield client_1.default.userEventsLog.create({ data: { name: name, event: params } });
+        });
+    }
     authUserService(signature, publicAddress) {
         return __awaiter(this, void 0, void 0, function* () {
             // let that = this;
-            let access_token = yield client_1.default.userInfo.findUnique({
+            let accessToken = yield client_1.default.userInfo.findUnique({
                 where: { userAddress: publicAddress },
             })
                 ////////////////////////////////////////////////////
@@ -208,7 +216,7 @@ let UserService = class UserService {
                     .createCustomToken(user.userAddress);
                 return firebaseToken;
             }));
-            return access_token;
+            return accessToken;
         });
     }
     updateByAddress(userAddress, data) {
@@ -223,7 +231,7 @@ let UserService = class UserService {
     }
     findUsersInfoByAddress(updateUserAddress) {
         return __awaiter(this, void 0, void 0, function* () {
-            let userInfo = yield client_1.default.userInfo.findUnique({
+            let userInfo = yield client_1.default.userInfo.findFirst({
                 where: {
                     userAddress: updateUserAddress.toLowerCase()
                 },
@@ -233,20 +241,36 @@ let UserService = class UserService {
     }
     checkUserName(username) {
         return __awaiter(this, void 0, void 0, function* () {
-            const update_user_info = yield client_1.default.userInfo.findUnique({
+            const updateUserInfo = yield client_1.default.userInfo.findFirst({
                 where: { username: username },
             });
-            return update_user_info;
+            return updateUserInfo;
+        });
+    }
+    searchAddressUsername(keyword, userAddress) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let result = yield client_1.default.userInfo.findMany({
+                where: {
+                    OR: [
+                        {
+                            username: {
+                                contains: keyword,
+                            },
+                        },
+                        {
+                            userAddress: { contains: keyword }
+                        },
+                    ],
+                },
+            });
+            return result;
         });
     }
     updateUserService(userAddress, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = yield client_1.default.userInfo.update({
                 where: { userAddress: userAddress.toLowerCase() },
-                data: {
-                    about: data.about,
-                    username: data.username
-                }
+                data: data
             });
             return result;
         });
@@ -254,9 +278,10 @@ let UserService = class UserService {
     createUserInfoService(regUserAddress) {
         return __awaiter(this, void 0, void 0, function* () {
             let userAddress = regUserAddress.toLowerCase();
-            let exist_user = yield this.findUsersInfoByAddress(userAddress);
-            if (exist_user != null) {
-                return exist_user;
+            console.log(userAddress);
+            let existUser = yield this.findUsersInfoByAddress(userAddress);
+            if (existUser != null) {
+                return existUser;
             }
             let currentDateTime = new Date()
                 .toISOString();
@@ -270,6 +295,12 @@ let UserService = class UserService {
             let userInfo = {
                 username: '',
                 nonce: Math.floor(Math.random() * 1000000),
+                about: '',
+                updateNameTimes: 0,
+                createTime: currentDateTime,
+                createTimestamp: currentTimestamp,
+                updateTime: currentDateTime,
+                updateTimestamp: currentTimestamp,
                 user: {
                     connectOrCreate: {
                         where: {

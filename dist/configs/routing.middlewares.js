@@ -22,8 +22,8 @@ let HeaderMiddleware = class HeaderMiddleware {
     use(context, next) {
         return __awaiter(this, void 0, void 0, function* () {
             context.set('Access-Control-Allow-Methods', 'GET,HEAD,PUT,POST,DELETE,PATCH');
-            context.set('Access-Control-Allow-Origin', context.request.header.origin || context.request.origin);
-            context.set('Access-Control-Allow-Headers', ['content-type']);
+            context.set('Access-Control-Allow-Origin', '*');
+            context.set('Access-Control-Allow-Headers', ['content-type', 'auth-token']);
             context.set('Access-Control-Allow-Credentials', 'true');
             context.set('Content-Type', 'application/json; charset=utf-8');
             return next();

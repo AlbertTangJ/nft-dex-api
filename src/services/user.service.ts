@@ -215,6 +215,7 @@ export class UserService {
   }
 
   async checkUserName(username: string) {
+    
     const updateUserInfo = await prisma.userInfo.findFirst({
       where: { username: username },
     });
