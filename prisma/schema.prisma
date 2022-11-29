@@ -110,6 +110,16 @@ model UserAchievement {
   @@schema("api")
 }
 
+model ReferralEvents {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress  String   @db.VarChar
+  referralCode String?  @db.VarChar
+  createTime   DateTime @default(now()) @db.Timestamp(6)
+
+  @@unique([userAddress, referralCode], map: "ReferralEvents_code_userAddress_unique")
+  @@schema("api")
+}
+
 enum RepeatPeriod {
   None
   Daily

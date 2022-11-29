@@ -124,6 +124,20 @@ export class UserService {
     return haveFollowed;
   }
 
+  async inputReferralCode(code: string, userAddress: string) {
+    let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+    if (userInfo.userAddress == userAddress.toLowerCase()) {
+      return null;
+    }
+    let item = await prisma.referralEvents.findFirst({ where: { referralCode: code, userAddress: userAddress.toLowerCase() } })
+    if (item == null) {
+      let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
+      return result;
+    } else {
+      return item;
+    }
+  }
+
   async saveEvent(name: string, params: any) {
     await prisma.userEventsLog.create({ data: { name: name, event: params } })
   }

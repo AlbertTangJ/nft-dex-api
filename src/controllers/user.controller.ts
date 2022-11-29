@@ -234,4 +234,13 @@ export class UserController {
     await this.userService.saveEvent(name, event);
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
+
+  @Post("/users/referral/code")
+  async inputReferralCode(@BodyParam("code", { required: true }) code: string, @BodyParam("userAddress", { required: true }) userAddress: string) {
+    let result = await this.userService.inputReferralCode(code, userAddress);
+    if (result == null) {
+      return new ApiResponse(ResponseStatus.Failure).toObject();
+    }
+    return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+  }
 }
