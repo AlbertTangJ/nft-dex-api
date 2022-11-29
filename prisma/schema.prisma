@@ -56,6 +56,7 @@ model UserInfo {
   points          Int       @default(0)
   followers       Int       @default(0)
   ranking         Int       @default(0)
+  referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
   user            User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")

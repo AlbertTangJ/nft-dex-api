@@ -46,10 +46,10 @@ export class UserService {
 
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
-        pageNo = pageNo - 1
-        pageNo = pageNo * pageSize
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
     }
-    let followList:Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
     return followList;
   }
 
@@ -215,7 +215,6 @@ export class UserService {
   }
 
   async checkUserName(username: string) {
-    
     const updateUserInfo = await prisma.userInfo.findFirst({
       where: { username: username },
     });
@@ -255,6 +254,11 @@ export class UserService {
     return result;
   }
 
+  async test() {
+    let u_address = '0x00820cb7fe7269b9b4daafc288d9d27eb7fe5bcf'
+    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(6, ${u_address}::TEXT);`
+  }
+
   async createUserInfoService(regUserAddress: string) {
     let userAddress = regUserAddress.toLowerCase();
     console.log(userAddress);
@@ -291,6 +295,7 @@ export class UserService {
       }
     }
     const result: UserInfo = await prisma.userInfo.create({ data: userInfo });
+    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(6, ${regUserAddress.toLowerCase()}::TEXT);`
     return result;
   }
 }

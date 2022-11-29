@@ -23,7 +23,7 @@ type CreateUserInfoBody = {
 @JsonController()
 @Service()
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(private userService: UserService) { }
 
   @Get("/users/find")
   async getUserByAddress(@QueryParam("address") address: string) {
@@ -126,7 +126,7 @@ export class UserController {
       let updateTimes = existUser.updateNameTimes + 1
       if (lastTimeUpdateYear.getFullYear() < currentYear) {
         updateTimes = 1
-      } 
+      }
       // 说移除一年改3次的限制, DB相关数据保留
       // else {
       //   if (updateTimes > 3) {
@@ -171,6 +171,10 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
+  @Get("/test")
+  async test() {
+    await this.userService.test()
+  }
 
   @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
@@ -193,7 +197,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/follow")
   async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
@@ -203,7 +207,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.unFollowUser(user, follower);
