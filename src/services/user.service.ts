@@ -24,24 +24,12 @@ export class UserService {
 
   // 获取follow 我的所有人
   async followList(userAddress: string, pageNo: number, pageSize: number) {
-    let fansList = await prisma.userFollowing.findMany({
-      where: {
-        userAddress: userAddress.toLowerCase(),
-      },
-      take: pageSize,
-      skip: pageNo
-    });
-    let result = [];
-    for (let i = 0; i < fansList.length; i++) {
-      const follower = fansList[i];
-      result.push({
-        id: follower.id,
-        userAddress: follower.userAddress,
-        followerAddress: follower.followerAddress,
-        status: follower.status,
-      });
+    if (pageNo > 0) {
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
     }
-    return result;
+    let followers: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    return followers;
   }
 
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
