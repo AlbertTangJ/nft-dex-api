@@ -28,7 +28,6 @@ export class UserService {
   }
 
   async findByAddress(userAddress: string) {
-    await this.fetchFollowAndUpdateUserInfo(userAddress);
     return await prisma.user.findUnique({
       where: {
         userAddress: userAddress
@@ -79,26 +78,13 @@ export class UserService {
       let result = await prisma.$transaction(async (tx) => {
         let result = await tx.userFollowing.create({ data: follow });
         if (result != null) {
-          let resultUserInfo = await tx.userInfo.findUnique({
-            where: {
-              userAddress: userAddress.toLowerCase()
-            }
-          });
-          let following = resultUserInfo.following + 1;
           let updateFollowing = await tx.userInfo.update({
             where: { userAddress: userAddress.toLowerCase() },
-            data: { following: following }
+            data: { following: { increment: 1 } }
           })
-
-          let resultFollowerUserInfo = await tx.userInfo.findUnique({
-            where: {
-              userAddress: followerAddress.toLowerCase()
-            }
-          });
-          let followers = resultFollowerUserInfo.followers + 1;
           await tx.userInfo.update({
             where: { userAddress: followerAddress.toLowerCase() },
-            data: { followers: followers }
+            data: { followers: { increment: 1 } }
           })
 
           return updateFollowing;
@@ -132,21 +118,12 @@ export class UserService {
           }
         });
         if (result != null) {
-          let userInfo = await tx.userInfo.findUnique({ where: { userAddress: userAddress.toLowerCase() } })
-          let following = userInfo.following - 1
-          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { following: following } })
-
-          let resultFollowerUserInfo = await tx.userInfo.findUnique({
-            where: {
-              userAddress: followerAddress.toLowerCase()
-            }
-          });
-          let followers = resultFollowerUserInfo.followers - 1;
+          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { following: { decrement: 1 } } })
           await tx.userInfo.update({
             where: { userAddress: followerAddress.toLowerCase() },
-            data: { followers: followers }
+            data: { followers: { decrement: 1 } }
           })
-          
+
           return userUpdateResult;
         }
       })
