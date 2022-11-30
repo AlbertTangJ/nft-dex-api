@@ -15,7 +15,7 @@ export const db_functions = async () => {
               referral_new_code TEXT;
           BEGIN
               LOOP
-                  referral_new_code := UPPER(SUBSTRING(MD5(''||NOW()::TEXT||RANDOM()::TEXT) FOR digits));
+                  referral_new_code := UPPER(array_to_string(array(select SUBSTRING('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' FROM (CEIL(RANDOM()*62))::int FOR 1) FROM generate_series(1, digits)), ''));
                   BEGIN
                       UPDATE api."UserInfo" SET "referralCode"=referral_new_code WHERE api."UserInfo"."userAddress" = user_address;
                       EXIT;
