@@ -193,7 +193,7 @@ export class UserController {
 
   @Get("/followers/:user/:pageNo/:pageSize")
   async followers(@Param("user") user: string, @Param("pageNo") pageNo: number, @Param("pageSize") pageSize: number) {
-    let result = await this.userService.followList(user, pageNo, pageSize);
+    let result = await this.userService.followersList(user, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 

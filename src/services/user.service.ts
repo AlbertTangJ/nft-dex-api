@@ -14,7 +14,21 @@ export class UserService {
     });
   }
 
+  async fetchFollowAndUpdateUserInfo(userAddress: string) {
+    // 获取我追踪的列表
+    let followingCount = await prisma.userFollowing.count({ where: { userAddress: userAddress.toLowerCase() } });
+    // 获取追踪我的列表
+    let followersCount = await prisma.userFollowing.count({ where: { followerAddress: userAddress.toLowerCase() } });
+
+    let result = await prisma.userInfo.update({
+      where: { userAddress: userAddress.toLowerCase() },
+      data: { followers: followersCount, following: followingCount }
+    })
+    return result
+  }
+
   async findByAddress(userAddress: string) {
+    await this.fetchFollowAndUpdateUserInfo(userAddress);
     return await prisma.user.findUnique({
       where: {
         userAddress: userAddress
@@ -23,12 +37,12 @@ export class UserService {
   }
 
   // 获取follow 我的所有人
-  async followList(userAddress: string, pageNo: number, pageSize: number) {
+  async followersList(userAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let followers: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let followers: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
     return followers;
   }
 
@@ -37,10 +51,13 @@ export class UserService {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
     return followList;
   }
 
+  // userAddress follow followerAddress
+  // userAddress following + 1
+  // followerAddress follower + 1
   async followUser(userAddress: string, followerAddress: string) {
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
@@ -67,13 +84,24 @@ export class UserService {
               userAddress: userAddress.toLowerCase()
             }
           });
-          let followers = resultUserInfo.followers + 1;
-          let updateFollowers = await tx.userInfo.update({
+          let following = resultUserInfo.following + 1;
+          let updateFollowing = await tx.userInfo.update({
             where: { userAddress: userAddress.toLowerCase() },
+            data: { following: following }
+          })
+
+          let resultFollowerUserInfo = await tx.userInfo.findUnique({
+            where: {
+              userAddress: followerAddress.toLowerCase()
+            }
+          });
+          let followers = resultFollowerUserInfo.followers + 1;
+          await tx.userInfo.update({
+            where: { userAddress: followerAddress.toLowerCase() },
             data: { followers: followers }
           })
 
-          return updateFollowers;
+          return updateFollowing;
         }
       })
       return result;
@@ -81,6 +109,9 @@ export class UserService {
     return haveFollowed;
   }
 
+  // userAddress follow followerAddress
+  // userAddress following - 1
+  // followerAddress follower - 1
   async unFollowUser(userAddress: string, followerAddress: string) {
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
@@ -102,8 +133,20 @@ export class UserService {
         });
         if (result != null) {
           let userInfo = await tx.userInfo.findUnique({ where: { userAddress: userAddress.toLowerCase() } })
-          let followers = userInfo.followers - 1
-          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { followers: followers } })
+          let following = userInfo.following - 1
+          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { following: following } })
+
+          let resultFollowerUserInfo = await tx.userInfo.findUnique({
+            where: {
+              userAddress: followerAddress.toLowerCase()
+            }
+          });
+          let followers = resultFollowerUserInfo.followers - 1;
+          await tx.userInfo.update({
+            where: { userAddress: followerAddress.toLowerCase() },
+            data: { followers: followers }
+          })
+          
           return userUpdateResult;
         }
       })
