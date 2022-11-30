@@ -24,7 +24,8 @@ export class LeaderBoardService {
         let i = (page * size) + 1
         for (let a = 0; a < result.length; a++) {
             const reward: Reward = result[a];
-            const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": reward.updatetimestamp, "rank": i }
+
+            const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": reward.updatetimestamp, "rank": a + 1 }
             rewards.push(item)
             i = i + 1
         }
@@ -39,8 +40,8 @@ export class LeaderBoardService {
         let userRanking = null
         for (let i = 0; i < result.length; i++) {
             const reward: Reward = result[i];
-            if (reward.address == userAddress) {
-                const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": reward.updatetimestamp, "rank": i }
+            if (reward.address == userAddress.toLowerCase()) {
+                const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": reward.updatetimestamp, "rank": i + 1 }
                 userRanking = item;
                 break
             }
