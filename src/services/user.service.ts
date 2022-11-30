@@ -277,8 +277,12 @@ export class UserService {
   }
 
   async test() {
-    let u_address = '0x00820cb7fe7269b9b4daafc288d9d27eb7fe5bcf'
-    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(6, ${u_address}::TEXT);`
+    let result: { userAddress: string }[] = await prisma.userInfo.findMany();
+    for (let i = 0; i < result.length; i++) {
+      const element: { userAddress: string } = result[i];
+      await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${element.userAddress.toLowerCase()}::TEXT);`
+    }
+
   }
 
   async createUserInfoService(regUserAddress: string) {
@@ -317,7 +321,7 @@ export class UserService {
       }
     }
     const result: UserInfo = await prisma.userInfo.create({ data: userInfo });
-    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(6, ${regUserAddress.toLowerCase()}::TEXT);`
+    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${regUserAddress.toLowerCase()}::TEXT);`
     return result;
   }
 }
