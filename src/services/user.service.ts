@@ -43,21 +43,21 @@ export class UserService {
     }
     let followers: Follower[] = await prisma.$queryRaw`
       SELECT
-        case when uf."userAddress" IS NOT NULL
-        then true 
-        else false 
-        end as "isFollowing", t.*
-    FROM api."UserFollowing" as uf
+        CASE WHEN uf."userAddress" IS NOT NULL
+        THEN true 
+        ELSE false 
+        END AS "isFollowing", t.*
+    FROM api."UserFollowing" AS uf
     RIGHT JOIN (
           SELECT 
-            "UserFollowing"."userAddress" as "userAddress", 
-            "UserFollowing"."followerAddress" as "followerAddress", 
-            "UserInfo"."followers" as "followers", 
-            "UserInfo"."following" as "following", 
-            "UserInfo"."username" as "username", 
-            "UserInfo"."about" as "about", 
-            "UserInfo"."points" as "points", 
-            "UserInfo"."ranking" as "ranking" 
+            "UserFollowing"."userAddress" AS "userAddress", 
+            "UserFollowing"."followerAddress" AS "followerAddress", 
+            "UserInfo"."followers" AS "followers", 
+            "UserInfo"."following" AS "following", 
+            "UserInfo"."username" AS "username", 
+            "UserInfo"."about" AS "about", 
+            "UserInfo"."points" AS "points", 
+            "UserInfo"."ranking" AS "ranking" 
           FROM "api"."UserFollowing" 
           JOIN "api"."UserInfo"
           ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
