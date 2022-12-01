@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions", "multiSchema"]
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
@@ -54,6 +54,7 @@ model UserInfo {
   updateTime      DateTime? @db.Timestamp(6)
   createTime      DateTime? @default(now()) @db.Timestamp(6)
   points          Int       @default(0)
+  referralPoints  Int       @default(0)
   followers       Int       @default(0)
   ranking         Int       @default(0)
   referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
@@ -82,6 +83,7 @@ model UserEventsLog {
 
 model Achievement {
   id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                String
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
@@ -92,6 +94,7 @@ model Achievement {
   updateTime          DateTime          @db.Timestamp(6)
   isGlobal            Boolean           @default(false)
   enabled             Boolean           @default(true)
+  referralRelated     Boolean           @default(false)
   latestCompletedTime DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 
