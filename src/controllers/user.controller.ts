@@ -154,8 +154,8 @@ export class UserController {
   }
 
   @Post("/users/search")
-  async search(@BodyParam("keyword") keyword: string, @BodyParam("userAddress") userAddress: string) {
-    let result = await this.userService.searchAddressUsername(keyword, userAddress);
+  async search(@BodyParam("keyword") keyword: string) {
+    let result = await this.userService.searchAddressUsername(keyword);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
@@ -197,7 +197,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/follow")
   async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
@@ -207,7 +207,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.unFollowUser(user, follower);

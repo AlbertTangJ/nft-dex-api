@@ -41,16 +41,42 @@ export class UserService {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let followers: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let followers: Follower[] = await prisma.$queryRaw`
+      SELECT
+        case when uf."userAddress" IS NOT NULL
+        then true 
+        else false 
+        end as "isFollowing", t.*
+    FROM api."UserFollowing" as uf
+    RIGHT JOIN (
+          SELECT 
+            "UserFollowing"."userAddress" as "userAddress", 
+            "UserFollowing"."followerAddress" as "followerAddress", 
+            "UserInfo"."followers" as "followers", 
+            "UserInfo"."following" as "following", 
+            "UserInfo"."username" as "username", 
+            "UserInfo"."about" as "about", 
+            "UserInfo"."points" as "points", 
+            "UserInfo"."ranking" as "ranking" 
+          FROM "api"."UserFollowing" 
+          JOIN "api"."UserInfo"
+          ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
+          WHERE "api"."UserFollowing"."followerAddress"=${userAddress.toLowerCase()} 
+          LIMIT ${pageSize} OFFSET ${pageNo}
+        ) t
+    ON uf."userAddress" = t."followerAddress" 
+    AND uf."followerAddress" = t."userAddress";
+    `;
     return followers;
   }
 
+  // 获取我 正在follow的所有人
   async followingList(userAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserInfo"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" WHERE "UserFollowing"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
     return followList;
   }
 
@@ -244,7 +270,7 @@ export class UserService {
     return updateUserInfo;
   }
 
-  async searchAddressUsername(keyword: string, userAddress: string) {
+  async searchAddressUsername(keyword: string) {
     let result = await prisma.userInfo.findMany(
       {
         where: {
