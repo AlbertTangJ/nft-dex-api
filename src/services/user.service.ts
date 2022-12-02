@@ -35,48 +35,81 @@ export class UserService {
     });
   }
 
-  // 获取follow 我的所有人
-  async followersList(userAddress: string, pageNo: number, pageSize: number) {
+  // 根据参数地址获取followers
+  async followersList(userAddress: string, viewAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
+    let condition = userAddress.toLowerCase();
+    if (condition == '') {
+      condition = `t."userAddress"`
+    }
     let followers: Follower[] = await prisma.$queryRaw`
       SELECT
-        CASE WHEN uf."userAddress" IS NOT NULL
-        THEN true 
-        ELSE false 
-        END AS "isFollowing", t.*
-    FROM api."UserFollowing" AS uf
-    RIGHT JOIN (
-          SELECT 
-            "UserFollowing"."userAddress" AS "userAddress", 
-            "UserFollowing"."followerAddress" AS "followerAddress", 
-            "UserInfo"."followers" AS "followers", 
-            "UserInfo"."following" AS "following", 
-            "UserInfo"."username" AS "username", 
-            "UserInfo"."about" AS "about", 
-            "UserInfo"."points" AS "points", 
-            "UserInfo"."ranking" AS "ranking" 
-          FROM "api"."UserFollowing" 
-          JOIN "api"."UserInfo"
-          ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
-          WHERE "api"."UserFollowing"."followerAddress"=${userAddress.toLowerCase()} 
-          LIMIT ${pageSize} OFFSET ${pageNo}
+          CASE WHEN uf."userAddress" IS NOT NULL
+          THEN true 
+          ELSE false 
+          END AS "isFollowing", t.*
+      FROM api."UserFollowing" AS uf
+      RIGHT JOIN (
+            SELECT 
+              "UserFollowing"."userAddress" AS "userAddress", 
+              "UserFollowing"."followerAddress" AS "followerAddress", 
+              "UserInfo"."followers" AS "followers", 
+              "UserInfo"."following" AS "following", 
+              "UserInfo"."username" AS "username", 
+              "UserInfo"."about" AS "about", 
+              "UserInfo"."points" AS "points", 
+              "UserInfo"."ranking" AS "ranking" 
+            FROM "api"."UserFollowing" 
+            JOIN "api"."UserInfo"
+            ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
+            WHERE "api"."UserFollowing"."followerAddress"=${viewAddress.toLowerCase()} 
+            LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
-    ON uf."userAddress" = t."followerAddress" 
-    AND uf."followerAddress" = t."userAddress";
+      ON uf."userAddress" = ${condition}
+      AND uf."followerAddress" = t."followerAddress";
     `;
     return followers;
   }
 
-  // 获取我 正在follow的所有人
-  async followingList(userAddress: string, pageNo: number, pageSize: number) {
+  // 根据参数地址获取正在following
+  async followingList(userAddress: string, viewAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let followList: Follower[] = await prisma.$queryRaw`SELECT "UserFollowing"."userAddress", "UserFollowing"."followerAddress", "UserInfo"."followers", "UserInfo"."following", "UserInfo"."username", "UserInfo"."about", "UserInfo"."points", "UserInfo"."ranking" FROM "api"."UserFollowing" JOIN "api"."UserInfo" ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" WHERE "UserFollowing"."userAddress"=${userAddress.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
+    let condition = userAddress.toLowerCase();
+    if (condition == '') {
+      condition = `t."userAddress"`
+    }
+    let followList: Follower[] = await prisma.$queryRaw`
+      SELECT
+          CASE WHEN uf."userAddress" IS NOT NULL
+          THEN true 
+          ELSE false 
+          END AS "isFollowing", t.*
+      FROM api."UserFollowing" AS uf
+      RIGHT JOIN (
+            SELECT 
+              "UserFollowing"."userAddress" AS "userAddress", 
+              "UserFollowing"."followerAddress" AS "followerAddress", 
+              "UserInfo"."followers" AS "followers", 
+              "UserInfo"."following" AS "following", 
+              "UserInfo"."username" AS "username", 
+              "UserInfo"."about" AS "about", 
+              "UserInfo"."points" AS "points", 
+              "UserInfo"."ranking" AS "ranking" 
+            FROM "api"."UserFollowing" 
+            JOIN "api"."UserInfo"
+            ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
+            WHERE "api"."UserFollowing"."userAddress"=${viewAddress.toLowerCase()} 
+            LIMIT ${pageSize} OFFSET ${pageNo}
+        ) t
+      ON uf."userAddress" = ${condition}
+      AND uf."followerAddress" = t."followerAddress";
+    `;
     return followList;
   }
 
@@ -84,6 +117,9 @@ export class UserService {
   // userAddress following + 1
   // followerAddress follower + 1
   async followUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
@@ -125,6 +161,9 @@ export class UserService {
   // userAddress following - 1
   // followerAddress follower - 1
   async unFollowUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: {

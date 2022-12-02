@@ -185,21 +185,23 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Get("/following/:user/:pageNo/:pageSize")
-  async following(@Param("user") user: string, @Param("pageNo") pageNo: number, @Param("pageSize") pageSize: number) {
-    let result = await this.userService.followingList(user, pageNo, pageSize);
+  @Post("/following/list")
+  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("viewer", { required: true }) viewer: string, @BodyParam("pageNo") pageNo: number, @BodyParam("pageSize") pageSize: number) {
+    
+    let result = await this.userService.followingList(user, viewer, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  @Get("/followers/:user/:pageNo/:pageSize")
-  async followers(@Param("user") user: string, @Param("pageNo") pageNo: number, @Param("pageSize") pageSize: number) {
-    let result = await this.userService.followersList(user, pageNo, pageSize);
+  @Post("/followers/list")
+  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("viewer", { required: true }) viewer: string, @BodyParam("pageNo") pageNo: number, @BodyParam("pageSize") pageSize: number) {
+    
+    let result = await this.userService.followersList(user, viewer, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
   // @Authorized("auth-token")
   @Post("/users/follow")
-  async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
+  async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true}) follower: string) {
     let result = await this.userService.followUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
