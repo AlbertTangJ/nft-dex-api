@@ -4,7 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
-type Follower = { userAddress: string, followerAddress: string, followers: number, ranking: number }
+type Follower = { followerAddress: string, followers: number, ranking: number }
 @Service()
 export class UserService {
   constructor() { }
@@ -36,7 +36,7 @@ export class UserService {
   }
 
   // 根据参数地址获取followers
-  async followersList(userAddress: string, viewAddress: string, pageNo: number, pageSize: number) {
+  async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -65,7 +65,7 @@ export class UserService {
             FROM "api"."UserFollowing" 
             JOIN "api"."UserInfo"
             ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
-            WHERE "api"."UserFollowing"."followerAddress"=${viewAddress.toLowerCase()} 
+            WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()} 
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
       ON uf."userAddress" = ${condition}
@@ -75,7 +75,7 @@ export class UserService {
   }
 
   // 根据参数地址获取正在following
-  async followingList(userAddress: string, viewAddress: string, pageNo: number, pageSize: number) {
+  async followingList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -103,8 +103,8 @@ export class UserService {
               "UserInfo"."ranking" AS "ranking" 
             FROM "api"."UserFollowing" 
             JOIN "api"."UserInfo"
-            ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
-            WHERE "api"."UserFollowing"."userAddress"=${viewAddress.toLowerCase()} 
+            ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" 
+            WHERE "api"."UserFollowing"."userAddress"=${targetAddress.toLowerCase()} 
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
       ON uf."userAddress" = ${condition}

@@ -4,15 +4,13 @@ import {
   QueryParam,
   Post,
   BodyParam,
-  Authorized,
-  Param,
-  Body,
-  Res,
-  Req,
+  Authorized
 } from "routing-controllers";
 import { UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
+import { isAddress } from "ethers/lib/utils";
+import Schema, { Rules } from 'async-validator';
 
 type CreateUserInfoBody = {
   userAddress: string,
@@ -23,7 +21,32 @@ type CreateUserInfoBody = {
 @JsonController()
 @Service()
 export class UserController {
-  constructor(private userService: UserService) { }
+  private followListValidator: Schema;
+
+  constructor(private userService: UserService) {
+    const followListAPICheck: Rules = {
+      user: {
+        type: "string",
+        required: true,
+        message: "need to right user address",
+        validator: (rule: any, value: any) => {
+          if (value == '') {
+            return true
+          } else {
+            return isAddress(value)
+          }
+        },
+      },
+      viewer: {
+        type: "string",
+        required: true,
+        message: "need to right viewer address",
+        validator: (rule: any, value: any) => isAddress(value),
+      }
+    }
+
+    this.followListValidator = new Schema(followListAPICheck);
+  }
 
   @Get("/users/find")
   async getUserByAddress(@QueryParam("address") address: string) {
@@ -164,9 +187,11 @@ export class UserController {
 
   @Get("/users")
   async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
-    let result = await this.userService.findUsersInfoByAddress(userAddress.toLowerCase());
-    if (result != null) {
-      return new ApiResponse(ResponseStatus.Success).setData(result);
+    if (isAddress(userAddress)) {
+      let result = await this.userService.findUsersInfoByAddress(userAddress.toLowerCase());
+      if (result != null) {
+        return new ApiResponse(ResponseStatus.Success).setData(result);
+      }
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -186,22 +211,45 @@ export class UserController {
   }
 
   @Post("/following/list")
-  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("viewer", { required: true }) viewer: string, @BodyParam("pageNo") pageNo: number, @BodyParam("pageSize") pageSize: number) {
-    
-    let result = await this.userService.followingList(user, viewer, pageNo, pageSize);
+  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+    try {
+      await this.followListValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
+
+    let result = await this.userService.followingList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
   @Post("/followers/list")
-  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("viewer", { required: true }) viewer: string, @BodyParam("pageNo") pageNo: number, @BodyParam("pageSize") pageSize: number) {
-    
-    let result = await this.userService.followersList(user, viewer, pageNo, pageSize);
+  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+    try {
+      await this.followListValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
+    let result = await this.userService.followersList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
   // @Authorized("auth-token")
   @Post("/users/follow")
-  async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true}) follower: string) {
+  async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
