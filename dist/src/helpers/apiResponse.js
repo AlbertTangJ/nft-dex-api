@@ -26,5 +26,6 @@ var ResponseStatus;
 (function (ResponseStatus) {
     ResponseStatus[ResponseStatus["Success"] = 0] = "Success";
     ResponseStatus[ResponseStatus["Failure"] = 1] = "Failure";
+    ResponseStatus[ResponseStatus["UsernameWrong"] = -4] = "UsernameWrong";
 })(ResponseStatus = exports.ResponseStatus || (exports.ResponseStatus = {}));
 //# sourceMappingURL=apiResponse.js.map

@@ -47,7 +47,7 @@ let UserService = class UserService {
     // 获取follow 我的所有人
     followList(userAddress, pageNo, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
-            let fans_list = yield client_1.default.userFollowing.findMany({
+            let fansList = yield client_1.default.userFollowing.findMany({
                 where: {
                     userAddress: userAddress.toLowerCase(),
                 },
@@ -55,8 +55,8 @@ let UserService = class UserService {
                 skip: pageNo
             });
             let result = [];
-            for (let i = 0; i < fans_list.length; i++) {
-                const follower = fans_list[i];
+            for (let i = 0; i < fansList.length; i++) {
+                const follower = fansList[i];
                 result.push({
                     id: follower.id,
                     userAddress: follower.userAddress,
@@ -69,7 +69,7 @@ let UserService = class UserService {
     }
     followingList(userAddress, pageNo, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
-            let follow_list = yield client_1.default.userFollowing.findMany({
+            let followList = yield client_1.default.userFollowing.findMany({
                 where: {
                     userAddress: userAddress.toLowerCase(),
                 },
@@ -77,8 +77,8 @@ let UserService = class UserService {
                 skip: pageNo
             });
             let result = [];
-            for (let i = 0; i < follow_list.length; i++) {
-                const follower = follow_list[i];
+            for (let i = 0; i < followList.length; i++) {
+                const follower = followList[i];
                 result.push({
                     id: follower.id,
                     userAddress: follower.userAddress,
@@ -146,10 +146,15 @@ let UserService = class UserService {
             return haveFollowed;
         });
     }
+    saveEvent(name, params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield client_1.default.userEventsLog.create({ data: { name: name, event: params } });
+        });
+    }
     authUserService(signature, publicAddress) {
         return __awaiter(this, void 0, void 0, function* () {
             // let that = this;
-            let access_token = yield client_1.default.userInfo.findUnique({
+            let accessToken = yield client_1.default.userInfo.findUnique({
                 where: { userAddress: publicAddress },
             })
                 ////////////////////////////////////////////////////
@@ -208,7 +213,7 @@ let UserService = class UserService {
                     .createCustomToken(user.userAddress);
                 return firebaseToken;
             }));
-            return access_token;
+            return accessToken;
         });
     }
     updateByAddress(userAddress, data) {
@@ -233,20 +238,17 @@ let UserService = class UserService {
     }
     checkUserName(username) {
         return __awaiter(this, void 0, void 0, function* () {
-            const update_user_info = yield client_1.default.userInfo.findUnique({
+            const updateUserInfo = yield client_1.default.userInfo.findFirst({
                 where: { username: username },
             });
-            return update_user_info;
+            return updateUserInfo;
         });
     }
     updateUserService(userAddress, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const result = yield client_1.default.userInfo.update({
                 where: { userAddress: userAddress.toLowerCase() },
-                data: {
-                    about: data.about,
-                    username: data.username
-                }
+                data: data
             });
             return result;
         });
@@ -254,9 +256,9 @@ let UserService = class UserService {
     createUserInfoService(regUserAddress) {
         return __awaiter(this, void 0, void 0, function* () {
             let userAddress = regUserAddress.toLowerCase();
-            let exist_user = yield this.findUsersInfoByAddress(userAddress);
-            if (exist_user != null) {
-                return exist_user;
+            let existUser = yield this.findUsersInfoByAddress(userAddress);
+            if (existUser != null) {
+                return existUser;
             }
             let currentDateTime = new Date()
                 .toISOString();
@@ -270,6 +272,12 @@ let UserService = class UserService {
             let userInfo = {
                 username: '',
                 nonce: Math.floor(Math.random() * 1000000),
+                about: '',
+                updateNameTimes: 0,
+                createTime: currentDateTime,
+                createTimestamp: currentTimestamp,
+                updateTime: currentDateTime,
+                updateTimestamp: currentTimestamp,
                 user: {
                     connectOrCreate: {
                         where: {
