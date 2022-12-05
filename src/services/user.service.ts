@@ -45,7 +45,7 @@ export class UserService {
       SELECT
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true 
-          ELSE false 
+          ELSE false
           END AS "isFollowing", t."userAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking
       FROM api."UserFollowing" AS uf
       RIGHT JOIN (
@@ -64,8 +64,8 @@ export class UserService {
             WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()} 
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
-      ON uf."userAddress" = ${condition}
-      AND uf."followerAddress" = t."followerAddress";
+      ON uf."userAddress" = t."userAddress"
+      AND uf."followerAddress" = ${condition};
     `;
     return followers;
   }
