@@ -127,10 +127,6 @@ export class UserController {
       let updateTimes = existUser.updateNameTimes + 1
       if (lastTimeUpdateYear.getFullYear() < currentYear) {
         updateTimes = 1
-      } else {
-        if (updateTimes > 3) {
-          return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
-        }
       }
       user = { username: username, about: about, updateNameTimes: updateTimes, updateTimestamp: currentTimestamp, updateTime: currentDateTime }
     }
