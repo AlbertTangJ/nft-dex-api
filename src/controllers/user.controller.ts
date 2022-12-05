@@ -21,7 +21,7 @@ type CreateUserInfoBody = {
 @JsonController()
 @Service()
 export class UserController {
-  private followListValidator: Schema;
+  private twoAddressValidator: Schema;
 
   constructor(private userService: UserService) {
     const followListAPICheck: Rules = {
@@ -45,7 +45,7 @@ export class UserController {
       }
     }
 
-    this.followListValidator = new Schema(followListAPICheck);
+    this.twoAddressValidator = new Schema(followListAPICheck);
   }
 
   @Get("/users/find")
@@ -185,6 +185,29 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
+  @Post("/users/info")
+  async fetchUserInfo(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string) {
+
+    try {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
+
+    let result = await this.userService.fetchUserInfo(user,targetUser);
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
   @Get("/users")
   async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
     if (isAddress(userAddress)) {
@@ -212,8 +235,9 @@ export class UserController {
 
   @Post("/following/list")
   async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+   
     try {
-      await this.followListValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
         if (errors) {
           for (let i = 0; i < errors.length; i++) {
             const error = errors[i];
@@ -231,8 +255,9 @@ export class UserController {
 
   @Post("/followers/list")
   async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+    
     try {
-      await this.followListValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
         if (errors) {
           for (let i = 0; i < errors.length; i++) {
             const error = errors[i];

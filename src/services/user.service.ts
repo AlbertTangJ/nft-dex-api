@@ -14,17 +14,13 @@ export class UserService {
     });
   }
 
-  async fetchFollowAndUpdateUserInfo(userAddress: string) {
+  async fetchFollowUserInfo(userAddress: string) {
     // 获取我追踪的列表
     let followingCount = await prisma.userFollowing.count({ where: { userAddress: userAddress.toLowerCase() } });
     // 获取追踪我的列表
     let followersCount = await prisma.userFollowing.count({ where: { followerAddress: userAddress.toLowerCase() } });
 
-    let result = await prisma.userInfo.update({
-      where: { userAddress: userAddress.toLowerCase() },
-      data: { followers: followersCount, following: followingCount }
-    })
-    return result
+    return { followers: followersCount, following: followingCount }
   }
 
   async findByAddress(userAddress: string) {
@@ -50,7 +46,7 @@ export class UserService {
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true 
           ELSE false 
-          END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking
+          END AS "isFollowing", t."userAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking
       FROM api."UserFollowing" AS uf
       RIGHT JOIN (
             SELECT 
@@ -331,6 +327,21 @@ export class UserService {
     return result;
   }
 
+  async fetchUserInfo(user: string, targetUser: string) {
+    let targetUserInfo: { id: string, userAddress: string, username: string, about: string, followers: number, following: number, points: number, referralPoints: number, referralCode: string, isFollowing?: boolean } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
+    let haveFollowed = await prisma.userFollowing.findUnique({
+      where: {
+        userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
+      }
+    });
+    let isFollowing = false
+    if (haveFollowed != null) {
+      isFollowing = true
+    }
+    targetUserInfo.isFollowing = isFollowing
+    return targetUserInfo;
+  }
+
   async updateUserService(userAddress: string, data: any) {
     const result = await prisma.userInfo.update(
       {
@@ -352,7 +363,6 @@ export class UserService {
 
   async createUserInfoService(regUserAddress: string) {
     let userAddress = regUserAddress.toLowerCase();
-    console.log(userAddress);
     let existUser = await this.findUsersInfoByAddress(userAddress);
     if (existUser != null) {
       return existUser;
