@@ -328,7 +328,7 @@ export class UserService {
   }
 
   async fetchUserInfo(user: string, targetUser: string) {
-    let targetUserInfo: { id: string, userAddress: string, username: string, about: string, followers: number, following: number, points: number, referralPoints: number, referralCode: string, isFollowing?: boolean } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
+    let targetUserInfo: { id: string, userAddress: string, username: string, about: string, followers: number, following: number, points: number, referralPoints: number, referralCode: string, isFollowing?: boolean, referralUsersCount?: number } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
@@ -338,6 +338,10 @@ export class UserService {
     if (haveFollowed != null) {
       isFollowing = true
     }
+    let referralUsersCount = await prisma.referralEvents.count({
+      where: { referralCode: targetUserInfo.referralCode }
+    })
+    targetUserInfo.referralUsersCount = referralUsersCount
     targetUserInfo.isFollowing = isFollowing
     return targetUserInfo;
   }
