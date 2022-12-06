@@ -272,7 +272,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/follow")
   async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.followUser(user, follower);
@@ -282,7 +282,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
     let result = await this.userService.unFollowUser(user, follower);

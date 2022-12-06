@@ -39,7 +39,7 @@ export class UserService {
     }
     let condition = userAddress.toLowerCase();
     if (condition == '') {
-      condition = `t."userAddress"`
+      condition = `t."followerAddress"`
     }
     let followers: Follower[] = await prisma.$queryRaw`
       SELECT
@@ -64,8 +64,8 @@ export class UserService {
             WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()} 
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
-      ON uf."userAddress" = t."userAddress"
-      AND uf."followerAddress" = ${condition};
+      ON uf."userAddress" = ${condition}
+      AND uf."followerAddress" = t."userAddress";
     `;
     return followers;
   }
