@@ -104,6 +104,7 @@ export class AchievementService {
             userInfo: {
               select: {
                 username: true,
+                userAddress: true,
               }
             }
           }

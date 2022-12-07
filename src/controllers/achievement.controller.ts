@@ -26,6 +26,22 @@ export class AchievementController {
       userAddress,
       100
     );
-    return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+
+    let responseData = result.map((item) => {
+      let obj: any = {
+        userId:
+          item.referralUser?.userInfo?.username?.length > 0
+            ? item.referralUser.userInfo.username
+            : item.referralUser.userInfo.userAddress,
+        pointGained: item.pointEarned,
+        status: item.achievement.title,
+        createTime: item.createTime,
+      };
+      return obj;
+    });
+
+    return new ApiResponse(ResponseStatus.Success)
+      .setData(responseData)
+      .toObject();
   }
 }
