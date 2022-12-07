@@ -10,7 +10,6 @@ import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 import { isAddress } from "ethers/lib/utils";
-import Schema, { Rules } from 'async-validator';
 import Schema, { Rules } from "async-validator";
 import { ethers } from "ethers";
 import infuraClient from "src/helpers/infuraClient";
