@@ -26,18 +26,19 @@ model UserFollowing {
 }
 
 model User {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String            @unique @db.VarChar(255)
-  status          Int               @default(1)
-  isDeleted       Int               @default(0)
-  createTime      DateTime          @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime          @db.Timestamp(6)
-  updateTimestamp Int
-  userAchievement UserAchievement[]
-  followers       UserFollowing[]   @relation("followers")
-  followings      UserFollowing[]   @relation("followings")
-  userInfo        UserInfo?
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress         String            @unique @db.VarChar(255)
+  status              Int               @default(1)
+  isDeleted           Int               @default(0)
+  createTime          DateTime          @default(now()) @db.Timestamp(6)
+  createTimestamp     Int
+  updateTime          DateTime          @db.Timestamp(6)
+  updateTimestamp     Int
+  userAchievement     UserAchievement[]
+  followers           UserFollowing[]   @relation("followers")
+  followings          UserFollowing[]   @relation("followings")
+  userInfo            UserInfo?
+  referralAchievement UserAchievement[] @relation("referralUser")
 
   @@schema("api")
 }
@@ -102,14 +103,17 @@ model Achievement {
 }
 
 model UserAchievement {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress   String      @db.VarChar
-  achievementId String      @db.Uuid
-  pointEarned   Int
-  createTime    DateTime    @default(now()) @db.Timestamp(6)
-  updateTime    DateTime    @db.Timestamp(6)
-  achievement   Achievement @relation(fields: [achievementId], references: [id])
-  user          User        @relation(fields: [userAddress], references: [userAddress])
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress         String      @db.VarChar
+  referralUserAddress String?     @db.VarChar
+  achievementId       String      @db.Uuid
+  pointEarned         Int
+  createTime          DateTime    @default(now()) @db.Timestamp(6)
+  updateTime          DateTime    @db.Timestamp(6)
+  txHash              String?     @db.VarChar
+  achievement         Achievement @relation(fields: [achievementId], references: [id])
+  user                User        @relation(fields: [userAddress], references: [userAddress])
+  referralUser        User?        @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
 
   @@schema("api")
 }
@@ -259,6 +263,7 @@ model Position {
   openMargin                             Decimal   @default(0) @db.Decimal
   batchId                                String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fundingPayment                         Decimal   @db.Decimal
+  txHash                                 String    @db.VarChar(255)
   Amm                                    Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])

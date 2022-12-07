@@ -317,6 +317,53 @@ export class UserController {
     if (result == null) {
       return new ApiResponse(ResponseStatus.Failure).toObject();
     }
+    let referredUserInfo = await this.userService.userInfoByReferralCode(code);
+    try {
+      await this.achievementService.completeAchievement(userAddress, "A02");
+      await this.achievementService.completeAchievement(
+        referredUserInfo.userAddress,
+        "A01",
+        userAddress
+      );
+    } catch (e) {
+      console.error(e);
+    }
+
     return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+  }
+
+  @Authorized("auth-token")
+  @Post("/users/trade/completed")
+  async completeTrade(
+    @BodyParam("txHash", { required: true }) txHash: string,
+    @BodyParam("userAddress", { required: true }) userAddress: string
+  ) {
+    let chContractInterface = new ethers.utils.Interface(CLEARING_HOUSE_ABI);
+    let tx = await infuraClient.getTransaction(txHash);
+    let decodedData = chContractInterface.parseTransaction(tx);
+
+    if (
+      decodedData.name === "openPosition" &&
+      tx.from.toLowerCase() === userAddress.toLowerCase() &&
+      tx.to.toLowerCase() ===
+        "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
+    ) {
+      try {
+        let refererUserInfo = await this.userService.getRefererUserInfo(
+          userAddress
+        );
+        if (refererUserInfo != null) {
+          await this.achievementService.completeAchievement(
+            refererUserInfo.userAddress,
+            "A03",
+            userAddress,
+            txHash
+          );
+        }
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    return new ApiResponse(ResponseStatus.Success).toObject();
   }
 }

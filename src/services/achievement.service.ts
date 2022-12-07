@@ -1,13 +1,16 @@
 import { Service } from "typedi";
 import prisma from "../helpers/client";
 import { Achievement, Prisma, User } from "@prisma/client";
+import { UserService } from "./user.service";
 
 @Service()
 export class AchievementService {
-  async findAchievementById(achievementId: string) {
+  constructor(private userService: UserService) {}
+
+  async findAchievementByCode(achievementCode: string) {
     return prisma.achievement.findFirst({
       where: {
-        id: achievementId,
+        code: achievementCode,
         enabled: true,
       },
     });
@@ -32,6 +35,18 @@ export class AchievementService {
           mode: "insensitive",
         },
         achievementId,
+      },
+    });
+  }
+
+  async findCompletedAchievementByTxHash(
+    achievementId: string,
+    txHash: string
+  ) {
+    return prisma.userAchievement.findMany({
+      where: {
+        achievementId,
+        txHash,
       },
     });
   }
@@ -66,20 +81,28 @@ export class AchievementService {
     });
   }
 
-  async completeAchievement(walletAddress: string, achievement: Achievement) {
+  private async completeAchievementInternal(
+    walletAddress: string,
+    achievement: Achievement,
+    referralUserAddress?: string,
+    txHash?: string
+  ) {
     const now = new Date();
     const nowTimestamp = Math.floor(now.getTime() / 1000);
     return await prisma.$transaction(async (tx) => {
       const updatedUserInfos = await tx.userInfo.updateMany({
         data: {
           points: {
-            increment: achievement.points,
+            increment: achievement.referralRelated ? 0 : achievement.points,
+          },
+          referralPoints: {
+            increment: achievement.referralRelated ? achievement.points : 0,
           },
           updateTime: now,
           updateTimestamp: nowTimestamp,
         },
         where: {
-          userAddress: walletAddress,
+          userAddress: walletAddress.toLowerCase(),
         },
       });
 
@@ -100,11 +123,12 @@ export class AchievementService {
 
       const completedAchievement = tx.userAchievement.create({
         data: {
-          userAddress: walletAddress,
+          userAddress: walletAddress.toLowerCase(),
           achievementId: achievement.id,
           pointEarned: achievement.points,
           createTime: now,
           updateTime: now,
+          referralUserAddress: referralUserAddress? referralUserAddress.toLowerCase() : null,
         },
       });
 
@@ -114,10 +138,13 @@ export class AchievementService {
 
   async isEligibleForAchievement(
     walletAddress: string,
-    achievement: Achievement
+    achievement: Achievement,
+    txHash?: string
   ) {
     const repeatPeriod = achievement.repeatPeriod;
     const repeatCount = achievement.redeemLimit;
+
+    if (repeatCount === 0) return true; // No limit
 
     let startDate: Date;
 
@@ -149,6 +176,12 @@ export class AchievementService {
         break;
     }
 
+    if (txHash) {
+      let completedAchievementWithTxHash =
+        await this.findCompletedAchievementByTxHash(achievement.id, txHash);
+      if (completedAchievementWithTxHash) return false;
+    }
+
     let completedAchievements = [];
 
     if (achievement.isGlobal) {
@@ -166,5 +199,34 @@ export class AchievementService {
     }
 
     return completedAchievements.length < repeatCount;
+  }
+
+  async completeAchievement(
+    walletAddress: string,
+    achievementCode: string,
+    referralUserAddress?: string,
+    txHash?: string
+  ) {
+    const user = await this.userService.findByAddress(walletAddress);
+    if (!user) {
+      throw new Error(`User not found.`);
+    }
+
+    const achievement = await this.findAchievementByCode(achievementCode);
+
+    if (!achievement) {
+      throw new Error(`Achievement not found.`);
+    }
+
+    if (!(await this.isEligibleForAchievement(walletAddress, achievement))) {
+      throw new Error(`Not eligible for this achievement.`);
+    }
+
+    await this.completeAchievementInternal(
+      walletAddress,
+      achievement,
+      referralUserAddress,
+      txHash
+    );
   }
 }

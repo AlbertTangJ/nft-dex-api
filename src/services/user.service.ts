@@ -14,21 +14,31 @@ export class UserService {
     });
   }
 
-  async fetchFollowUserInfo(userAddress: string) {
-    // 获取我追踪的列表
-    let followingCount = await prisma.userFollowing.count({ where: { userAddress: userAddress.toLowerCase() } });
-    // 获取追踪我的列表
-    let followersCount = await prisma.userFollowing.count({ where: { followerAddress: userAddress.toLowerCase() } });
-
-    return { followers: followersCount, following: followingCount }
-  }
-
   async findByAddress(userAddress: string) {
     return await prisma.user.findUnique({
       where: {
-        userAddress: userAddress
+        userAddress: userAddress.toLowerCase(),
       },
     });
+  }
+
+  async userInfoByReferralCode(referralCode: string) {
+    return await prisma.userInfo.findFirst({
+      where: {
+        referralCode,
+      },
+    });
+  }
+
+  async getRefererUserInfo(userAddress: string) {
+    let info = await prisma.$queryRaw<UserInfo[]>`
+    SELECT * FROM api."UserInfo" WHERE "referralCode" = 
+    (SELECT "referralCode" FROM api."ReferralEvents" WHERE "userAddress" = 
+     ${userAddress.toLowerCase()})
+     LIMIT 1
+     `;
+
+    return info.length === 1 ? info[0] : null;
   }
 
   // 根据参数地址获取followers
