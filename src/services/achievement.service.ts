@@ -129,6 +129,7 @@ export class AchievementService {
           createTime: now,
           updateTime: now,
           referralUserAddress: referralUserAddress? referralUserAddress.toLowerCase() : null,
+          txHash,
         },
       });
 
@@ -179,7 +180,7 @@ export class AchievementService {
     if (txHash) {
       let completedAchievementWithTxHash =
         await this.findCompletedAchievementByTxHash(achievement.id, txHash);
-      if (completedAchievementWithTxHash) return false;
+      if (completedAchievementWithTxHash.length > 0) return false;
     }
 
     let completedAchievements = [];
@@ -218,7 +219,7 @@ export class AchievementService {
       throw new Error(`Achievement not found.`);
     }
 
-    if (!(await this.isEligibleForAchievement(walletAddress, achievement))) {
+    if (!(await this.isEligibleForAchievement(walletAddress, achievement, txHash))) {
       throw new Error(`Not eligible for this achievement.`);
     }
 

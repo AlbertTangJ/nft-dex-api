@@ -11,12 +11,16 @@ import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 import { isAddress } from "ethers/lib/utils";
 import Schema, { Rules } from 'async-validator';
+import Schema, { Rules } from "async-validator";
+import { ethers } from "ethers";
+import infuraClient from "src/helpers/infuraClient";
 
 type CreateUserInfoBody = {
   userAddress: string,
   username: string,
   nonce: number
 }
+const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
 
 @JsonController()
 @Service()
