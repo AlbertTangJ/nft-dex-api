@@ -6,7 +6,7 @@ import {
   BodyParam,
   Authorized
 } from "routing-controllers";
-import { UserService } from "../services";
+import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 import { isAddress } from "ethers/lib/utils";
@@ -27,7 +27,10 @@ const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
 export class UserController {
   private twoAddressValidator: Schema;
 
-  constructor(private userService: UserService) {
+  constructor(
+    private userService: UserService,
+    private achievementService: AchievementService
+  ) {
     const followListAPICheck: Rules = {
       user: {
         type: "string",
