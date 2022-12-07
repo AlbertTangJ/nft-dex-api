@@ -2,6 +2,7 @@ import { Service } from "typedi";
 import prisma from "../helpers/client";
 import { Achievement, Prisma, User } from "@prisma/client";
 import { UserService } from "./user.service";
+import { select } from "async";
 
 @Service()
 export class AchievementService {
@@ -81,6 +82,39 @@ export class AchievementService {
     });
   }
 
+  async getReferralAchievements(userAddress: string, limit: number) {
+    return prisma.userAchievement.findMany({
+      take: limit,
+      where: {
+        userAddress: userAddress.toLowerCase(),
+        achievement: {
+          referralRelated: true,
+        },
+      },
+      select: {
+        pointEarned: true,
+        createTime: true,
+        achievement: {
+          select: {
+            title: true,
+          }
+        },
+        referralUser: {
+          select: {
+            userInfo: {
+              select: {
+                username: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy:{
+        createTime: "desc"
+      },
+    });
+  }
+
   private async completeAchievementInternal(
     walletAddress: string,
     achievement: Achievement,
@@ -128,7 +162,9 @@ export class AchievementService {
           pointEarned: achievement.points,
           createTime: now,
           updateTime: now,
-          referralUserAddress: referralUserAddress? referralUserAddress.toLowerCase() : null,
+          referralUserAddress: referralUserAddress
+            ? referralUserAddress.toLowerCase()
+            : null,
           txHash,
         },
       });
@@ -219,7 +255,9 @@ export class AchievementService {
       throw new Error(`Achievement not found.`);
     }
 
-    if (!(await this.isEligibleForAchievement(walletAddress, achievement, txHash))) {
+    if (
+      !(await this.isEligibleForAchievement(walletAddress, achievement, txHash))
+    ) {
       throw new Error(`Not eligible for this achievement.`);
     }
 

@@ -12,11 +12,6 @@ import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 
-type CreateUserInfoBody = {
-  userAddress: string;
-  username: string;
-  nonce: number;
-};
 @JsonController()
 @Service()
 export class AchievementController {
@@ -25,5 +20,12 @@ export class AchievementController {
     private achievementService: AchievementService
   ) {}
 
-  
+  @Get("/achievement/referral/list")
+  async referralAchievements(@QueryParam("userAddress") userAddress: string) {
+    let result = await this.achievementService.getReferralAchievements(
+      userAddress,
+      100
+    );
+    return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+  }
 }
