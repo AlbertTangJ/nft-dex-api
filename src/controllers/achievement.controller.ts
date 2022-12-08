@@ -12,11 +12,6 @@ import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 
-type CreateUserInfoBody = {
-  userAddress: string;
-  username: string;
-  nonce: number;
-};
 @JsonController()
 @Service()
 export class AchievementController {
@@ -25,44 +20,28 @@ export class AchievementController {
     private achievementService: AchievementService
   ) {}
 
-  async completeAchievement(walletAddress: string, achievementId: string) {
-    const user = await this.userService.findByAddress(walletAddress);
-    if (!user) {
-      return new ApiResponse(ResponseStatus.Failure)
-        .setErrorMessage("User not found")
-        .toObject();
-    }
-
-    const achievement = await this.achievementService.findAchievementById(
-      achievementId
+  @Get("/achievement/referral/list")
+  async referralAchievements(@QueryParam("userAddress") userAddress: string) {
+    let result = await this.achievementService.getReferralAchievements(
+      userAddress,
+      100
     );
 
-    if (!achievement) {
-      return new ApiResponse(ResponseStatus.Failure)
-        .setErrorMessage("Achievement not found")
-        .toObject();
-    }
+    let responseData = result.map((item) => {
+      let obj: any = {
+        userId:
+          item.referralUser?.userInfo?.username?.length > 0
+            ? item.referralUser.userInfo.username
+            : item.referralUser.userInfo.userAddress,
+        pointGained: item.pointEarned,
+        status: item.achievement.title,
+        createTime: item.createTime,
+      };
+      return obj;
+    });
 
-    if (
-      !(await this.achievementService.isEligibleForAchievement(
-        walletAddress,
-        achievement
-      ))
-    ) {
-      return new ApiResponse(ResponseStatus.Failure)
-        .setErrorMessage("User is not eligible for this achievement")
-        .toObject();
-    }
-
-    try {
-      await this.achievementService.completeAchievement(
-        walletAddress,
-        achievement
-      );
-    } catch (e) {
-      return new ApiResponse(ResponseStatus.Failure).toObject();
-    }
-
-    return new ApiResponse(ResponseStatus.Success).toObject();
+    return new ApiResponse(ResponseStatus.Success)
+      .setData(responseData)
+      .toObject();
   }
 }
