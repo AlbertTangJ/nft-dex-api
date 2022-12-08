@@ -255,7 +255,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
 
-    let result = await this.userService.followingList(user, targetUser, round, pageNo, pageSize);
+    let result = await this.userService.followingList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
@@ -274,7 +274,7 @@ export class UserController {
     } catch (error) {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
-    let result = await this.userService.followersList(user, targetUser, round, pageNo, pageSize);
+    let result = await this.userService.followersList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 

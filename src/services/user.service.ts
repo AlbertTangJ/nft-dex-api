@@ -42,7 +42,7 @@ export class UserService {
   }
 
   // 根据参数地址获取followers
-  async followersList(userAddress: string, targetAddress: string, round: number, pageNo: number, pageSize: number) {
+  async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -52,12 +52,11 @@ export class UserService {
       condition = `t."followerAddress"`
     }
     let followers: Follower[] = await prisma.$queryRaw`
-      SELECT "isFollowing", "userAddress", followers, following, username, about, points, ranking, string_agg(rwd.amm_address,',') as "ammAddress" FROM 
-	      (SELECT
+      SELECT
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true
           ELSE false
-          END AS "isFollowing", uf."followerAddress" AS ufuaddress, t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking
+          END AS "isFollowing", uf."followerAddress" AS ufuaddress, t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking, t.amm
           FROM api."UserFollowing" AS uf
           RIGHT JOIN (
               SELECT 
@@ -68,7 +67,8 @@ export class UserService {
                 "UserInfo"."username" AS "username", 
                 "UserInfo"."about" AS "about", 
                 "UserInfo"."points" AS "points", 
-                "UserInfo"."ranking" AS "ranking" 
+                "UserInfo"."ranking" AS "ranking",
+                "UserInfo"."amm" AS "amm"
               FROM "api"."UserFollowing" 
               JOIN "api"."UserInfo"
               ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
@@ -76,17 +76,13 @@ export class UserService {
               LIMIT ${pageSize} OFFSET ${pageNo}
             ) t
           ON uf."userAddress" = ${condition}
-          AND uf."followerAddress" = t."userAddress") frs 
-	    JOIN PUBLIC.rewards rwd 
-	    ON frs.ufuaddress = rwd.user_address
-	    WHERE rwd.round = ${round} AND rwd.amm_pnl <> 0
-	    GROUP BY "isFollowing", "userAddress", followers, following, username, about, points, ranking;
+          AND uf."followerAddress" = t."userAddress";
     `;
     return followers;
   }
 
   // 根据参数地址获取正在following
-  async followingList(userAddress: string, targetAddress: string, round: number, pageNo: number, pageSize: number) {
+  async followingList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -96,9 +92,7 @@ export class UserService {
       condition = `t."userAddress"`
     }
     let followList: Follower[] = await prisma.$queryRaw`
-    SELECT "followerAddress", "isFollowing", followers, following, username, about, points, ranking, string_agg(rwd.amm_address,',') AS "ammAddress" 
-    FROM 
-      (SELECT
+    SELECT
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true 
           ELSE false 
@@ -113,7 +107,8 @@ export class UserService {
               "UserInfo"."username" AS "username", 
               "UserInfo"."about" AS "about", 
               "UserInfo"."points" AS "points", 
-              "UserInfo"."ranking" AS "ranking" 
+              "UserInfo"."ranking" AS "ranking",
+              "UserInfo"."amm" AS "amm" 
             FROM "api"."UserFollowing" 
             JOIN "api"."UserInfo"
             ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" 
@@ -121,11 +116,7 @@ export class UserService {
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
       ON uf."userAddress" = ${condition}
-      AND uf."followerAddress" = t."followerAddress") frs
-      JOIN PUBLIC.rewards rwd 
-	    ON frs."followerAddress" = rwd.user_address
-	    WHERE rwd.round = ${round} AND rwd.amm_pnl <> 0
-	    GROUP BY "followerAddress", "isFollowing", followers, following, username, about, points, ranking;
+      AND uf."followerAddress" = t."followerAddress";
     `;
     return followList;
   }

@@ -60,6 +60,7 @@ model UserInfo {
   referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
   following       Int       @default(0)
   referralPoints  Int       @default(0)
+  amm             String?   @db.VarChar
   user            User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")
