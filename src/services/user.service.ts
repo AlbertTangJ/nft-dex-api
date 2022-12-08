@@ -42,7 +42,7 @@ export class UserService {
   }
 
   // 根据参数地址获取followers
-  async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
+  async followersList(userAddress: string, targetAddress: string, round: number, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -79,14 +79,14 @@ export class UserService {
           AND uf."followerAddress" = t."userAddress") frs 
 	    JOIN PUBLIC.rewards rwd 
 	    ON frs.ufuaddress = rwd.user_address
-	    WHERE rwd.round = 2 AND rwd.amm_pnl <> 0
+	    WHERE rwd.round = ${round} AND rwd.amm_pnl <> 0
 	    GROUP BY "isFollowing", "userAddress", followers, following, username, about, points, ranking;
     `;
     return followers;
   }
 
   // 根据参数地址获取正在following
-  async followingList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
+  async followingList(userAddress: string, targetAddress: string, round: number, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
@@ -124,7 +124,7 @@ export class UserService {
       AND uf."followerAddress" = t."followerAddress") frs
       JOIN PUBLIC.rewards rwd 
 	    ON frs."followerAddress" = rwd.user_address
-	    WHERE rwd.round = 2 AND rwd.amm_pnl <> 0
+	    WHERE rwd.round = ${round} AND rwd.amm_pnl <> 0
 	    GROUP BY "followerAddress", "isFollowing", followers, following, username, about, points, ranking;
     `;
     return followList;

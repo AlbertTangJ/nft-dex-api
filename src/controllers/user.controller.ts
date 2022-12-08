@@ -207,7 +207,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
 
-    let result = await this.userService.fetchUserInfo(user,targetUser);
+    let result = await this.userService.fetchUserInfo(user, targetUser);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
@@ -240,8 +240,8 @@ export class UserController {
   }
 
   @Post("/following/list")
-  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
-   
+  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("round", { required: true }) round: number, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+
     try {
       await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
         if (errors) {
@@ -255,13 +255,13 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
 
-    let result = await this.userService.followingList(user, targetUser, pageNo, pageSize);
+    let result = await this.userService.followingList(user, targetUser, round, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
   @Post("/followers/list")
-  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
-    
+  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("round", { required: true }) round: number, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+
     try {
       await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
         if (errors) {
@@ -274,7 +274,7 @@ export class UserController {
     } catch (error) {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
-    let result = await this.userService.followersList(user, targetUser, pageNo, pageSize);
+    let result = await this.userService.followersList(user, targetUser, round, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
@@ -352,7 +352,7 @@ export class UserController {
       decodedData.name === "openPosition" &&
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
       tx.to.toLowerCase() ===
-        "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
+      "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
     ) {
       try {
         let refererUserInfo = await this.userService.getRefererUserInfo(
