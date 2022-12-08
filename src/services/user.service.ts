@@ -42,30 +42,35 @@ export class UserService {
       condition = `t."followerAddress"`
     }
     let followers: Follower[] = await prisma.$queryRaw`
-      SELECT
+      SELECT "isFollowing", "userAddress", followers, following, username, about, points, ranking, string_agg(rwd.amm_address,',') as "ammAddress" FROM 
+	      (SELECT
           CASE WHEN uf."userAddress" IS NOT NULL
-          THEN true 
+          THEN true
           ELSE false
-          END AS "isFollowing", t."userAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking
-      FROM api."UserFollowing" AS uf
-      RIGHT JOIN (
-            SELECT 
-              "UserFollowing"."userAddress" AS "userAddress", 
-              "UserFollowing"."followerAddress" AS "followerAddress", 
-              "UserInfo"."followers" AS "followers", 
-              "UserInfo"."following" AS "following", 
-              "UserInfo"."username" AS "username", 
-              "UserInfo"."about" AS "about", 
-              "UserInfo"."points" AS "points", 
-              "UserInfo"."ranking" AS "ranking" 
-            FROM "api"."UserFollowing" 
-            JOIN "api"."UserInfo"
-            ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
-            WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()} 
-            LIMIT ${pageSize} OFFSET ${pageNo}
-        ) t
-      ON uf."userAddress" = ${condition}
-      AND uf."followerAddress" = t."userAddress";
+          END AS "isFollowing", uf."followerAddress" AS ufuaddress, t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking
+          FROM api."UserFollowing" AS uf
+          RIGHT JOIN (
+              SELECT 
+                "UserFollowing"."userAddress" AS "userAddress", 
+                "UserFollowing"."followerAddress" AS "followerAddress", 
+                "UserInfo"."followers" AS "followers", 
+                "UserInfo"."following" AS "following", 
+                "UserInfo"."username" AS "username", 
+                "UserInfo"."about" AS "about", 
+                "UserInfo"."points" AS "points", 
+                "UserInfo"."ranking" AS "ranking" 
+              FROM "api"."UserFollowing" 
+              JOIN "api"."UserInfo"
+              ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
+              WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()}
+              LIMIT ${pageSize} OFFSET ${pageNo}
+            ) t
+          ON uf."userAddress" = ${condition}
+          AND uf."followerAddress" = t."userAddress") frs 
+	    JOIN PUBLIC.rewards rwd 
+	    ON frs.ufuaddress = rwd.user_address
+	    WHERE rwd.round = 2 AND rwd.amm_pnl <> 0
+	    GROUP BY "isFollowing", "userAddress", followers, following, username, about, points, ranking;
     `;
     return followers;
   }
@@ -81,7 +86,9 @@ export class UserService {
       condition = `t."userAddress"`
     }
     let followList: Follower[] = await prisma.$queryRaw`
-      SELECT
+    SELECT "followerAddress", "isFollowing", followers, following, username, about, points, ranking, string_agg(rwd.amm_address,',') AS "ammAddress" 
+    FROM 
+      (SELECT
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true 
           ELSE false 
@@ -104,7 +111,11 @@ export class UserService {
             LIMIT ${pageSize} OFFSET ${pageNo}
         ) t
       ON uf."userAddress" = ${condition}
-      AND uf."followerAddress" = t."followerAddress";
+      AND uf."followerAddress" = t."followerAddress") frs
+      JOIN PUBLIC.rewards rwd 
+	    ON frs."followerAddress" = rwd.user_address
+	    WHERE rwd.round = 2 AND rwd.amm_pnl <> 0
+	    GROUP BY "followerAddress", "isFollowing", followers, following, username, about, points, ranking;
     `;
     return followList;
   }
