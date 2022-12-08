@@ -34,11 +34,11 @@ model User {
   createTimestamp     Int
   updateTime          DateTime          @db.Timestamp(6)
   updateTimestamp     Int
+  referralAchievement UserAchievement[] @relation("referralUser")
   userAchievement     UserAchievement[]
   followers           UserFollowing[]   @relation("followers")
   followings          UserFollowing[]   @relation("followings")
   userInfo            UserInfo?
-  referralAchievement UserAchievement[] @relation("referralUser")
 
   @@schema("api")
 }
@@ -105,15 +105,15 @@ model Achievement {
 model UserAchievement {
   id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userAddress         String      @db.VarChar
-  referralUserAddress String?     @db.VarChar
   achievementId       String      @db.Uuid
   pointEarned         Int
   createTime          DateTime    @default(now()) @db.Timestamp(6)
   updateTime          DateTime    @db.Timestamp(6)
+  referralUserAddress String?     @db.VarChar
   txHash              String?     @db.VarChar
   achievement         Achievement @relation(fields: [achievementId], references: [id])
+  referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
-  referralUser        User?        @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
 
   @@schema("api")
 }
