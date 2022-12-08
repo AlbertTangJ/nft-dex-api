@@ -240,7 +240,7 @@ export class UserController {
   }
 
   @Post("/following/list")
-  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("round", { required: true }) round: number, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
 
     try {
       await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
@@ -260,7 +260,7 @@ export class UserController {
   }
 
   @Post("/followers/list")
-  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("round", { required: true }) round: number, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
 
     try {
       await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {

@@ -56,7 +56,7 @@ export class UserService {
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true
           ELSE false
-          END AS "isFollowing", uf."followerAddress" AS ufuaddress, t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking, t.amm
+          END AS "isFollowing", t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
           FROM api."UserFollowing" AS uf
           RIGHT JOIN (
               SELECT 
@@ -96,7 +96,7 @@ export class UserService {
           CASE WHEN uf."userAddress" IS NOT NULL
           THEN true 
           ELSE false 
-          END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking
+          END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
       FROM api."UserFollowing" AS uf
       RIGHT JOIN (
             SELECT 
