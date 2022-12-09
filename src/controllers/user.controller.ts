@@ -183,8 +183,9 @@ export class UserController {
   }
 
   @Post("/users/search")
-  async search(@BodyParam("keyword") keyword: string) {
-    let result = await this.userService.searchAddressUsername(keyword);
+  async search(@BodyParam("keyword") keyword: string, @BodyParam("userAddress") userAddress: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+    let isAddress = ethers.utils.isAddress(userAddress);
+    let result = await this.userService.searchAddressUsername(keyword, userAddress, pageNo, pageSize, isAddress);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }

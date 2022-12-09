@@ -317,26 +317,59 @@ export class UserService {
     return updateUserInfo;
   }
 
-  async searchAddressUsername(keyword: string) {
-    let result = await prisma.userInfo.findMany(
-      {
-        where: {
-          OR: [
-            {
-              username: {
-                contains: keyword,
-              },
-            },
-            {
-              userAddress:
-                { contains: keyword }
-            },
-          ],
-        },
-      }
-    )
-
-    return result;
+  async searchAddressUsername(keyword: string, userAddress: string, pageNo: number, pageSize: number, isAddress: boolean) {
+    if (pageNo > 0) {
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
+    }
+    let searchKeyword = '%'+keyword+'%';
+    if (isAddress) {
+      
+      let result = await prisma.$queryRaw`
+      SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", mf.followers, mf.following, mf.username, mf.about, mf.points, mf.ranking FROM "api"."UserInfo" AS uif
+      LEFT JOIN
+      (SELECT
+            CASE WHEN uf."userAddress" IS NOT NULL 
+            THEN true
+            ELSE false
+            END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
+            FROM api."UserFollowing" AS uf
+            RIGHT JOIN (
+                  SELECT 
+                    "UserFollowing"."userAddress" AS "userAddress", 
+                    "UserFollowing"."followerAddress" AS "followerAddress", 
+                    "UserInfo"."followers" AS "followers", 
+                    "UserInfo"."following" AS "following", 
+                    "UserInfo"."username" AS "username", 
+                    "UserInfo"."about" AS "about", 
+                    "UserInfo"."points" AS "points", 
+                    "UserInfo"."ranking" AS "ranking",
+                    "UserInfo"."amm" AS "amm" 
+                  FROM "api"."UserFollowing" 
+                  JOIN "api"."UserInfo"
+                  ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" 
+                  WHERE "api"."UserFollowing"."userAddress"=${userAddress.toLowerCase()}
+              ) t
+            ON uf."userAddress"=${userAddress.toLowerCase()}
+            AND uf."followerAddress" = t."followerAddress") mf 
+      ON mf."followerAddress" = uif."userAddress"
+      WHERE uif.username LIKE ${searchKeyword} OR uif."userAddress" LIKE ${searchKeyword}
+      LIMIT ${pageSize} OFFSET ${pageNo}`;
+      return result;
+    } else {
+      let result = await prisma.$queryRaw`
+      SELECT
+        "userAddress", 
+        followers,
+        following, 
+        username, 
+        about, 
+        points, 
+        ranking
+      FROM "api"."UserInfo"
+      WHERE username LIKE ${searchKeyword} OR "userAddress" LIKE ${searchKeyword};`;
+      return result;
+    }
   }
 
   async fetchUserInfo(user: string, targetUser: string) {
