@@ -207,7 +207,7 @@ export class UserService {
 
   async inputReferralCode(code: string, userAddress: string) {
     let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-    if (userInfo.userAddress == userAddress.toLowerCase()) {
+    if (userInfo==null ||userInfo.userAddress == userAddress.toLowerCase()) {
       return null;
     }
     let item = await prisma.referralEvents.findFirst({ where: { referralCode: code, userAddress: userAddress.toLowerCase() } })
@@ -322,7 +322,7 @@ export class UserService {
       pageNo = pageNo - 1
       pageNo = pageNo * pageSize
     }
-    let searchKeyword = '%'+keyword+'%';
+    let searchKeyword = '%' + keyword + '%';
     if (isAddress) {
       let result = await prisma.$queryRaw`
       SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", mf.followers, mf.following, mf.username, mf.about, mf.points, mf.ranking FROM "api"."UserInfo" AS uif
