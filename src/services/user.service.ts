@@ -207,12 +207,16 @@ export class UserService {
 
   async inputReferralCode(code: string, userAddress: string) {
     let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-    if (userInfo==null ||userInfo.userAddress == userAddress.toLowerCase()) {
+    if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase()) {
       return null;
     }
     let item = await prisma.referralEvents.findFirst({ where: { referralCode: code, userAddress: userAddress.toLowerCase() } })
     if (item == null) {
       let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
+      await prisma.userInfo.update({
+        where: { userAddress: userInfo.userAddress },
+        data: { isInputCode: true }
+      })
       return result;
     } else {
       return item;
