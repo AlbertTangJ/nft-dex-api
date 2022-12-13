@@ -338,10 +338,13 @@ export class UserController {
     if (result == null) {
       return new ApiResponse(ResponseStatus.Failure).toObject();
     }
-    let referredUserInfo = await this.userService.userInfoByReferralCode(code);
+    let referralUserInfo = await this.userService.userInfoByReferralCode(code);
     try {
       await this.achievementService.completeAchievement(userAddress, "A02");
-      await this.achievementService.completeAchievement(referredUserInfo.userAddress, "A01", userAddress);
+      let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A01", userAddress);
+      if (existingAchievementRecord == null) {
+        await this.achievementService.completeAchievement(referralUserInfo.userAddress, "A01", userAddress);
+      }
     } catch (e) {
       // console.log(e); Silent error for now
     }
@@ -367,8 +370,8 @@ export class UserController {
       try {
         let refererUserInfo = await this.userService.getRefererUserInfo(userAddress);
         if (refererUserInfo != null) {
-          let existingTradeCount = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
-          if (existingTradeCount == null) {
+          let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
+          if (existingAchievementRecord == null) {
             await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
           }
         }
