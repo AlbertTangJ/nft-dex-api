@@ -317,7 +317,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/referral/code")
   async inputReferralCode(@BodyParam("code", { required: true }) code: string, @BodyParam("userAddress", { required: true }) userAddress: string) {
     let result = await this.userService.inputReferralCode(code, userAddress);
