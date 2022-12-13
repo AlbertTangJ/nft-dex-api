@@ -333,7 +333,7 @@ export class UserController {
         userAddress
       );
     } catch (e) {
-      console.error(e);
+      // console.log(e); Silent error for now
     }
 
     return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
