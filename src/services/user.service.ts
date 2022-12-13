@@ -329,7 +329,7 @@ export class UserService {
     let searchKeyword = '%' + keyword + '%';
     if (isAddress) {
       let result = await prisma.$queryRaw`
-      SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", mf.followers, mf.following, mf.username, mf.about, mf.points, mf.ranking FROM "api"."UserInfo" AS uif
+      SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", uif.followers, uif.following, uif.username, uif.about, uif.points, uif.ranking FROM "api"."UserInfo" AS uif
       LEFT JOIN
       (SELECT
             CASE WHEN uf."userAddress" IS NOT NULL 
