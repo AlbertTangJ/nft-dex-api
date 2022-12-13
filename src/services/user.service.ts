@@ -191,9 +191,9 @@ export class UserService {
           }
         });
         if (result != null) {
-          let userUpdateResult = await tx.userInfo.update({ where: { userAddress: userAddress.toLowerCase() }, data: { following: { decrement: 1 } } })
-          await tx.userInfo.update({
-            where: { userAddress: followerAddress.toLowerCase() },
+          let userUpdateResult = await tx.userInfo.updateMany({ where: { userAddress: userAddress.toLowerCase(), following: { gt: 0 } }, data: { following: { decrement: 1 } } })
+          await tx.userInfo.updateMany({
+            where: { userAddress: followerAddress.toLowerCase(), followers: { gt: 0 } },
             data: { followers: { decrement: 1 } }
           })
 
