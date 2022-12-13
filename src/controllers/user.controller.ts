@@ -333,8 +333,7 @@ export class UserController {
         userAddress
       );
     } catch (e) {
-      console.error(e);
-      // throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(e.message).toObject()
+      // console.log(e); Silent error for now
     }
 
     return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
@@ -369,7 +368,7 @@ export class UserController {
           );
         }
       } catch (e) {
-        console.log(e);
+        // console.log(e); Silent error for now
       }
     }
     return new ApiResponse(ResponseStatus.Success).toObject();
