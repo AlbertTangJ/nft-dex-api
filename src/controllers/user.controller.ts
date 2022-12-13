@@ -368,7 +368,7 @@ export class UserController {
           );
         }
       } catch (e) {
-        console.log(e);
+        // console.log(e); Silent error for now
       }
     }
     return new ApiResponse(ResponseStatus.Success).toObject();
