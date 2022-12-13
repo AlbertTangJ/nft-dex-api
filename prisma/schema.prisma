@@ -60,8 +60,8 @@ model UserInfo {
   referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
   following       Int       @default(0)
   referralPoints  Int       @default(0)
-  isInputCode     Boolean   @default(false)
   amm             String?   @db.VarChar
+  isInputCode     Boolean   @default(false)
   user            User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")

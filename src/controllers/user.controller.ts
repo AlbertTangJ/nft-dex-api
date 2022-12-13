@@ -317,7 +317,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/referral/code")
   async inputReferralCode(@BodyParam("code", { required: true }) code: string, @BodyParam("userAddress", { required: true }) userAddress: string) {
     let result = await this.userService.inputReferralCode(code, userAddress);
@@ -334,6 +334,7 @@ export class UserController {
       );
     } catch (e) {
       console.error(e);
+      // throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(e.message).toObject()
     }
 
     return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
