@@ -17,6 +17,17 @@ export class AchievementService {
     });
   }
 
+  async findUserAchievementByCodeAndReferredUser(achievementCode: string, userAddress: string) {
+    return prisma.userAchievement.findFirst({
+      where: {
+        referralUserAddress: userAddress.toLocaleLowerCase(),
+        achievement: {
+          code: achievementCode,
+        },
+      },
+    });
+  }
+
   async findCompletedAchievementById(achievementId: string) {
     return prisma.userAchievement.findMany({
       where: {
