@@ -1,11 +1,4 @@
-import {
-  JsonController,
-  Get,
-  QueryParam,
-  Post,
-  BodyParam,
-  Authorized
-} from "routing-controllers";
+import { JsonController, Get, QueryParam, Post, BodyParam, Authorized } from "routing-controllers";
 import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
@@ -15,10 +8,10 @@ import { ethers } from "ethers";
 import infuraClient from "src/helpers/infuraClient";
 
 type CreateUserInfoBody = {
-  userAddress: string,
-  username: string,
-  nonce: number
-}
+  userAddress: string;
+  username: string;
+  nonce: number;
+};
 const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
 
 @JsonController()
@@ -26,30 +19,27 @@ const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
 export class UserController {
   private twoAddressValidator: Schema;
 
-  constructor(
-    private userService: UserService,
-    private achievementService: AchievementService
-  ) {
+  constructor(private userService: UserService, private achievementService: AchievementService) {
     const followListAPICheck: Rules = {
       user: {
         type: "string",
         required: true,
         message: "need to right user address",
         validator: (rule: any, value: any) => {
-          if (value == '') {
-            return true
+          if (value == "") {
+            return true;
           } else {
-            return isAddress(value)
+            return isAddress(value);
           }
-        },
+        }
       },
       viewer: {
         type: "string",
         required: true,
         message: "need to right viewer address",
-        validator: (rule: any, value: any) => isAddress(value),
+        validator: (rule: any, value: any) => isAddress(value)
       }
-    }
+    };
 
     this.twoAddressValidator = new Schema(followListAPICheck);
   }
@@ -57,26 +47,20 @@ export class UserController {
   @Get("/users/find")
   async getUserByAddress(@QueryParam("address") address: string) {
     if (!address) {
-      return new ApiResponse(ResponseStatus.Failure)
-        .setErrorMessage("Missing parameters")
-        .toObject();
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("Missing parameters").toObject();
     }
     const user = await this.userService.findByAddress(address);
 
     if (!user) {
-      return new ApiResponse(ResponseStatus.Failure)
-        .setErrorMessage("User not found")
-        .toObject();
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
     } else {
       return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
     }
   }
 
-
-
   checkUserName(username: string) {
-    let checkMessage = ""
-    let checkUserNameResult = false
+    let checkMessage = "";
+    let checkUserNameResult = false;
     if (username == "" || username == null) {
       checkUserNameResult = true;
     } else {
@@ -84,9 +68,9 @@ export class UserController {
       let result = patten.test(username);
       if (!result) {
         checkUserNameResult = false;
-        checkMessage = "username must be 5-10 characters"
+        checkMessage = "username must be 5-10 characters";
       } else {
-        checkUserNameResult = true
+        checkUserNameResult = true;
       }
     }
     let check = { result: checkUserNameResult, message: checkMessage };
@@ -96,28 +80,31 @@ export class UserController {
   }
 
   checkAbout(about: string) {
-    let checkAboutResult = false
-    let checkMessage = ""
+    let checkAboutResult = false;
+    let checkMessage = "";
     if (about == "" || about == null) {
       checkAboutResult = true;
     } else {
       if (about.length >= 0 && about.length <= 200) {
         checkAboutResult = true;
       } else {
-        checkMessage = "about can not over 200 characters"
-        checkAboutResult = false
+        checkMessage = "about can not over 200 characters";
+        checkAboutResult = false;
       }
     }
-    let check = { result: checkAboutResult, message: checkMessage }
+    let check = { result: checkAboutResult, message: checkMessage };
     if (!check.result) {
       throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(check.message);
     }
   }
 
-
   @Authorized(["auth-token"])
   @Post("/users/update")
-  async updateUser(@BodyParam("username") username: string, @BodyParam("userAddress") userAddress: string, @BodyParam("about") about: string) {
+  async updateUser(
+    @BodyParam("username") username: string,
+    @BodyParam("userAddress") userAddress: string,
+    @BodyParam("about") about: string
+  ) {
     let isUpdateUsername = false;
     if (username != "" && username != null) {
       var existUser = await this.userService.findUsersInfoByAddress(userAddress);
@@ -132,10 +119,10 @@ export class UserController {
     }
 
     if (username == null) {
-      username = ''
+      username = "";
     }
     if (about == null) {
-      about = ''
+      about = "";
     }
 
     try {
@@ -152,9 +139,9 @@ export class UserController {
       var currentDate = new Date();
       let currentYear = currentDate.getFullYear();
       let lastTimeUpdateYear = existUser.updateTime;
-      let updateTimes = existUser.updateNameTimes + 1
+      let updateTimes = existUser.updateNameTimes + 1;
       if (lastTimeUpdateYear.getFullYear() < currentYear) {
-        updateTimes = 1
+        updateTimes = 1;
       }
       // 说移除一年改3次的限制, DB相关数据保留
       // else {
@@ -162,7 +149,13 @@ export class UserController {
       //     return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`can not change username over 3 times pre year`).toObject();;
       //   }
       // }
-      user = { username: username, about: about, updateNameTimes: updateTimes, updateTimestamp: currentTimestamp, updateTime: currentDateTime }
+      user = {
+        username: username,
+        about: about,
+        updateNameTimes: updateTimes,
+        updateTimestamp: currentTimestamp,
+        updateTime: currentDateTime
+      };
     }
     let result = await this.userService.updateUserService(userAddress, user);
     if (result != null) {
@@ -171,10 +164,10 @@ export class UserController {
         userAddress: result.userAddress,
         nonce: result.nonce,
         username: result.username,
-        about: result.about,
+        about: result.about
       });
     }
-    return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`unKnow reason`).toObject();;
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage(`unKnow reason`).toObject();
   }
 
   async findUserByName(username: string) {
@@ -183,7 +176,12 @@ export class UserController {
   }
 
   @Post("/users/search")
-  async search(@BodyParam("keyword") keyword: string, @BodyParam("userAddress") userAddress: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
+  async search(
+    @BodyParam("keyword") keyword: string,
+    @BodyParam("userAddress") userAddress: string,
+    @BodyParam("pageNo") pageNo: number = 1,
+    @BodyParam("pageSize") pageSize: number = 30
+  ) {
     let isAddress = ethers.utils.isAddress(userAddress);
     let result = await this.userService.searchAddressUsername(keyword, userAddress, pageNo, pageSize, isAddress);
     if (result != null) {
@@ -193,10 +191,12 @@ export class UserController {
   }
 
   @Post("/users/info")
-  async fetchUserInfo(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string) {
-
+  async fetchUserInfo(
+    @BodyParam("user", { required: true }) user: string,
+    @BodyParam("targetUser", { required: true }) targetUser: string
+  ) {
     try {
-      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, errors => {
         if (errors) {
           for (let i = 0; i < errors.length; i++) {
             const error = errors[i];
@@ -228,7 +228,7 @@ export class UserController {
 
   @Get("/test")
   async test() {
-    await this.userService.test()
+    await this.userService.test();
   }
 
   @Post("/users")
@@ -241,10 +241,14 @@ export class UserController {
   }
 
   @Post("/following/list")
-  async following(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
-
+  async following(
+    @BodyParam("user", { required: true }) user: string,
+    @BodyParam("targetUser", { required: true }) targetUser: string,
+    @BodyParam("pageNo") pageNo: number = 1,
+    @BodyParam("pageSize") pageSize: number = 30
+  ) {
     try {
-      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, errors => {
         if (errors) {
           for (let i = 0; i < errors.length; i++) {
             const error = errors[i];
@@ -261,10 +265,14 @@ export class UserController {
   }
 
   @Post("/followers/list")
-  async followers(@BodyParam("user", { required: true }) user: string, @BodyParam("targetUser", { required: true }) targetUser: string, @BodyParam("pageNo") pageNo: number = 1, @BodyParam("pageSize") pageSize: number = 30) {
-
+  async followers(
+    @BodyParam("user", { required: true }) user: string,
+    @BodyParam("targetUser", { required: true }) targetUser: string,
+    @BodyParam("pageNo") pageNo: number = 1,
+    @BodyParam("pageSize") pageSize: number = 30
+  ) {
     try {
-      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, (errors) => {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, errors => {
         if (errors) {
           for (let i = 0; i < errors.length; i++) {
             const error = errors[i];
@@ -281,7 +289,10 @@ export class UserController {
 
   @Authorized("auth-token")
   @Post("/users/follow")
-  async follow(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
+  async follow(
+    @BodyParam("userAddress", { required: true }) user: string,
+    @BodyParam("followerAddress", { required: true }) follower: string
+  ) {
     let result = await this.userService.followUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
@@ -291,7 +302,10 @@ export class UserController {
 
   @Authorized("auth-token")
   @Post("/users/unfollow")
-  async unFollower(@BodyParam("userAddress", { required: true }) user: string, @BodyParam("followerAddress", { required: true }) follower: string) {
+  async unFollower(
+    @BodyParam("userAddress", { required: true }) user: string,
+    @BodyParam("followerAddress", { required: true }) follower: string
+  ) {
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
@@ -301,10 +315,7 @@ export class UserController {
 
   @Post("/users/auth")
   async authUser(@BodyParam("signature") signature: string, @BodyParam("publicAddress") publicAddress: string) {
-    let result = await this.userService.authUserService(
-      signature,
-      publicAddress
-    );
+    let result = await this.userService.authUserService(signature, publicAddress);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData({ token: result }).toObject();
     }
@@ -319,7 +330,10 @@ export class UserController {
 
   @Authorized("auth-token")
   @Post("/users/referral/code")
-  async inputReferralCode(@BodyParam("code", { required: true }) code: string, @BodyParam("userAddress", { required: true }) userAddress: string) {
+  async inputReferralCode(
+    @BodyParam("code", { required: true }) code: string,
+    @BodyParam("userAddress", { required: true }) userAddress: string
+  ) {
     let result = await this.userService.inputReferralCode(code, userAddress);
     if (result == null) {
       return new ApiResponse(ResponseStatus.Failure).toObject();
@@ -327,11 +341,7 @@ export class UserController {
     let referredUserInfo = await this.userService.userInfoByReferralCode(code);
     try {
       await this.achievementService.completeAchievement(userAddress, "A02");
-      await this.achievementService.completeAchievement(
-        referredUserInfo.userAddress,
-        "A01",
-        userAddress
-      );
+      await this.achievementService.completeAchievement(referredUserInfo.userAddress, "A01", userAddress);
     } catch (e) {
       // console.log(e); Silent error for now
     }
@@ -352,20 +362,15 @@ export class UserController {
     if (
       decodedData.name === "openPosition" &&
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
-      tx.to.toLowerCase() ===
-      "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
+      tx.to.toLowerCase() === "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
     ) {
       try {
-        let refererUserInfo = await this.userService.getRefererUserInfo(
-          userAddress
-        );
+        let refererUserInfo = await this.userService.getRefererUserInfo(userAddress);
         if (refererUserInfo != null) {
-          await this.achievementService.completeAchievement(
-            refererUserInfo.userAddress,
-            "A03",
-            userAddress,
-            txHash
-          );
+          let existingTradeCount = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
+          if (existingTradeCount == null) {
+            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
+          }
         }
       } catch (e) {
         // console.log(e); Silent error for now
