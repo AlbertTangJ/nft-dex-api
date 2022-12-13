@@ -210,7 +210,7 @@ export class UserService {
     if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase()) {
       return null;
     }
-    let item = await prisma.referralEvents.findFirst({ where: { referralCode: code, userAddress: userAddress.toLowerCase() } })
+    let item = await prisma.referralEvents.findFirst({ where: { userAddress: userAddress.toLowerCase() } })
     if (item == null) {
       let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
       await prisma.userInfo.update({
