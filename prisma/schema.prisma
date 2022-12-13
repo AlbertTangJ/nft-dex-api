@@ -126,7 +126,7 @@ model ReferralEvents {
   referralCode String?  @db.VarChar
   createTime   DateTime @default(now()) @db.Timestamp(6)
 
-  @@unique([userAddress, referralCode], map: "ReferralEvents_code_userAddress_unique")
+  @@unique([userAddress], map: "ReferralEvents_userAddress_unique")
   @@schema("api")
 }
 
