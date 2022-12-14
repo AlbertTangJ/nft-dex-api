@@ -136,8 +136,8 @@ export class UserService {
       }
     });
 
-    if (doingUnFollow != null) {
-      return null
+    if (doingUnFollow.length > 0) {
+      return doingUnFollow
     }
 
     let haveFollowed = await prisma.userFollowing.findUnique({
@@ -145,6 +145,7 @@ export class UserService {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
       }
     });
+
     if (haveFollowed == null) {
       let currentDateTime = new Date()
         .toISOString();
@@ -191,7 +192,7 @@ export class UserService {
         status: 1
       },
     });
-    if (haveFollowed != null) {
+    if (haveFollowed.length > 0) {
       let userUpdateResult = await prisma.userFollowing.updateMany({
         where: {
           userAddress: userAddress.toLowerCase(),
