@@ -287,7 +287,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/follow")
   async follow(
     @BodyParam("userAddress", { required: true }) user: string,
@@ -300,7 +300,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(
     @BodyParam("userAddress", { required: true }) user: string,
