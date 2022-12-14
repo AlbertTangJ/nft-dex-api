@@ -14,6 +14,19 @@ export class UserService {
     });
   }
 
+  async fetchFollowAndUpdateUserInfo(userAddress: string) {
+    // 获取我追踪的列表
+    let followingCount = await prisma.userFollowing.count({ where: { userAddress: userAddress.toLowerCase() } });
+    // 获取追踪我的列表
+    let followersCount = await prisma.userFollowing.count({ where: { followerAddress: userAddress.toLowerCase() } });
+
+    let result = await prisma.userInfo.update({
+      where: { userAddress: userAddress.toLowerCase() },
+      data: { followers: followersCount, following: followingCount }
+    })
+    return result
+  }
+
   async findByAddress(userAddress: string) {
     return await prisma.user.findUnique({
       where: {
@@ -128,24 +141,11 @@ export class UserService {
     if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
       return null;
     }
-    let doingUnFollow = await prisma.userFollowing.findMany({
-      where: {
-        userAddress: userAddress.toLowerCase(),
-        followerAddress: followerAddress.toLowerCase(),
-        status: 0
-      }
-    });
-
-    if (doingUnFollow.length > 0) {
-      return doingUnFollow
-    }
-
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
       }
     });
-
     if (haveFollowed == null) {
       let currentDateTime = new Date()
         .toISOString();
@@ -158,22 +158,15 @@ export class UserService {
         userAddress: userAddress.toLowerCase(),
         followerAddress: followerAddress.toLowerCase()
       };
-      let result = await prisma.$transaction(async (tx) => {
-        let result = await tx.userFollowing.create({ data: follow });
-        if (result != null) {
-          let updateFollowing = await tx.userInfo.update({
-            where: { userAddress: userAddress.toLowerCase() },
-            data: { following: { increment: 1 } }
-          })
-          await tx.userInfo.update({
-            where: { userAddress: followerAddress.toLowerCase() },
-            data: { followers: { increment: 1 } }
-          })
+      try {
+        await prisma.userFollowing.create({ data: follow });
+      } catch (error) {
+        console.log(error)
+      } finally {
+        await this.fetchFollowAndUpdateUserInfo(userAddress.toLowerCase());
+        await this.fetchFollowAndUpdateUserInfo(followerAddress.toLowerCase());
+      }
 
-          return updateFollowing;
-        }
-      })
-      return result;
     }
     return haveFollowed;
   }
@@ -185,43 +178,28 @@ export class UserService {
     if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
       return null;
     }
-    let haveFollowed = await prisma.userFollowing.findMany({
+    let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
-        userAddress: userAddress.toLowerCase(),
-        followerAddress: followerAddress.toLowerCase(),
-        status: 1
-      },
-    });
-    if (haveFollowed.length > 0) {
-      let userUpdateResult = await prisma.userFollowing.updateMany({
-        where: {
-          userAddress: userAddress.toLowerCase(),
-          followerAddress: followerAddress.toLowerCase(),
-          status: 1
-        }, data: { status: 0 }
-      })
-      if (userUpdateResult != null) {
-
+        userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
       }
-      let result = await prisma.$transaction(async (tx) => {
-        let result = await tx.userFollowing.deleteMany({
+    });
+
+    if (haveFollowed != null) {
+      try {
+        await prisma.userFollowing.delete({
           where: {
-            userAddress: userAddress.toLowerCase(),
-            followerAddress: followerAddress.toLowerCase(),
-            status: 0
+            userAddress_followerAddress: {
+              userAddress: userAddress.toLowerCase(),
+              followerAddress: followerAddress.toLowerCase(),
+            }
           }
         });
-        if (result != null) {
-          let userUpdateResult = await tx.userInfo.updateMany({ where: { userAddress: userAddress.toLowerCase(), following: { gt: 0 } }, data: { following: { decrement: 1 } } })
-          await tx.userInfo.updateMany({
-            where: { userAddress: followerAddress.toLowerCase(), followers: { gt: 0 } },
-            data: { followers: { decrement: 1 } }
-          })
-
-          return userUpdateResult;
-        }
-      })
-      return result;
+      } catch (error) {
+        console.log(error)
+      } finally {
+        await this.fetchFollowAndUpdateUserInfo(userAddress.toLowerCase());
+        await this.fetchFollowAndUpdateUserInfo(followerAddress.toLowerCase());
+      }
     }
     return haveFollowed;
   }

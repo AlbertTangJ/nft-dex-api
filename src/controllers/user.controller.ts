@@ -287,12 +287,13 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/follow")
   async follow(
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
+    console.log("follow")
     let result = await this.userService.followUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
@@ -300,12 +301,13 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Authorized("auth-token")
+  // @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
+    console.log("unfollow")
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
