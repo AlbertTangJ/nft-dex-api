@@ -4,6 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
+type Follower = { followerAddress: string, followers: number, ranking: number }
 @Service()
 export class UserService {
   constructor() { }
@@ -13,59 +14,133 @@ export class UserService {
     });
   }
 
+  async fetchFollowAndUpdateUserInfo(userAddress: string) {
+    // 获取我追踪的列表
+    let followingCount = await prisma.userFollowing.count({ where: { userAddress: userAddress.toLowerCase() } });
+    // 获取追踪我的列表
+    let followersCount = await prisma.userFollowing.count({ where: { followerAddress: userAddress.toLowerCase() } });
+
+    let result = await prisma.userInfo.update({
+      where: { userAddress: userAddress.toLowerCase() },
+      data: { followers: followersCount, following: followingCount }
+    })
+    return result
+  }
+
   async findByAddress(userAddress: string) {
     return await prisma.user.findUnique({
       where: {
-        userAddress: userAddress
-      },
-    });
-  }
-
-  // 获取follow 我的所有人
-  async followList(userAddress: string, pageNo: number, pageSize: number) {
-    let fansList = await prisma.userFollowing.findMany({
-      where: {
         userAddress: userAddress.toLowerCase(),
       },
-      take: pageSize,
-      skip: pageNo
     });
-    let result = [];
-    for (let i = 0; i < fansList.length; i++) {
-      const follower = fansList[i];
-      result.push({
-        id: follower.id,
-        userAddress: follower.userAddress,
-        followerAddress: follower.followerAddress,
-        status: follower.status,
-      });
-    }
-    return result;
   }
 
-  async followingList(userAddress: string, pageNo: number, pageSize: number) {
-    let followList = await prisma.userFollowing.findMany({
+  async userInfoByReferralCode(referralCode: string) {
+    return await prisma.userInfo.findFirst({
       where: {
-        userAddress: userAddress.toLowerCase(),
+        referralCode,
       },
-      take: pageSize,
-      skip: pageNo
     });
-
-    let result = [];
-    for (let i = 0; i < followList.length; i++) {
-      const follower = followList[i];
-      result.push({
-        id: follower.id,
-        userAddress: follower.userAddress,
-        followerAddress: follower.followerAddress,
-        status: follower.status,
-      });
-    }
-    return result;
   }
 
+  async getRefererUserInfo(userAddress: string) {
+    let info = await prisma.$queryRaw<UserInfo[]>`
+    SELECT * FROM api."UserInfo" WHERE "referralCode" = 
+    (SELECT "referralCode" FROM api."ReferralEvents" WHERE "userAddress" = 
+     ${userAddress.toLowerCase()})
+     LIMIT 1
+     `;
+
+    return info.length === 1 ? info[0] : null;
+  }
+
+  // 根据参数地址获取followers
+  async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
+    if (pageNo > 0) {
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
+    }
+    let condition = userAddress.toLowerCase();
+    if (condition == '') {
+      condition = `t."followerAddress"`
+    }
+    let followers: Follower[] = await prisma.$queryRaw`
+      SELECT
+          CASE WHEN uf."userAddress" IS NOT NULL
+          THEN true
+          ELSE false
+          END AS "isFollowing", t."userAddress", t.followers, t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
+          FROM api."UserFollowing" AS uf
+          RIGHT JOIN (
+              SELECT 
+                "UserFollowing"."userAddress" AS "userAddress", 
+                "UserFollowing"."followerAddress" AS "followerAddress", 
+                "UserInfo"."followers" AS "followers", 
+                "UserInfo"."following" AS "following", 
+                "UserInfo"."username" AS "username", 
+                "UserInfo"."about" AS "about", 
+                "UserInfo"."points" AS "points", 
+                "UserInfo"."ranking" AS "ranking",
+                "UserInfo"."amm" AS "amm"
+              FROM "api"."UserFollowing" 
+              JOIN "api"."UserInfo"
+              ON "api"."UserFollowing"."userAddress" = "api"."UserInfo"."userAddress" 
+              WHERE "api"."UserFollowing"."followerAddress"=${targetAddress.toLowerCase()}
+              LIMIT ${pageSize} OFFSET ${pageNo}
+            ) t
+          ON uf."userAddress" = ${condition}
+          AND uf."followerAddress" = t."userAddress";
+    `;
+    return followers;
+  }
+
+  // 根据参数地址获取正在following
+  async followingList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
+    if (pageNo > 0) {
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
+    }
+    let condition = userAddress.toLowerCase();
+    if (condition == '') {
+      condition = `t."userAddress"`
+    }
+    let followList: Follower[] = await prisma.$queryRaw`
+    SELECT
+          CASE WHEN uf."userAddress" IS NOT NULL
+          THEN true 
+          ELSE false 
+          END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
+      FROM api."UserFollowing" AS uf
+      RIGHT JOIN (
+            SELECT 
+              "UserFollowing"."userAddress" AS "userAddress", 
+              "UserFollowing"."followerAddress" AS "followerAddress", 
+              "UserInfo"."followers" AS "followers", 
+              "UserInfo"."following" AS "following", 
+              "UserInfo"."username" AS "username", 
+              "UserInfo"."about" AS "about", 
+              "UserInfo"."points" AS "points", 
+              "UserInfo"."ranking" AS "ranking",
+              "UserInfo"."amm" AS "amm" 
+            FROM "api"."UserFollowing" 
+            JOIN "api"."UserInfo"
+            ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" 
+            WHERE "api"."UserFollowing"."userAddress"=${targetAddress.toLowerCase()} 
+            LIMIT ${pageSize} OFFSET ${pageNo}
+        ) t
+      ON uf."userAddress" = ${condition}
+      AND uf."followerAddress" = t."followerAddress";
+    `;
+    return followList;
+  }
+
+  // userAddress follow followerAddress
+  // userAddress following + 1
+  // followerAddress follower + 1
   async followUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
@@ -75,49 +150,80 @@ export class UserService {
       let currentDateTime = new Date()
         .toISOString();
       let currentTimestamp = Math.floor(Date.now() / 1000);
-      let follow: Prisma.UserFollowingCreateInput = {
+      let follow = {
         status: 1,
         createTimestamp: currentTimestamp,
         updateTime: currentDateTime,
         updateTimestamp: currentTimestamp,
-        followerUser: {
-          connect: {
-            userAddress: userAddress.toLowerCase()
-          }
-        },
-        followingUser: {
-          connect: {
-            userAddress: followerAddress.toLowerCase()
-          }
-        }
+        userAddress: userAddress.toLowerCase(),
+        followerAddress: followerAddress.toLowerCase()
       };
-      let result = await prisma.userFollowing.create({ data: follow });
-      return result
+      try {
+       await prisma.userFollowing.create({ data: follow });
+      } catch (error) {
+        console.log(error)
+      } finally {
+        await this.fetchFollowAndUpdateUserInfo(userAddress.toLowerCase());
+        await this.fetchFollowAndUpdateUserInfo(followerAddress.toLowerCase());
+      }
+      haveFollowed = await prisma.userFollowing.findUnique({
+        where: {
+          userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
+        }
+      });
     }
     return haveFollowed;
   }
 
+  // userAddress follow followerAddress
+  // userAddress following - 1
+  // followerAddress follower - 1
   async unFollowUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
-        userAddress_followerAddress: {
-          userAddress: userAddress.toLowerCase(),
-          followerAddress: followerAddress.toLowerCase(),
-        }
-      },
+        userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
+      }
     });
+
     if (haveFollowed != null) {
-      let result = await prisma.userFollowing.delete({
-        where: {
-          userAddress_followerAddress: {
-            userAddress: userAddress.toLowerCase(),
-            followerAddress: followerAddress.toLowerCase(),
+      try {
+        await prisma.userFollowing.delete({
+          where: {
+            userAddress_followerAddress: {
+              userAddress: userAddress.toLowerCase(),
+              followerAddress: followerAddress.toLowerCase(),
+            }
           }
-        }
-      });
-      return result;
+        });
+      } catch (error) {
+        console.log(error)
+      } finally {
+        await this.fetchFollowAndUpdateUserInfo(userAddress.toLowerCase());
+        await this.fetchFollowAndUpdateUserInfo(followerAddress.toLowerCase());
+      }
     }
     return haveFollowed;
+  }
+
+  async inputReferralCode(code: string, userAddress: string) {
+    let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+    if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase()) {
+      return null;
+    }
+    let item = await prisma.referralEvents.findFirst({ where: { userAddress: userAddress.toLowerCase() } })
+    if (item == null) {
+      let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
+      await prisma.userInfo.update({
+        where: { userAddress: userAddress.toLowerCase() },
+        data: { isInputCode: true }
+      });
+      return result;
+    } else {
+      return item;
+    }
   }
 
   async saveEvent(name: string, params: any) {
@@ -202,7 +308,7 @@ export class UserService {
   }
 
   async findUsersInfoByAddress(updateUserAddress: string) {
-    let userInfo = await prisma.userInfo.findUnique({
+    let userInfo = await prisma.userInfo.findFirst({
       where: {
         userAddress: updateUserAddress.toLowerCase()
       },
@@ -218,6 +324,79 @@ export class UserService {
     return updateUserInfo;
   }
 
+  async searchAddressUsername(keyword: string, userAddress: string, pageNo: number, pageSize: number, isAddress: boolean) {
+    if (pageNo > 0) {
+      pageNo = pageNo - 1
+      pageNo = pageNo * pageSize
+    }
+    let searchKeyword = '%' + keyword + '%';
+    if (isAddress) {
+      let result = await prisma.$queryRaw`
+      SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", uif.followers, uif.following, uif.username, uif.about, uif.points, uif.ranking FROM "api"."UserInfo" AS uif
+      LEFT JOIN
+      (SELECT
+            CASE WHEN uf."userAddress" IS NOT NULL 
+            THEN true
+            ELSE false
+            END AS "isFollowing", t."followerAddress", t."followers", t.following, t.username, t.about, t.points, t.ranking, string_to_array(t.amm, ',') AS amm
+            FROM api."UserFollowing" AS uf
+            RIGHT JOIN (
+                  SELECT 
+                    "UserFollowing"."userAddress" AS "userAddress", 
+                    "UserFollowing"."followerAddress" AS "followerAddress", 
+                    "UserInfo"."followers" AS "followers", 
+                    "UserInfo"."following" AS "following", 
+                    "UserInfo"."username" AS "username", 
+                    "UserInfo"."about" AS "about", 
+                    "UserInfo"."points" AS "points", 
+                    "UserInfo"."ranking" AS "ranking",
+                    "UserInfo"."amm" AS "amm" 
+                  FROM "api"."UserFollowing" 
+                  JOIN "api"."UserInfo"
+                  ON "api"."UserFollowing"."followerAddress" = "api"."UserInfo"."userAddress" 
+                  WHERE "api"."UserFollowing"."userAddress"=${userAddress.toLowerCase()}
+              ) t
+            ON uf."userAddress"=${userAddress.toLowerCase()}
+            AND uf."followerAddress" = t."followerAddress") mf 
+      ON mf."followerAddress" = uif."userAddress"
+      WHERE uif.username LIKE ${searchKeyword} OR uif."userAddress" LIKE ${searchKeyword}
+      LIMIT ${pageSize} OFFSET ${pageNo}`;
+      return result;
+    } else {
+      let result = await prisma.$queryRaw`
+      SELECT
+        "userAddress", 
+        followers,
+        following, 
+        username, 
+        about, 
+        points, 
+        ranking
+      FROM "api"."UserInfo"
+      WHERE username LIKE ${searchKeyword} OR "userAddress" LIKE ${searchKeyword};`;
+      return result;
+    }
+  }
+
+  async fetchUserInfo(user: string, targetUser: string) {
+    let targetUserInfo: { id: string, userAddress: string, username: string, about: string, followers: number, following: number, points: number, referralPoints: number, referralCode: string, isFollowing?: boolean, referralUsersCount?: number } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
+    let haveFollowed = await prisma.userFollowing.findUnique({
+      where: {
+        userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
+      }
+    });
+    let isFollowing = false
+    if (haveFollowed != null) {
+      isFollowing = true
+    }
+    let referralUsersCount = await prisma.referralEvents.count({
+      where: { referralCode: targetUserInfo.referralCode }
+    })
+    targetUserInfo.referralUsersCount = referralUsersCount
+    targetUserInfo.isFollowing = isFollowing
+    return targetUserInfo;
+  }
+
   async updateUserService(userAddress: string, data: any) {
     const result = await prisma.userInfo.update(
       {
@@ -226,6 +405,15 @@ export class UserService {
       },
     );
     return result;
+  }
+
+  async test() {
+    let result: { userAddress: string }[] = await prisma.userInfo.findMany();
+    for (let i = 0; i < result.length; i++) {
+      const element: { userAddress: string } = result[i];
+      await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${element.userAddress.toLowerCase()}::TEXT);`
+    }
+
   }
 
   async createUserInfoService(regUserAddress: string) {
@@ -263,6 +451,7 @@ export class UserService {
       }
     }
     const result: UserInfo = await prisma.userInfo.create({ data: userInfo });
+    await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${regUserAddress.toLowerCase()}::TEXT);`
     return result;
   }
 }

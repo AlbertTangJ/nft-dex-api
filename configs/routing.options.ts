@@ -29,8 +29,6 @@ export const routingConfigs: RoutingControllersOptions = {
           let decodedToken = await global.firebaseAdmin
             .auth()
             .verifyIdToken(token);
-          console.log(decodedToken)
-          console.log(userAddress)
           if (decodedToken.uid != userAddress) {
             checkTokenResult = false;
             checkMessage = `Failed token is not right`;
