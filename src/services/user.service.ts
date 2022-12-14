@@ -146,6 +146,7 @@ export class UserService {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
       }
     });
+    console.log(haveFollowed);
     if (haveFollowed == null) {
       let currentDateTime = new Date()
         .toISOString();
@@ -159,14 +160,18 @@ export class UserService {
         followerAddress: followerAddress.toLowerCase()
       };
       try {
-        await prisma.userFollowing.create({ data: follow });
+       await prisma.userFollowing.create({ data: follow });
       } catch (error) {
         console.log(error)
       } finally {
         await this.fetchFollowAndUpdateUserInfo(userAddress.toLowerCase());
         await this.fetchFollowAndUpdateUserInfo(followerAddress.toLowerCase());
       }
-
+      haveFollowed = await prisma.userFollowing.findUnique({
+        where: {
+          userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
+        }
+      });
     }
     return haveFollowed;
   }
