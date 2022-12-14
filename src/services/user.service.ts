@@ -146,7 +146,6 @@ export class UserService {
         userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
       }
     });
-    console.log(haveFollowed);
     if (haveFollowed == null) {
       let currentDateTime = new Date()
         .toISOString();
