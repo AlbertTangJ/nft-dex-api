@@ -375,6 +375,7 @@ export class UserController {
           let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
           if (existingAchievementRecord == null) {
             await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
+            await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
         }
       } catch (e) {

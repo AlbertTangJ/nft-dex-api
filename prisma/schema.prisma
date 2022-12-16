@@ -247,7 +247,10 @@ model Position {
   cumulativeFee                           Decimal   @db.Decimal
   cumulativeFundingPayment                Decimal   @db.Decimal
   cumulativeLiquidationPenalty            Decimal   @db.Decimal
+  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
   cumulativeRealizedPnl                   Decimal   @db.Decimal
+  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
   liquidationPenalty                      Decimal   @db.Decimal
   baseAssetReserve                        Decimal   @db.Decimal
   quoteAssetReserve                       Decimal   @db.Decimal
@@ -263,12 +266,9 @@ model Position {
   positionCumulativeRealizedPnl           Decimal   @default(0) @db.Decimal
   realizedPnlWithdrawAmount               Decimal   @default(0) @db.Decimal
   openMargin                              Decimal   @default(0) @db.Decimal
+  txHash                                  String    @db.VarChar(255)
   batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fundingPayment                          Decimal   @db.Decimal
-  txHash                                  String    @db.VarChar(255)
-  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
-  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
-  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
