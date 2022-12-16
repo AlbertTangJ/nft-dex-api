@@ -113,6 +113,7 @@ model UserAchievement {
   updateTime          DateTime    @db.Timestamp(6)
   referralUserAddress String?     @db.VarChar
   txHash              String?     @db.VarChar
+  hidden              Boolean     @default(false)
   achievement         Achievement @relation(fields: [achievementId], references: [id])
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])

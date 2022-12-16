@@ -12,8 +12,8 @@ export class AchievementService {
     return prisma.achievement.findFirst({
       where: {
         code: achievementCode,
-        enabled: true,
-      },
+        enabled: true
+      }
     });
   }
 
@@ -22,44 +22,38 @@ export class AchievementService {
       where: {
         referralUserAddress: userAddress.toLocaleLowerCase(),
         achievement: {
-          code: achievementCode,
-        },
-      },
+          code: achievementCode
+        }
+      }
     });
   }
 
   async findCompletedAchievementById(achievementId: string) {
     return prisma.userAchievement.findMany({
       where: {
-        achievementId,
-      },
+        achievementId
+      }
     });
   }
 
-  async findUserCompletedAchievementById(
-    userAddress: string,
-    achievementId: string
-  ) {
+  async findUserCompletedAchievementById(userAddress: string, achievementId: string) {
     return prisma.userAchievement.findMany({
       where: {
         userAddress: {
           equals: userAddress,
-          mode: "insensitive",
+          mode: "insensitive"
         },
-        achievementId,
-      },
+        achievementId
+      }
     });
   }
 
-  async findCompletedAchievementByTxHash(
-    achievementId: string,
-    txHash: string
-  ) {
+  async findCompletedAchievementByTxHash(achievementId: string, txHash: string) {
     return prisma.userAchievement.findMany({
       where: {
         achievementId,
-        txHash,
-      },
+        txHash
+      }
     });
   }
 
@@ -68,28 +62,24 @@ export class AchievementService {
       where: {
         achievementId,
         createTime: {
-          gte: date,
-        },
-      },
+          gte: date
+        }
+      }
     });
   }
 
-  async findUserCompletedAchievementByIdAfter(
-    userAddress: string,
-    achievementId: string,
-    date: Date
-  ) {
+  async findUserCompletedAchievementByIdAfter(userAddress: string, achievementId: string, date: Date) {
     return prisma.userAchievement.findMany({
       where: {
         userAddress: {
           equals: userAddress,
-          mode: "insensitive",
+          mode: "insensitive"
         },
         achievementId,
         createTime: {
-          gte: date,
-        },
-      },
+          gte: date
+        }
+      }
     });
   }
 
@@ -98,16 +88,17 @@ export class AchievementService {
       take: limit,
       where: {
         userAddress: userAddress.toLowerCase(),
+        hidden: false,
         achievement: {
-          referralRelated: true,
-        },
+          referralRelated: true
+        }
       },
       select: {
         pointEarned: true,
         createTime: true,
         achievement: {
           select: {
-            title: true,
+            title: true
           }
         },
         referralUser: {
@@ -115,15 +106,28 @@ export class AchievementService {
             userInfo: {
               select: {
                 username: true,
-                userAddress: true,
+                userAddress: true
               }
             }
           }
         }
       },
-      orderBy:{
+      orderBy: {
         createTime: "desc"
-      },
+      }
+    });
+  }
+
+  async hideReferralAchievements(achievementCode: string, userAddress: string, referralUserAddress: string) {
+    return prisma.userAchievement.updateMany({
+      data: { hidden: true },
+      where: {
+        userAddress: userAddress.toLowerCase(),
+        referralUserAddress: referralUserAddress.toLowerCase(),
+        achievement: {
+          code: achievementCode
+        }
+      }
     });
   }
 
@@ -135,32 +139,32 @@ export class AchievementService {
   ) {
     const now = new Date();
     const nowTimestamp = Math.floor(now.getTime() / 1000);
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async tx => {
       const updatedUserInfos = await tx.userInfo.updateMany({
         data: {
           points: {
-            increment: achievement.referralRelated ? 0 : achievement.points,
+            increment: achievement.referralRelated ? 0 : achievement.points
           },
           referralPoints: {
-            increment: achievement.referralRelated ? achievement.points : 0,
+            increment: achievement.referralRelated ? achievement.points : 0
           },
           updateTime: now,
-          updateTimestamp: nowTimestamp,
+          updateTimestamp: nowTimestamp
         },
         where: {
-          userAddress: walletAddress.toLowerCase(),
-        },
+          userAddress: walletAddress.toLowerCase()
+        }
       });
 
       const updatedAchievements = await tx.achievement.updateMany({
         data: {
           latestCompletedTime: now,
-          updateTime: now,
+          updateTime: now
         },
         where: {
           id: achievement.id,
-          latestCompletedTime: achievement.latestCompletedTime,
-        },
+          latestCompletedTime: achievement.latestCompletedTime
+        }
       });
 
       if (updatedUserInfos.count === 0 || updatedAchievements.count === 0) {
@@ -174,22 +178,16 @@ export class AchievementService {
           pointEarned: achievement.points,
           createTime: now,
           updateTime: now,
-          referralUserAddress: referralUserAddress
-            ? referralUserAddress.toLowerCase()
-            : null,
-          txHash,
-        },
+          referralUserAddress: referralUserAddress ? referralUserAddress.toLowerCase() : null,
+          txHash
+        }
       });
 
       return completedAchievement;
     });
   }
 
-  async isEligibleForAchievement(
-    walletAddress: string,
-    achievement: Achievement,
-    txHash?: string
-  ) {
+  async isEligibleForAchievement(walletAddress: string, achievement: Achievement, txHash?: string) {
     const repeatPeriod = achievement.repeatPeriod;
     const repeatCount = achievement.redeemLimit;
 
@@ -226,8 +224,7 @@ export class AchievementService {
     }
 
     if (txHash) {
-      let completedAchievementWithTxHash =
-        await this.findCompletedAchievementByTxHash(achievement.id, txHash);
+      let completedAchievementWithTxHash = await this.findCompletedAchievementByTxHash(achievement.id, txHash);
       if (completedAchievementWithTxHash.length > 0) return false;
     }
 
@@ -239,23 +236,14 @@ export class AchievementService {
         : this.findCompletedAchievementById(achievement.id));
     } else {
       completedAchievements = await (startDate
-        ? this.findUserCompletedAchievementByIdAfter(
-            walletAddress,
-            achievement.id,
-            startDate
-          )
+        ? this.findUserCompletedAchievementByIdAfter(walletAddress, achievement.id, startDate)
         : this.findUserCompletedAchievementById(walletAddress, achievement.id));
     }
 
     return completedAchievements.length < repeatCount;
   }
 
-  async completeAchievement(
-    walletAddress: string,
-    achievementCode: string,
-    referralUserAddress?: string,
-    txHash?: string
-  ) {
+  async completeAchievement(walletAddress: string, achievementCode: string, referralUserAddress?: string, txHash?: string) {
     const user = await this.userService.findByAddress(walletAddress);
     if (!user) {
       throw new Error(`User not found.`);
@@ -267,17 +255,10 @@ export class AchievementService {
       throw new Error(`Achievement not found.`);
     }
 
-    if (
-      !(await this.isEligibleForAchievement(walletAddress, achievement, txHash))
-    ) {
+    if (!(await this.isEligibleForAchievement(walletAddress, achievement, txHash))) {
       throw new Error(`Not eligible for this achievement.`);
     }
 
-    await this.completeAchievementInternal(
-      walletAddress,
-      achievement,
-      referralUserAddress,
-      txHash
-    );
+    await this.completeAchievementInternal(walletAddress, achievement, referralUserAddress, txHash);
   }
 }
