@@ -122,11 +122,10 @@ model UserAchievement {
 
 model ReferralEvents {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress  String   @db.VarChar
+  userAddress  String   @unique(map: "ReferralEvents_userAddress_unique") @db.VarChar
   referralCode String?  @db.VarChar
   createTime   DateTime @default(now()) @db.Timestamp(6)
 
-  @@unique([userAddress], map: "ReferralEvents_userAddress_unique")
   @@schema("api")
 }
 
@@ -228,45 +227,48 @@ model AmmReserve {
 }
 
 model Position {
-  id                                     Int       @id @default(autoincrement())
-  userAddress                            String    @db.VarChar(255)
-  margin                                 Decimal   @db.Decimal
-  openNotional                           Decimal   @db.Decimal
-  exchangedPositionSize                  Decimal   @db.Decimal
-  fee                                    Decimal   @db.Decimal
-  size                                   Decimal   @db.Decimal
-  lastUpdatedCumulativePremiumFraction   Decimal   @db.Decimal
-  realizedPnl                            Decimal   @db.Decimal
-  badDebt                                Decimal   @db.Decimal
-  timestamp                              Int
-  createTime                             DateTime  @default(now()) @db.Timestamp(6)
-  updateTime                             DateTime? @db.Timestamp(6)
-  action                                 Action
-  ammAddress                             String    @db.VarChar(255)
-  cumulativeBadDebt                      Decimal   @db.Decimal
-  cumulativeFee                          Decimal   @db.Decimal
-  cumulativeFundingPayment               Decimal   @db.Decimal
-  cumulativeLiquidationPenalty           Decimal   @db.Decimal
-  cumulativeRealizedPnl                  Decimal   @db.Decimal
-  liquidationPenalty                     Decimal   @db.Decimal
-  baseAssetReserve                       Decimal   @db.Decimal
-  quoteAssetReserve                      Decimal   @db.Decimal
-  positionNotional                       Decimal   @db.Decimal
-  timestampIndex                         Decimal   @db.Decimal
-  latestCumulativePremiumFraction        Decimal   @db.Decimal
-  cumulativeFundingPaymentWithdrawAmount Decimal   @default(0) @db.Decimal
-  cumulativeMarginWithdrawAmount         Decimal   @default(0) @db.Decimal
-  cumulativeRealizedPnlWithdrawAmount    Decimal   @default(0) @db.Decimal
-  fundingPaymentWithdrawAmount           Decimal   @default(0) @db.Decimal
-  marginWithdrawAmount                   Decimal   @default(0) @db.Decimal
-  positionCumulativeFundingPayment       Decimal   @default(0) @db.Decimal
-  positionCumulativeRealizedPnl          Decimal   @default(0) @db.Decimal
-  realizedPnlWithdrawAmount              Decimal   @default(0) @db.Decimal
-  openMargin                             Decimal   @default(0) @db.Decimal
-  batchId                                String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fundingPayment                         Decimal   @db.Decimal
-  txHash                                 String    @db.VarChar(255)
-  Amm                                    Amm       @relation(fields: [ammAddress], references: [address])
+  id                                      Int       @id @default(autoincrement())
+  userAddress                             String    @db.VarChar(255)
+  margin                                  Decimal   @db.Decimal
+  openNotional                            Decimal   @db.Decimal
+  exchangedPositionSize                   Decimal   @db.Decimal
+  fee                                     Decimal   @db.Decimal
+  size                                    Decimal   @db.Decimal
+  lastUpdatedCumulativePremiumFraction    Decimal   @db.Decimal
+  realizedPnl                             Decimal   @db.Decimal
+  badDebt                                 Decimal   @db.Decimal
+  timestamp                               Int
+  createTime                              DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                              DateTime? @db.Timestamp(6)
+  action                                  Action
+  ammAddress                              String    @db.VarChar(255)
+  cumulativeBadDebt                       Decimal   @db.Decimal
+  cumulativeFee                           Decimal   @db.Decimal
+  cumulativeFundingPayment                Decimal   @db.Decimal
+  cumulativeLiquidationPenalty            Decimal   @db.Decimal
+  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
+  cumulativeRealizedPnl                   Decimal   @db.Decimal
+  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
+  liquidationPenalty                      Decimal   @db.Decimal
+  baseAssetReserve                        Decimal   @db.Decimal
+  quoteAssetReserve                       Decimal   @db.Decimal
+  positionNotional                        Decimal   @db.Decimal
+  timestampIndex                          Decimal   @db.Decimal
+  latestCumulativePremiumFraction         Decimal   @db.Decimal
+  cumulativeFundingPaymentWithdrawAmount  Decimal   @default(0) @db.Decimal
+  cumulativeMarginWithdrawAmount          Decimal   @default(0) @db.Decimal
+  cumulativeRealizedPnlWithdrawAmount     Decimal   @default(0) @db.Decimal
+  fundingPaymentWithdrawAmount            Decimal   @default(0) @db.Decimal
+  marginWithdrawAmount                    Decimal   @default(0) @db.Decimal
+  positionCumulativeFundingPayment        Decimal   @default(0) @db.Decimal
+  positionCumulativeRealizedPnl           Decimal   @default(0) @db.Decimal
+  realizedPnlWithdrawAmount               Decimal   @default(0) @db.Decimal
+  openMargin                              Decimal   @default(0) @db.Decimal
+  txHash                                  String    @db.VarChar(255)
+  batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fundingPayment                          Decimal   @db.Decimal
+  Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
   @@index([timestampIndex(sort: Desc)])
