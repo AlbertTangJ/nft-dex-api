@@ -159,7 +159,7 @@ export class UserService {
         followerAddress: followerAddress.toLowerCase()
       };
       try {
-       await prisma.userFollowing.create({ data: follow });
+        await prisma.userFollowing.create({ data: follow });
       } catch (error) {
         console.log(error)
       } finally {
@@ -213,12 +213,14 @@ export class UserService {
     if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase()) {
       return null;
     }
+
     let item = await prisma.referralEvents.findFirst({ where: { userAddress: userAddress.toLowerCase() } })
     if (item == null) {
       let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
+      let countReferralCode = await prisma.referralEvents.count({ where: { referralCode: userInfo.referralCode } })
       await prisma.userInfo.update({
         where: { userAddress: userAddress.toLowerCase() },
-        data: { isInputCode: true }
+        data: { isInputCode: true, countReferralCode: countReferralCode }
       });
       return result;
     } else {
@@ -313,6 +315,7 @@ export class UserService {
         userAddress: updateUserAddress.toLowerCase()
       },
     });
+
     return userInfo;
   }
 
