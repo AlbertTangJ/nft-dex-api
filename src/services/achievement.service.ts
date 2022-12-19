@@ -231,7 +231,7 @@ export class AchievementService {
           dataArray = dataArray.concat(extraData);
         }
 
-        if (lastAchievement && lastAchievement.progress + 1 === totalSteps) {
+        if ((lastAchievement && lastAchievement.progress + 1 === totalSteps) || totalSteps === 1) {
           // Achievement completed, give points to user
           const updatedUserInfos = await tx.userInfo.updateMany({
             data: {
