@@ -44,26 +44,27 @@ model User {
 }
 
 model UserInfo {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String    @unique @db.VarChar
-  nonce           Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
-  username        String    @db.VarChar
-  about           String?
-  updateNameTimes Int?      @default(0)
-  updateTimestamp Int?
-  createTimestamp Int?
-  updateTime      DateTime? @db.Timestamp(6)
-  createTime      DateTime? @default(now()) @db.Timestamp(6)
-  points          Int       @default(0)
-  followers       Int       @default(0)
-  ranking         Int       @default(0)
-  referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
-  following       Int       @default(0)
-  referralPoints  Int       @default(0)
-  amm             String?   @db.VarChar
-  isInputCode     Boolean   @default(false)
-  user            User      @relation(fields: [userAddress], references: [userAddress])
-  countReferralCode Int     @default(0)
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress       String    @unique @db.VarChar
+  nonce             Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
+  username          String    @db.VarChar
+  about             String?
+  updateNameTimes   Int?      @default(0)
+  updateTimestamp   Int?
+  createTimestamp   Int?
+  updateTime        DateTime? @db.Timestamp(6)
+  createTime        DateTime? @default(now()) @db.Timestamp(6)
+  points            Int       @default(0)
+  followers         Int       @default(0)
+  ranking           Int       @default(0)
+  referralCode      String?   @unique(map: "UserInfo_code_unique") @db.VarChar
+  following         Int       @default(0)
+  referralPoints    Int       @default(0)
+  amm               String?   @db.VarChar
+  isInputCode       Boolean   @default(false)
+  user              User      @relation(fields: [userAddress], references: [userAddress])
+  countReferralCode Int       @default(0)
+
   @@schema("api")
 }
 
@@ -89,14 +90,20 @@ model Achievement {
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
+  type                String?           @db.VarChar
+  action              String?           @db.VarChar
+  page                String?           @db.VarChar
   points              Int
   redeemLimit         Int               @default(1)
   repeatPeriod        RepeatPeriod
+  step                Int               @default(1)
+  displayStep         String            @default("")
   createTime          DateTime          @default(now()) @db.Timestamp(6)
   updateTime          DateTime          @db.Timestamp(6)
   isGlobal            Boolean           @default(false)
   enabled             Boolean           @default(true)
   latestCompletedTime DateTime?         @db.Timestamp(6)
+  endTime             DateTime?         @db.Timestamp(6)
   code                String
   referralRelated     Boolean           @default(false)
   userAchievement     UserAchievement[]
@@ -114,6 +121,10 @@ model UserAchievement {
   referralUserAddress String?     @db.VarChar
   txHash              String?     @db.VarChar
   hidden              Boolean     @default(false)
+  progress            Int         @default(1)
+  completed           Boolean     @default(false)
+  ended               Boolean     @default(false)
+  data                Json?
   achievement         Achievement @relation(fields: [achievementId], references: [id])
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
