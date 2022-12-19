@@ -63,12 +63,10 @@ export class AchievementController {
     @QueryParam("pageNo") pageNo: number = 1,
     @QueryParam("pageSize") pageSize: number = 30
   ) {
-    let historyList = await this.achievementService.getUserAchievementHistory(userAddress, pageSize, pageNo);
-    for (let history of historyList) {
-    }
+    if (pageNo <= 0) pageNo = 1;
 
-    return new ApiResponse(ResponseStatus.Success)
-      .setData(historyList)
-      .toObject();
+    let historyList = await this.achievementService.getUserAchievementHistory(userAddress, pageSize, (pageNo - 1) * pageSize);
+
+    return new ApiResponse(ResponseStatus.Success).setData(historyList).toObject();
   }
 }
