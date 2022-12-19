@@ -44,6 +44,40 @@ export class AchievementService {
     AND a."code" != 'A02'`;
   }
 
+  async getUserAchievementHistory(userAddress: string, limit: number, offset: number) {
+    return prisma.userAchievement.findMany({
+      take: limit,
+      skip: offset,
+      select:{
+        pointEarned: true,
+        createTime: true,
+        achievement:{
+          select:{
+            code: true,
+            description: true
+          }
+        },
+        referralUser:{
+          select:{
+            userInfo:{
+              select:{
+                username: true,
+                userAddress: true
+              }
+            }
+          }
+        }
+      },
+      where: {
+        userAddress: userAddress.toLowerCase(),
+        completed: true
+      },
+      orderBy: {
+        createTime: "desc"
+      }
+    });
+  }
+
   async findAchievementByCode(achievementCode: string) {
     return prisma.achievement.findFirst({
       where: {

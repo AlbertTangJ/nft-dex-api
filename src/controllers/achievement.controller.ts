@@ -56,4 +56,19 @@ export class AchievementController {
       })
       .toObject();
   }
+
+  @Get("/achievement/history")
+  async achievementHistory(
+    @QueryParam("userAddress", { required: true }) userAddress: string,
+    @QueryParam("pageNo") pageNo: number = 1,
+    @QueryParam("pageSize") pageSize: number = 30
+  ) {
+    let historyList = await this.achievementService.getUserAchievementHistory(userAddress, pageSize, pageNo);
+    for (let history of historyList) {
+    }
+
+    return new ApiResponse(ResponseStatus.Success)
+      .setData(historyList)
+      .toObject();
+  }
 }
