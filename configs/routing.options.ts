@@ -29,9 +29,10 @@ export const routingConfigs: RoutingControllersOptions = {
           let decodedToken = await global.firebaseAdmin
             .auth()
             .verifyIdToken(token);
+            console.log(`Decoded Token uid: ${decodedToken.uid}\nIssued at: ${decodedToken.auth_time}\nExpires at: ${decodedToken.exp}`)
           if (decodedToken.uid != userAddress) {
             checkTokenResult = false;
-            checkMessage = `Failed token is not right`;
+            checkMessage = `Invalid token for ${userAddress}, token is for ${decodedToken.uid.substring(0, 10)}`;
           }
         } catch (error) {
           checkMessage = error.message;
