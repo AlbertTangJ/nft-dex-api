@@ -11,6 +11,7 @@ import {
 import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
+import { RepeatPeriod } from "@prisma/client";
 
 @JsonController()
 @Service()
@@ -42,6 +43,31 @@ export class AchievementController {
 
     return new ApiResponse(ResponseStatus.Success)
       .setData(responseData)
+      .toObject();
+  }
+
+  @Get("/achievement/task/list")
+  async taskList(@QueryParam("userAddress", { required: true }) userAddress: string) {
+    let weeklyTasks = [];
+    let promotionTasks = [];
+    let oneTimeTasks = [];
+    let achievementList = await this.achievementService.getUserAchievementList(userAddress);
+    for (let achievement of achievementList) {
+      if (achievement.code.startsWith("E")) {
+        promotionTasks.push(achievement);
+      } else if (achievement.repeatPeriod === RepeatPeriod.Weekly) {
+        weeklyTasks.push(achievement);
+      } else {
+        oneTimeTasks.push(achievement);
+      }
+    }
+
+    return new ApiResponse(ResponseStatus.Success)
+      .setData({
+        weeklyTasks,
+        promotionTasks,
+        oneTimeTasks
+      })
       .toObject();
   }
 }

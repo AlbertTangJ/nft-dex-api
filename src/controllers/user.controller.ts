@@ -293,7 +293,7 @@ export class UserController {
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
-    console.log("follow")
+    console.log("follow");
     let result = await this.userService.followUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
@@ -307,7 +307,7 @@ export class UserController {
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
-    console.log("unfollow")
+    console.log("unfollow");
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
@@ -365,11 +365,14 @@ export class UserController {
     let decodedData = chContractInterface.parseTransaction(tx);
 
     if (
-      decodedData.name === "openPosition" &&
+      (decodedData.name === "openPosition" || decodedData.name === "closePosition") &&
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
       tx.to.toLowerCase() === "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
     ) {
+      let amm: string = decodedData.args[0].toString();
+      let side: string = decodedData.args[1].toString();
       try {
+        // A03 - Referer Traded
         let refererUserInfo = await this.userService.getRefererUserInfo(userAddress);
         if (refererUserInfo != null) {
           let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
@@ -377,9 +380,34 @@ export class UserController {
             await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
             await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
+          // R01 - Refer 5 new friends to open first position
+          existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("R01", userAddress);
+          if (existingAchievementRecord == null) {
+            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "R01", userAddress, txHash);
+          }
+        }
+        // T01 - Trade 1 time every week
+        await this.achievementService.completeAchievement(userAddress, "T01", null, txHash);
+        // T02 - Trade 5 time every week
+        await this.achievementService.completeAchievement(userAddress, "T02", null, txHash);
+        // T04 - Trade 50 times in lifetime
+        await this.achievementService.completeAchievement(userAddress, "T04", null, txHash);
+        // E01 - Trade at least 1 time during trading competition
+        await this.achievementService.completeAchievement(userAddress, "E01", null, txHash);
+        if (decodedData.name === "openPosition") {
+          // T03 - Open positions in more than 3 trading pairs
+          await this.achievementService.completeAchievement(userAddress, "T03", null, txHash, [amm]);
+          if (side == "0") {
+            // Long
+            // T05 - Open long positions in all trading pairs
+            await this.achievementService.completeAchievement(userAddress, "T05", null, txHash, [amm]);
+          } else {
+            // T06 - Open short positions in all trading pairs
+            await this.achievementService.completeAchievement(userAddress, "T06", null, txHash, [amm]);
+          }
         }
       } catch (e) {
-        // console.log(e); Silent error for now
+        console.log(e);
       }
     }
     return new ApiResponse(ResponseStatus.Success).toObject();
