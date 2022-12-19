@@ -64,6 +64,7 @@ export class AchievementController {
     @QueryParam("pageSize") pageSize: number = 30
   ) {
     if (pageNo <= 0) pageNo = 1;
+    if (pageSize > 50) pageSize = 50;
 
     let historyList = await this.achievementService.getUserAchievementHistory(userAddress, pageSize, (pageNo - 1) * pageSize);
 
