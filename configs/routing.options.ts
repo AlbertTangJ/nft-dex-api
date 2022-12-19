@@ -33,6 +33,7 @@ export const routingConfigs: RoutingControllersOptions = {
           if (decodedToken.uid != userAddress) {
             checkTokenResult = false;
             checkMessage = `Invalid token for ${userAddress}, token is for ${decodedToken.uid.substring(0, 10)}`;
+            console.error(checkMessage);
           }
         } catch (error) {
           checkMessage = error.message;
