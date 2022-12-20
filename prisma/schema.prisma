@@ -93,22 +93,22 @@ model Achievement {
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
+  type                String?           @db.VarChar
+  action              String?           @db.VarChar
+  page                String?           @db.VarChar
   points              Int
   redeemLimit         Int               @default(1)
   repeatPeriod        RepeatPeriod
+  step                Int               @default(1)
+  displayStep         String            @default("")
   createTime          DateTime          @default(now()) @db.Timestamp(6)
   updateTime          DateTime          @db.Timestamp(6)
   isGlobal            Boolean           @default(false)
   enabled             Boolean           @default(true)
   latestCompletedTime DateTime?         @db.Timestamp(6)
+  endTime             DateTime?         @db.Timestamp(6)
   code                String
   referralRelated     Boolean           @default(false)
-  action              String?           @db.VarChar
-  page                String?           @db.VarChar
-  step                Int               @default(1)
-  type                String?           @db.VarChar
-  displayStep         String            @default("")
-  endTime             DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 
   @@schema("api")

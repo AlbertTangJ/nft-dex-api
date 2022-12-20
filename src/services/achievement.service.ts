@@ -1,18 +1,100 @@
 import { Service } from "typedi";
 import prisma from "../helpers/client";
-import { Achievement, Prisma, User } from "@prisma/client";
+import { Achievement, Prisma, RepeatPeriod, User } from "@prisma/client";
 import { UserService } from "./user.service";
-import { select } from "async";
+
+type AchievementProgress = {
+  title: string;
+  type?: string;
+  action?: string;
+  page?: string;
+  step: number;
+  progress: number;
+  repeatPeriod: string;
+  code: string;
+  points: number;
+  displayStep: string;
+  endTime: Date;
+};
 
 @Service()
 export class AchievementService {
   constructor(private userService: UserService) {}
+
+  async getUserAchievementList(userAddress: string) {
+    return prisma.$queryRaw<AchievementProgress[]>`
+    SELECT a."title", a."step", a."repeatPeriod", a."type", a."action", a."page", a."code", a."points", a."displayStep", a."endTime",
+    CASE WHEN (CASE WHEN r."progress" IS NULL THEN 1 ELSE 0 END) = 0
+    THEN (r."progress")
+    ELSE 0
+    END
+    AS "progress"
+    FROM api."Achievement" a 
+    LEFT JOIN 
+    (SELECT ua."achievementId", MAX(ua."progress") AS "progress"
+    FROM
+    api."UserAchievement" ua
+    WHERE 
+    ua."userAddress" = ${userAddress.toLowerCase()}
+    AND
+    ua."ended" = false
+    GROUP BY ua."achievementId") r
+    ON a."id" = r."achievementId"
+    WHERE a."referralRelated" = false
+    AND a."code" != 'A02'`;
+  }
+
+  async getUserAchievementHistory(userAddress: string, limit: number, offset: number) {
+    return prisma.userAchievement.findMany({
+      take: limit,
+      skip: offset,
+      select:{
+        pointEarned: true,
+        createTime: true,
+        achievement:{
+          select:{
+            code: true,
+            description: true
+          }
+        },
+        referralUser:{
+          select:{
+            userInfo:{
+              select:{
+                username: true,
+                userAddress: true
+              }
+            }
+          }
+        }
+      },
+      where: {
+        userAddress: userAddress.toLowerCase(),
+        completed: true
+      },
+      orderBy: {
+        createTime: "desc"
+      }
+    });
+  }
 
   async findAchievementByCode(achievementCode: string) {
     return prisma.achievement.findFirst({
       where: {
         code: achievementCode,
         enabled: true
+      }
+    });
+  }
+
+  async findAchievementByCodeAndTxHash(achievementCode: string, txHash: string) {
+    return prisma.userAchievement.findFirst({
+      where: {
+        achievement: {
+          code: achievementCode,
+          enabled: true
+        },
+        txHash
       }
     });
   }
@@ -31,7 +113,8 @@ export class AchievementService {
   async findCompletedAchievementById(achievementId: string) {
     return prisma.userAchievement.findMany({
       where: {
-        achievementId
+        achievementId,
+        completed: true
       }
     });
   }
@@ -40,15 +123,15 @@ export class AchievementService {
     return prisma.userAchievement.findMany({
       where: {
         userAddress: {
-          equals: userAddress,
-          mode: "insensitive"
+          equals: userAddress.toLocaleLowerCase()
         },
-        achievementId
+        achievementId,
+        completed: true
       }
     });
   }
 
-  async findCompletedAchievementByTxHash(achievementId: string, txHash: string) {
+  async findUserAchievementByTxHash(achievementId: string, txHash: string) {
     return prisma.userAchievement.findMany({
       where: {
         achievementId,
@@ -61,6 +144,7 @@ export class AchievementService {
     return prisma.userAchievement.findMany({
       where: {
         achievementId,
+        completed: true,
         createTime: {
           gte: date
         }
@@ -72,10 +156,10 @@ export class AchievementService {
     return prisma.userAchievement.findMany({
       where: {
         userAddress: {
-          equals: userAddress,
-          mode: "insensitive"
+          equals: userAddress.toLowerCase()
         },
         achievementId,
+        completed: true,
         createTime: {
           gte: date
         }
@@ -135,98 +219,123 @@ export class AchievementService {
     walletAddress: string,
     achievement: Achievement,
     referralUserAddress?: string,
-    txHash?: string
+    txHash?: string,
+    extraData?: string[]
   ) {
     const now = new Date();
     const nowTimestamp = Math.floor(now.getTime() / 1000);
-    return await prisma.$transaction(async tx => {
-      const updatedUserInfos = await tx.userInfo.updateMany({
-        data: {
-          points: {
-            increment: achievement.referralRelated ? 0 : achievement.points
-          },
-          referralPoints: {
-            increment: achievement.referralRelated ? achievement.points : 0
-          },
-          updateTime: now,
-          updateTimestamp: nowTimestamp
-        },
-        where: {
-          userAddress: walletAddress.toLowerCase()
+    try {
+      let result = await prisma.$transaction(async tx => {
+        const totalSteps = achievement.step;
+        let startDate = this.getAchievementStartDate(achievement.repeatPeriod);
+        let lastAchievement = await (startDate
+          ? tx.userAchievement.findFirst({
+              where: {
+                userAddress: walletAddress.toLowerCase(),
+                achievementId: achievement.id,
+                createTime: {
+                  gte: startDate
+                }
+              },
+              orderBy: {
+                createTime: "desc"
+              }
+            })
+          : tx.userAchievement.findFirst({
+              where: {
+                userAddress: walletAddress.toLowerCase(),
+                achievementId: achievement.id
+              },
+              orderBy: {
+                createTime: "desc"
+              }
+            }));
+
+        let combinedDataWithoutDuplicate = null;
+
+        let dataArray;
+
+        if (extraData) {
+          dataArray = lastAchievement?.data ? (lastAchievement.data as string[]) : [];
+          combinedDataWithoutDuplicate = new Set([...dataArray, ...extraData]);
+          if (combinedDataWithoutDuplicate.length <= dataArray.length) {
+            // No new item
+            throw new Error(`No new item`);
+          }
+          dataArray = dataArray.concat(extraData);
         }
-      });
 
-      const updatedAchievements = await tx.achievement.updateMany({
-        data: {
-          latestCompletedTime: now,
-          updateTime: now
-        },
-        where: {
-          id: achievement.id,
-          latestCompletedTime: achievement.latestCompletedTime
+        if ((lastAchievement && lastAchievement.progress + 1 === totalSteps) || totalSteps === 1) {
+          // Achievement completed, give points to user
+          const updatedUserInfos = await tx.userInfo.updateMany({
+            data: {
+              points: {
+                increment: achievement.referralRelated ? 0 : achievement.points
+              },
+              referralPoints: {
+                increment: achievement.referralRelated ? achievement.points : 0
+              },
+              updateTime: now,
+              updateTimestamp: nowTimestamp
+            },
+            where: {
+              userAddress: walletAddress.toLowerCase()
+            }
+          });
+          if (updatedUserInfos.count === 0) {
+            throw new Error(`Please try again.`);
+          }
+
+          const updatedAchievements = await tx.achievement.updateMany({
+            data: {
+              latestCompletedTime: now,
+              updateTime: now
+            },
+            where: {
+              id: achievement.id,
+              latestCompletedTime: achievement.latestCompletedTime
+            }
+          });
+
+          if (updatedAchievements.count === 0) {
+            throw new Error(`Please try again.`);
+          }
         }
+
+        const completedAchievement = tx.userAchievement.create({
+          data: {
+            userAddress: walletAddress.toLowerCase(),
+            achievementId: achievement.id,
+            pointEarned: (lastAchievement?.progress ?? 0) + 1 === totalSteps ? achievement.points : 0,
+            createTime: now,
+            updateTime: now,
+            referralUserAddress: referralUserAddress ? referralUserAddress.toLowerCase() : null,
+            progress: lastAchievement ? lastAchievement.progress + 1 : 1,
+            completed: (lastAchievement?.progress ?? 0) + 1 === totalSteps ? true : false,
+            txHash,
+            data: dataArray?.length > 0 ? dataArray : undefined
+          }
+        });
+
+        return completedAchievement;
       });
-
-      if (updatedUserInfos.count === 0 || updatedAchievements.count === 0) {
-        throw new Error(`Please try again.`);
-      }
-
-      const completedAchievement = tx.userAchievement.create({
-        data: {
-          userAddress: walletAddress.toLowerCase(),
-          achievementId: achievement.id,
-          pointEarned: achievement.points,
-          createTime: now,
-          updateTime: now,
-          referralUserAddress: referralUserAddress ? referralUserAddress.toLowerCase() : null,
-          txHash
-        }
-      });
-
-      return completedAchievement;
-    });
+    } catch (e) {
+      console.log(e);
+    }
   }
 
-  async isEligibleForAchievement(walletAddress: string, achievement: Achievement, txHash?: string) {
+  async isEligibleForAchievement(walletAddress: string, achievement: Achievement) {
     const repeatPeriod = achievement.repeatPeriod;
     const repeatCount = achievement.redeemLimit;
 
     if (repeatCount === 0) return true; // No limit
 
-    let startDate: Date;
+    let startDate = this.getAchievementStartDate(repeatPeriod);
 
-    switch (repeatPeriod) {
-      case "None":
-        startDate = null;
-        break;
-      case "Daily":
-        startDate = new Date();
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case "Weekly":
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - startDate.getDay());
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case "Monthly":
-        startDate = new Date();
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case "Yearly":
-        startDate = new Date();
-        startDate.setMonth(0);
-        startDate.setDate(1);
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      default:
-        break;
-    }
-
-    if (txHash) {
-      let completedAchievementWithTxHash = await this.findCompletedAchievementByTxHash(achievement.id, txHash);
-      if (completedAchievementWithTxHash.length > 0) return false;
-    }
+    // if (txHash) {
+    //   let completedAchievementWithTxHash = await this.findCompletedAchievementByTxHash(achievement.id, txHash);
+    //   if (completedAchievementWithTxHash.length > 0) return false;
+    // }
 
     let completedAchievements = [];
 
@@ -243,22 +352,65 @@ export class AchievementService {
     return completedAchievements.length < repeatCount;
   }
 
-  async completeAchievement(walletAddress: string, achievementCode: string, referralUserAddress?: string, txHash?: string) {
-    const user = await this.userService.findByAddress(walletAddress);
-    if (!user) {
-      throw new Error(`User not found.`);
-    }
-
+  async completeAchievement(
+    walletAddress: string,
+    achievementCode: string,
+    referralUserAddress?: string,
+    txHash?: string,
+    extraData?: string[]
+  ) {
     const achievement = await this.findAchievementByCode(achievementCode);
 
     if (!achievement) {
-      throw new Error(`Achievement not found.`);
+      return false;
     }
 
-    if (!(await this.isEligibleForAchievement(walletAddress, achievement, txHash))) {
-      throw new Error(`Not eligible for this achievement.`);
+    if (txHash) {
+      let completedAchievementWithTxHash = await this.findUserAchievementByTxHash(achievement.id, txHash);
+      if (completedAchievementWithTxHash.length > 0) {
+        return false;
+      }
+    }
+    if (!(await this.isEligibleForAchievement(walletAddress, achievement))) {
+      return false;
     }
 
-    await this.completeAchievementInternal(walletAddress, achievement, referralUserAddress, txHash);
+    await this.completeAchievementInternal(walletAddress, achievement, referralUserAddress, txHash, extraData);
+  }
+
+  private getAchievementStartDate(repeatPeriod: RepeatPeriod): Date {
+    let startDate: Date;
+
+    switch (repeatPeriod) {
+      case "None":
+        startDate = null;
+        break;
+      case "Daily":
+        startDate = new Date();
+        startDate.setUTCHours(0, 0, 0, 0);
+        break;
+      case "Weekly":
+        startDate = new Date();
+        let day = startDate.getUTCDay();
+        let diff = startDate.getUTCDate() - day + (day == 0 ? -6 : 1); // adjust when day is sunday
+        startDate.setUTCDate(diff);
+        startDate.setUTCHours(0, 0, 0, 0);
+        break;
+      case "Monthly":
+        startDate = new Date();
+        startDate.setUTCDate(1);
+        startDate.setUTCHours(0, 0, 0, 0);
+        break;
+      case "Yearly":
+        startDate = new Date();
+        startDate.setUTCMonth(0);
+        startDate.setUTCDate(1);
+        startDate.setUTCHours(0, 0, 0, 0);
+        break;
+      default:
+        break;
+    }
+
+    return startDate;
   }
 }
