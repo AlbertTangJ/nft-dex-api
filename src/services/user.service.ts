@@ -229,7 +229,10 @@ export class UserService {
   }
 
   async saveEvent(name: string, params: any) {
-    await prisma.userEventsLog.create({ data: { name: name, event: params } })
+    let currentDateTime = new Date()
+      .toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    await prisma.userEventsLog.create({ data: { name: name, event: params, createTime: currentDateTime, createTimestamp: currentTimestamp, updateTime: currentDateTime, updateTimestamp: currentTimestamp } })
   }
 
   async authUserService(signature: string, publicAddress: string) {

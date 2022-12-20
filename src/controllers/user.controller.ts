@@ -287,7 +287,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/follow")
   async follow(
     @BodyParam("userAddress", { required: true }) user: string,
@@ -301,7 +301,7 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  // @Authorized("auth-token")
+  @Authorized("auth-token")
   @Post("/users/unfollow")
   async unFollower(
     @BodyParam("userAddress", { required: true }) user: string,
@@ -375,7 +375,6 @@ export class UserController {
           let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
           if (existingAchievementRecord == null) {
             await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
-            await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
         }
       } catch (e) {
