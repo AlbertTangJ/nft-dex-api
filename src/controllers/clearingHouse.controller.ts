@@ -8,7 +8,7 @@ import {
 } from "routing-controllers";
 import { AmmService, ClearingHouseService } from "../services";
 import { Service } from "typedi";
-import { ethers, BigNumber, utils } from "ethers";
+import { BigNumber, utils } from "ethers";
 import {
   getFundingPayment,
   getMarginRatio,
@@ -23,9 +23,6 @@ import { toBN } from "src/helpers/decimalHelper";
 import { PositionDetail } from "src/helpers/positionDetail";
 import { GraphData } from "src/helpers/graphData";
 import { TradeData, Position } from "@prisma/client";
-
-
-const AMM_ABI = require("../abi/amm_abi.json");
 
 @JsonController()
 @Service()
@@ -46,7 +43,7 @@ export class ClearingHouseController {
     let position = await this.clearingHouseService.currentPosition(trader, amm);
     let ammReserve = await this.ammService.latestAmmReserves(amm);
     if (!position || position.size.eq(0)) {
-      return new ApiResponse(1).toObject();
+      return new ApiResponse(ResponseStatus.Failure).toObject();
     }
 
     let [_, unrealizedPnl] = getPositionNotionalAndUnrealizedPnl(
@@ -56,7 +53,7 @@ export class ClearingHouseController {
       toBN(ammReserve.baseAssetReserve)
     );
 
-    return new ApiResponse(0)
+    return new ApiResponse(ResponseStatus.Success)
       .setData({ unrealizedPnl: unrealizedPnl.toString() })
       .toObject();
   }
@@ -73,7 +70,7 @@ export class ClearingHouseController {
     let amm = await this.ammService.amm(ammAddress);
 
     if (!amm) {
-      return new ApiResponse(1).setData({ error: "Amm not found" }).toObject();
+      return new ApiResponse(ResponseStatus.Failure).setData({ error: "Amm not found" }).toObject();
     }
 
     let position = timestamp
@@ -118,7 +115,7 @@ export class ClearingHouseController {
       remainMargin
     ).toObject();
 
-    return new ApiResponse(0)
+    return new ApiResponse(ResponseStatus.Success)
       .setData({
         position: positionDetail,
       })
@@ -157,7 +154,9 @@ export class ClearingHouseController {
           .add(toBN(position.cumulativeRealizedPnl))
           .sub(toBN(position.cumulativeFee))
           .sub(toBN(position.cumulativeFundingPayment))
-          .sub(toBN(position.cumulativeLiquidationPenalty));
+          .sub(toBN(position.cumulativeLiquidationPenalty))
+          .sub(toBN(position.cumulativeFullLiquidationRealizedPnl))
+          .add(toBN(position.cumulativeFullLiquidationFundingPayment));
         allTimePriceChangePnl = allTimePriceChangePnl.add(
           toBN(position.realizedPnl)
         );
@@ -256,8 +255,9 @@ export class ClearingHouseController {
           .toString(),
         totalUnrealizedPnl: totalUnrealizedPnl.toString(),
         allTimePriceChangePnl: allTimePriceChangePnl.toString(),
-        allTimeAccumulativeFundingPayment:
-          allTimeAccumulativeFundingPayment.mul(-1).toString(),
+        allTimeAccumulativeFundingPayment: allTimeAccumulativeFundingPayment
+          .mul(-1)
+          .toString(),
       })
       .toObject();
   }
@@ -310,7 +310,7 @@ export class ClearingHouseController {
         }
       }
     } else {
-      return new ApiResponse(1).toObject();
+      return new ApiResponse(ResponseStatus.Success).toObject();
     }
 
     return await this.totalAccountValueGraph(

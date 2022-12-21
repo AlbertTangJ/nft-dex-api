@@ -43,6 +43,10 @@ export class UserService {
     });
   }
 
+  async updateUserInfos(data: Prisma.UserInfoUpdateManyArgs) {
+    return prisma.userInfo.updateMany(data);
+  }
+
   async getRefererUserInfo(userAddress: string) {
     let info = await prisma.$queryRaw<UserInfo[]>`
     SELECT * FROM api."UserInfo" WHERE "referralCode" = 
@@ -210,7 +214,7 @@ export class UserService {
 
   async inputReferralCode(code: string, userAddress: string) {
     let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-    if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase()) {
+    if (userInfo == null || userInfo.userAddress == userAddress.toLowerCase() || userInfo.isInputCode === true) {
       return null;
     }
 

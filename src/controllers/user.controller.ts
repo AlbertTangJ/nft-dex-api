@@ -369,6 +369,16 @@ export class UserController {
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
       tx.to.toLowerCase() === "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
     ) {
+
+      await this.userService.updateUserInfos({
+        data:{
+          isInputCode: true
+        },
+        where:{
+          userAddress: userAddress.toLowerCase()
+        }
+      });
+
       let amm: string = decodedData.args[0].toString();
       let side: string = decodedData.args[1].toString();
       try {
