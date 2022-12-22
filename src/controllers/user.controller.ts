@@ -391,10 +391,10 @@ export class UserController {
             await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
           // R01 - Refer 5 new friends to open first position
-          existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("R01", userAddress);
-          if (existingAchievementRecord == null) {
-            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "R01", userAddress, txHash);
-          }
+          // existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("R01", userAddress);
+          // if (existingAchievementRecord == null) {
+          //   await this.achievementService.completeAchievement(refererUserInfo.userAddress, "R01", userAddress, txHash);
+          // }
         }
         // // T01 - Trade 1 time every week
         // await this.achievementService.completeAchievement(userAddress, "T01", null, txHash);
