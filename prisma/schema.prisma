@@ -44,25 +44,26 @@ model User {
 }
 
 model UserInfo {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String    @unique @db.VarChar
-  nonce           Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
-  username        String    @db.VarChar
-  about           String?
-  updateNameTimes Int?      @default(0)
-  updateTimestamp Int?
-  createTimestamp Int?
-  updateTime      DateTime? @db.Timestamp(6)
-  createTime      DateTime? @default(now()) @db.Timestamp(6)
-  points          Int       @default(0)
-  followers       Int       @default(0)
-  ranking         Int       @default(0)
-  referralCode    String?   @unique(map: "UserInfo_code_unique") @db.VarChar
-  following       Int       @default(0)
-  referralPoints  Int       @default(0)
-  amm             String?   @db.VarChar
-  isInputCode     Boolean   @default(false)
-  user            User      @relation(fields: [userAddress], references: [userAddress])
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress       String    @unique @db.VarChar
+  nonce             Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
+  username          String    @db.VarChar
+  about             String?
+  updateNameTimes   Int?      @default(0)
+  updateTimestamp   Int?
+  createTimestamp   Int?
+  updateTime        DateTime? @db.Timestamp(6)
+  createTime        DateTime? @default(now()) @db.Timestamp(6)
+  points            Int       @default(0)
+  followers         Int       @default(0)
+  ranking           Int       @default(0)
+  referralCode      String?   @unique(map: "UserInfo_code_unique") @db.VarChar
+  following         Int       @default(0)
+  referralPoints    Int       @default(0)
+  amm               String?   @db.VarChar
+  isInputCode       Boolean   @default(false)
+  countReferralCode Int       @default(0)
+  user              User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")
 }
@@ -77,9 +78,13 @@ model BadWords {
 }
 
 model UserEventsLog {
-  id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  event Json?
-  name  String? @db.VarChar
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event           Json?
+  name            String?   @db.VarChar
+  createTime      DateTime? @default(now()) @db.Timestamp(6)
+  createTimestamp Int?
+  updateTime      DateTime? @db.Timestamp(6)
+  updateTimestamp Int?
 
   @@schema("api")
 }
@@ -99,6 +104,12 @@ model Achievement {
   latestCompletedTime DateTime?         @db.Timestamp(6)
   code                String
   referralRelated     Boolean           @default(false)
+  action              String?           @db.VarChar
+  page                String?           @db.VarChar
+  step                Int               @default(1)
+  type                String?           @db.VarChar
+  displayStep         String            @default("")
+  endTime             DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 
   @@schema("api")
@@ -114,6 +125,10 @@ model UserAchievement {
   referralUserAddress String?     @db.VarChar
   txHash              String?     @db.VarChar
   hidden              Boolean     @default(false)
+  completed           Boolean     @default(false)
+  data                Json?
+  progress            Int         @default(1)
+  ended               Boolean     @default(false)
   achievement         Achievement @relation(fields: [achievementId], references: [id])
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
@@ -247,10 +262,7 @@ model Position {
   cumulativeFee                           Decimal   @db.Decimal
   cumulativeFundingPayment                Decimal   @db.Decimal
   cumulativeLiquidationPenalty            Decimal   @db.Decimal
-  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
   cumulativeRealizedPnl                   Decimal   @db.Decimal
-  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
-  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
   liquidationPenalty                      Decimal   @db.Decimal
   baseAssetReserve                        Decimal   @db.Decimal
   quoteAssetReserve                       Decimal   @db.Decimal
@@ -266,9 +278,12 @@ model Position {
   positionCumulativeRealizedPnl           Decimal   @default(0) @db.Decimal
   realizedPnlWithdrawAmount               Decimal   @default(0) @db.Decimal
   openMargin                              Decimal   @default(0) @db.Decimal
-  txHash                                  String    @db.VarChar(255)
   batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fundingPayment                          Decimal   @db.Decimal
+  txHash                                  String    @db.VarChar(255)
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
