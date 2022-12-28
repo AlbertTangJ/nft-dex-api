@@ -220,7 +220,8 @@ export class AchievementService {
     achievement: Achievement,
     referralUserAddress?: string,
     txHash?: string,
-    extraData?: string[]
+    extraData?: string[],
+    forcePointEarned?: number
   ) {
     const now = new Date();
     const nowTimestamp = Math.floor(now.getTime() / 1000);
@@ -259,6 +260,8 @@ export class AchievementService {
 
         let dataArray;
 
+        const pointEarned = forcePointEarned ?? achievement.points;
+
         if (extraData) {
           dataArray = lastAchievement?.data ? (lastAchievement.data as string[]) : [];
           combinedDataWithoutDuplicate = new Set([...dataArray, ...extraData]);
@@ -274,10 +277,10 @@ export class AchievementService {
           const updatedUserInfos = await tx.userInfo.updateMany({
             data: {
               points: {
-                increment: achievement.referralRelated ? 0 : achievement.points
+                increment: achievement.referralRelated ? 0 : pointEarned
               },
               referralPoints: {
-                increment: achievement.referralRelated ? achievement.points : 0
+                increment: achievement.referralRelated ? pointEarned : 0
               },
               updateTime: now,
               updateTimestamp: nowTimestamp
@@ -310,7 +313,7 @@ export class AchievementService {
           data: {
             userAddress: walletAddress.toLowerCase(),
             achievementId: achievement.id,
-            pointEarned: (lastAchievement?.progress ?? 0) + 1 === totalSteps ? achievement.points : 0,
+            pointEarned: (lastAchievement?.progress ?? 0) + 1 === totalSteps ? pointEarned : 0,
             createTime: now,
             updateTime: now,
             referralUserAddress: referralUserAddress ? referralUserAddress.toLowerCase() : null,
@@ -361,7 +364,8 @@ export class AchievementService {
     achievementCode: string,
     referralUserAddress?: string,
     txHash?: string,
-    extraData?: string[]
+    extraData?: string[],
+    completeWhenNotEligible = false
   ) {
     const achievement = await this.findAchievementByCode(achievementCode);
 
@@ -375,11 +379,21 @@ export class AchievementService {
         return false;
       }
     }
-    if (!(await this.isEligibleForAchievement(walletAddress, achievement))) {
+
+    const isEligible = await this.isEligibleForAchievement(walletAddress, achievement);
+
+    if (!isEligible && !completeWhenNotEligible) {
       return false;
     }
 
-    await this.completeAchievementInternal(walletAddress, achievement, referralUserAddress, txHash, extraData);
+    await this.completeAchievementInternal(
+      walletAddress,
+      achievement,
+      referralUserAddress,
+      txHash,
+      extraData,
+      !isEligible && completeWhenNotEligible ? 0 : null
+    );
   }
 
   private getAchievementStartDate(repeatPeriod: RepeatPeriod): Date {

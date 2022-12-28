@@ -387,7 +387,7 @@ export class UserController {
         if (refererUserInfo != null) {
           let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
           if (existingAchievementRecord == null) {
-            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
+            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash, null, true);
             await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
           // R01 - Refer 5 new friends to open first position
