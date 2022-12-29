@@ -1,7 +1,6 @@
 import { Position } from "@prisma/client";
 import { BigNumber, utils } from "ethers";
 
-
 export const enum Dir {
   addToAmm,
   removeFromAmm,
@@ -156,7 +155,10 @@ export function getTotalAccountValue(
     .sub(fundingPayment)
     .sub(BigNumber.from(position.cumulativeFundingPayment.toString()))
     .sub(BigNumber.from(position.cumulativeFee.toString()))
-    .sub(BigNumber.from(position.cumulativeLiquidationPenalty.toString()));
+    .sub(BigNumber.from(position.cumulativeLiquidationPenalty.toString()))
+    .sub(BigNumber.from(position.cumulativeFullLiquidationRealizedPnl.toString()))
+    .add(BigNumber.from(position.cumulativeFullLiquidationFundingPayment.toString()))
+    ;
 }
 
 export function getPriceChangePnl(

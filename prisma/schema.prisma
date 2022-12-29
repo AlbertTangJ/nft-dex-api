@@ -81,6 +81,8 @@ model UserEventsLog {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   event           Json?
   name            String?   @db.VarChar
+  ip              String?   @db.VarChar
+  userAgent       String?   @db.VarChar
   createTime      DateTime? @default(now()) @db.Timestamp(6)
   createTimestamp Int?
   updateTime      DateTime? @db.Timestamp(6)

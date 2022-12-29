@@ -1,4 +1,4 @@
-import { JsonController, Get, QueryParam, Post, BodyParam, Authorized } from "routing-controllers";
+import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req } from "routing-controllers";
 import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
@@ -226,9 +226,11 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Get("/test")
-  async test() {
+  // @Authorized("auth-token")
+  @Post("/test")
+  async test(@BodyParam("userAddress", { required: true }) userAddress: string) {
     await this.userService.test();
+    return new ApiResponse(ResponseStatus.Success);
   }
 
   @Post("/users")
@@ -324,9 +326,12 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
+
   @Post("/users/event")
-  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any) {
-    await this.userService.saveEvent(name, event);
+  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any, @Req() request: any) {
+    let userAgent = request.headers['user-agent'];
+    let ip = request.headers['host'];
+    await this.userService.saveEvent(name, event, ip, userAgent);
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
 
@@ -369,6 +374,16 @@ export class UserController {
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
       tx.to.toLowerCase() === "0x0c578801Ae88e92A06732A68A51698c4fA55aE73".toLowerCase() // Move to .env
     ) {
+
+      await this.userService.updateUserInfos({
+        data: {
+          isInputCode: true
+        },
+        where: {
+          userAddress: userAddress.toLowerCase()
+        }
+      });
+
       let amm: string = decodedData.args[0].toString();
       let side: string = decodedData.args[1].toString();
       try {
@@ -378,33 +393,34 @@ export class UserController {
           let existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("A03", userAddress);
           if (existingAchievementRecord == null) {
             await this.achievementService.completeAchievement(refererUserInfo.userAddress, "A03", userAddress, txHash);
+            await this.achievementService.hideReferralAchievements("A01", refererUserInfo.userAddress, userAddress);
           }
           // R01 - Refer 5 new friends to open first position
-          existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("R01", userAddress);
-          if (existingAchievementRecord == null) {
-            await this.achievementService.completeAchievement(refererUserInfo.userAddress, "R01", userAddress, txHash);
-          }
+          // existingAchievementRecord = await this.achievementService.findUserAchievementByCodeAndReferredUser("R01", userAddress);
+          // if (existingAchievementRecord == null) {
+          //   await this.achievementService.completeAchievement(refererUserInfo.userAddress, "R01", userAddress, txHash);
+          // }
         }
-        // T01 - Trade 1 time every week
-        await this.achievementService.completeAchievement(userAddress, "T01", null, txHash);
-        // T02 - Trade 5 time every week
-        await this.achievementService.completeAchievement(userAddress, "T02", null, txHash);
-        // T04 - Trade 50 times in lifetime
-        await this.achievementService.completeAchievement(userAddress, "T04", null, txHash);
-        // E01 - Trade at least 1 time during trading competition
-        await this.achievementService.completeAchievement(userAddress, "E01", null, txHash);
-        if (decodedData.name === "openPosition") {
-          // T03 - Open positions in more than 3 trading pairs
-          await this.achievementService.completeAchievement(userAddress, "T03", null, txHash, [amm]);
-          if (side == "0") {
-            // Long
-            // T05 - Open long positions in all trading pairs
-            await this.achievementService.completeAchievement(userAddress, "T05", null, txHash, [amm]);
-          } else {
-            // T06 - Open short positions in all trading pairs
-            await this.achievementService.completeAchievement(userAddress, "T06", null, txHash, [amm]);
-          }
-        }
+        // // T01 - Trade 1 time every week
+        // await this.achievementService.completeAchievement(userAddress, "T01", null, txHash);
+        // // T02 - Trade 5 time every week
+        // await this.achievementService.completeAchievement(userAddress, "T02", null, txHash);
+        // // T04 - Trade 50 times in lifetime
+        // await this.achievementService.completeAchievement(userAddress, "T04", null, txHash);
+        // // E01 - Trade at least 1 time during trading competition
+        // await this.achievementService.completeAchievement(userAddress, "E01", null, txHash);
+        // if (decodedData.name === "openPosition") {
+        //   // T03 - Open positions in more than 3 trading pairs
+        //   await this.achievementService.completeAchievement(userAddress, "T03", null, txHash, [amm]);
+        //   if (side == "0") {
+        //     // Long
+        //     // T05 - Open long positions in all trading pairs
+        //     await this.achievementService.completeAchievement(userAddress, "T05", null, txHash, [amm]);
+        //   } else {
+        //     // T06 - Open short positions in all trading pairs
+        //     await this.achievementService.completeAchievement(userAddress, "T06", null, txHash, [amm]);
+        //   }
+        // }
       } catch (e) {
         console.log(e);
       }

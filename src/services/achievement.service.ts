@@ -48,19 +48,19 @@ export class AchievementService {
     return prisma.userAchievement.findMany({
       take: limit,
       skip: offset,
-      select:{
+      select: {
         pointEarned: true,
         createTime: true,
-        achievement:{
-          select:{
+        achievement: {
+          select: {
             code: true,
             description: true
           }
         },
-        referralUser:{
-          select:{
-            userInfo:{
-              select:{
+        referralUser: {
+          select: {
+            userInfo: {
+              select: {
                 username: true,
                 userAddress: true
               }
@@ -235,7 +235,9 @@ export class AchievementService {
                 achievementId: achievement.id,
                 createTime: {
                   gte: startDate
-                }
+                },
+                ended: false,
+                completed: false
               },
               orderBy: {
                 createTime: "desc"
@@ -244,7 +246,9 @@ export class AchievementService {
           : tx.userAchievement.findFirst({
               where: {
                 userAddress: walletAddress.toLowerCase(),
-                achievementId: achievement.id
+                achievementId: achievement.id,
+                ended: false,
+                completed: false
               },
               orderBy: {
                 createTime: "desc"
