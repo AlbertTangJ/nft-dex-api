@@ -330,7 +330,7 @@ export class UserController {
   @Post("/users/event")
   async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any, @Req() request: any) {
     let userAgent = request.headers['user-agent'];
-    let ip = request.headers['host'];
+    let ip = request.ip;
     await this.userService.saveEvent(name, event, ip, userAgent);
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
