@@ -81,12 +81,12 @@ model UserEventsLog {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   event           Json?
   name            String?   @db.VarChar
-  ip              String?   @db.VarChar
-  userAgent       String?   @db.VarChar
   createTime      DateTime? @default(now()) @db.Timestamp(6)
   createTimestamp Int?
   updateTime      DateTime? @db.Timestamp(6)
   updateTimestamp Int?
+  ip              String?   @db.VarChar
+  userAgent       String?   @db.VarChar
 
   @@schema("api")
 }
@@ -135,6 +135,30 @@ model UserAchievement {
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
 
+  @@schema("api")
+}
+
+model Events {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  startTime       Int
+  endTime         Int
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model Whitelist {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress String
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
   @@schema("api")
 }
 
@@ -241,30 +265,6 @@ model AmmReserve {
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
   @@index([ammAddress, timestamp(sort: Desc)])
-  @@schema("api")
-}
-
-model Events {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String
-  description     String
-  startTime       Int
-  endTime         Int
-  createTime      DateTime @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime @db.Timestamp(6)
-  updateTimestamp Int
-
-  @@schema("api")
-}
-
-model Whitelist {
-  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress String
-  createTime      DateTime @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime @db.Timestamp(6)
-  updateTimestamp Int
   @@schema("api")
 }
 
