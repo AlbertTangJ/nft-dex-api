@@ -241,21 +241,24 @@ export class UserService {
     let currentDateTime = new Date().toISOString();
     let currentTimestamp = Math.floor(Date.now() / 1000);
     if (Array.isArray(params)) {
+      let datalist = []
       for (let i = 0; i < params.length; i++) {
         const element = params[i];
-        await prisma.userEventsLog.create({
-          data: {
-            name: name,
-            event: element,
-            ip: ip,
-            userAgent: userAgent,
-            createTime: currentDateTime,
-            createTimestamp: currentTimestamp,
-            updateTime: currentDateTime,
-            updateTimestamp: currentTimestamp
-          }
-        });
+        let data = {
+          name: name,
+          event: element,
+          ip: ip,
+          userAgent: userAgent,
+          createTime: currentDateTime,
+          createTimestamp: currentTimestamp,
+          updateTime: currentDateTime,
+          updateTimestamp: currentTimestamp
+        }
+        datalist.push(data)
       }
+      await prisma.userEventsLog.createMany({
+        data: datalist
+      });
     } else {
       await prisma.userEventsLog.create({
         data: {
