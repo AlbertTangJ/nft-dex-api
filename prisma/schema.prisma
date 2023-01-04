@@ -138,31 +138,6 @@ model UserAchievement {
   @@schema("api")
 }
 
-model Events {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title           String
-  description     String
-  startTime       Int
-  endTime         Int
-  createTime      DateTime @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime @db.Timestamp(6)
-  updateTimestamp Int
-
-  @@schema("api")
-}
-
-model Whitelist {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String
-  createTime      DateTime @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime @db.Timestamp(6)
-  updateTimestamp Int
-
-  @@schema("api")
-}
-
 model ReferralEvents {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userAddress  String   @unique(map: "ReferralEvents_userAddress_unique") @db.VarChar
