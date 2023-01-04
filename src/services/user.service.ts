@@ -58,6 +58,62 @@ export class UserService {
     return info.length === 1 ? info[0] : null;
   }
 
+  // 保存连接钱包的地址
+  async saveConnectWalletAddress(userAddress: string) {
+    let haveOne = await prisma.connectHistory.findUnique({ where: { userAddress } });
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    if (haveOne) {
+      return haveOne;
+    } else {
+      let data = {
+        userAddress: userAddress,
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let user = await prisma.connectHistory.create({ data: data });
+      return user;
+    }
+  }
+
+  // 查询地址是否连接过
+  async fetchConnectWallet(userAddress: string) {
+    let haveOne = await prisma.connectHistory.findUnique({ where: { userAddress } });
+    return haveOne;
+  }
+
+  // 查询地址是不是在whitelist
+  async fetchWhitelist(userAddress: string) {
+    let haveOne = await prisma.whitelist.findUnique({ where: { userAddress } });
+    return haveOne;
+  }
+
+  // 将地址加入whitelist
+  async saveWhitelist(list: string[]) {
+    let datalist = []
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < list.length; i++) {
+      const address = list[i];
+      let data = {
+        userAddress: address.toLowerCase(),
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let haveOne = await prisma.whitelist.findUnique({ where: { userAddress: address.toLowerCase() } })
+      if (haveOne == null || haveOne == undefined) {
+        datalist.push(data)
+      }
+    }
+    if (datalist.length > 0) {
+      let result = await prisma.whitelist.createMany({ data: datalist })
+      return result;
+    }
+    return null;
+  }
+
   // 根据参数地址获取followers
   async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {

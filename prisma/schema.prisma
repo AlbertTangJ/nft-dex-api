@@ -147,6 +147,42 @@ model ReferralEvents {
   @@schema("api")
 }
 
+model Events {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  startTime       Int
+  endTime         Int
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model ConnectHistory {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model Whitelist {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
 model AggregateJob {
   id                                             Int     @id @default(autoincrement())
   adjustKLastUpdatedBlockNumber                  Int     @default(0)

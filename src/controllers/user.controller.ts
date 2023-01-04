@@ -1,4 +1,4 @@
-import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req } from "routing-controllers";
+import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req, Param } from "routing-controllers";
 import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
@@ -42,6 +42,30 @@ export class UserController {
     };
 
     this.twoAddressValidator = new Schema(followListAPICheck);
+  }
+
+  @Post("/users/connect/wallet")
+  async connectWallet(@BodyParam("address") address: string) {
+    if (!address) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("Missing parameters").toObject();
+    }
+
+    const user = await this.userService.saveConnectWalletAddress(address.toLowerCase())
+    if (!user) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
+    } else {
+      return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
+    }
+  }
+
+  @Get("/users/find/connected/:address")
+  async fetchConnectedAddress(@Param("address") address: string) {
+    const user = await this.userService.fetchConnectWallet(address.toLowerCase());
+    if (!user) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
+    } else {
+      return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
+    }
   }
 
   @Get("/users/find")
@@ -264,6 +288,26 @@ export class UserController {
 
     let result = await this.userService.followingList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
+  }
+
+  // @Post("/users/create/whitelist")
+  // async createWhitelist(@BodyParam("users", { required: true }) users: []) {
+
+  //   let result = await this.userService.saveWhitelist(users)
+  //   if (result != null) {
+  //     return new ApiResponse(ResponseStatus.Success);
+  //   }
+  //   return new ApiResponse(ResponseStatus.Failure);
+  // }
+
+  @Get("/users/whitelist/:address")
+  async findAddressInWhitelist(@Param("address") address: string) {
+
+    let result = await this.userService.fetchWhitelist(address.toLowerCase())
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
   }
 
   @Post("/followers/list")

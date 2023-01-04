@@ -23,13 +23,23 @@ export class ActivityController {
         @BodyParam("startTime") startTime: number,
         @BodyParam("endTime") endTime: number) {
 
-        this.activityService.create(title, description, startTime, endTime);
+        let activity = await this.activityService.create(title, description, startTime, endTime);
+        if (!activity) {
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage("activity create fail").toObject();
+        } else {
+            return new ApiResponse(ResponseStatus.Success).setData(activity).toObject();
+        }
     }
 
 
     @Get("/activity/running/list")
     async activityList() {
-        return await this.activityService.findRunningActivities()
+        let list = await this.activityService.findRunningActivities();
+        if (!list) {
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage("no any activities").toObject();
+        } else {
+            return new ApiResponse(ResponseStatus.Success).setData(list).toObject();
+        }
     }
 
 }
