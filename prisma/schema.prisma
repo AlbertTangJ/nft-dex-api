@@ -183,6 +183,17 @@ model Whitelist {
   @@schema("api")
 }
 
+model SubscribeUsers {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
 model AggregateJob {
   id                                             Int     @id @default(autoincrement())
   adjustKLastUpdatedBlockNumber                  Int     @default(0)
@@ -361,6 +372,16 @@ model TradeData {
   @@index([ammAddress, resolution, startTimestamp])
   @@index([ammAddress, startTimestamp])
   @@index([ammAddress(ops: raw("gin_trgm_ops"))], map: "trgm_amm_address_idx", type: Gin)
+  @@schema("api")
+}
+
+model TethBalanceHistory {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress String  @db.VarChar(255)
+  balance     Decimal @db.Decimal
+  timestamp   Int
+
+  @@index([userAddress, timestamp])
   @@schema("api")
 }
 

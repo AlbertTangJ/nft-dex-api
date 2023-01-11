@@ -1,5 +1,6 @@
+import { Amm, Position } from "@prisma/client";
 import { BigNumber, utils } from "ethers";
-import { Amm, Position } from "prisma/generated/dataClient";
+// import { Amm, Position } from "prisma/generated/dataClient";
 import { toBN } from "./decimalHelper";
 
 export class PositionDetail {
@@ -11,7 +12,7 @@ export class PositionDetail {
     private marginRatio: BigNumber,
     private positionNotional: BigNumber,
     private remainMargin: BigNumber
-  ) {}
+  ) { }
 
   getAmm() {
     return this.amm;

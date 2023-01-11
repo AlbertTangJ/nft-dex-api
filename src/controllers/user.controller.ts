@@ -300,6 +300,17 @@ export class UserController {
   //   return new ApiResponse(ResponseStatus.Failure);
   // }
 
+
+  @Post("/users/subscribe/email")
+  async subscribeEmail(@BodyParam("email", { required: true }) email: string) {
+
+    let result = await this.userService.subscribeUserEmail(email)
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success);
+    }
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("duplicate email");
+  }
+
   @Get("/users/whitelist/:address")
   async findAddressInWhitelist(@Param("address") address: string) {
 
@@ -333,6 +344,22 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
+  @Post("/users/check/user/isfollow")
+  async checkIsFollow(
+    @BodyParam("userAddress", { required: true }) user: string,
+    @BodyParam("followerAddress", { required: true }) follower: string
+  ) {
+    const apiTest = process.env.API_TEST;
+    if (!apiTest) {
+      throw Error("not found");
+    }
+    let result = await this.userService.isFollowUser(user, follower);
+    if (result) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("not exists");
+  }
+
   @Authorized("auth-token")
   @Post("/users/follow")
   async follow(
@@ -353,12 +380,11 @@ export class UserController {
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
-    console.log("unfollow");
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
-    return new ApiResponse(ResponseStatus.Failure);
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("no this follower");
   }
 
   @Post("/users/auth")

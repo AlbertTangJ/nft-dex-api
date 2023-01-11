@@ -475,6 +475,37 @@ export class UserService {
     }
   }
 
+  async subscribeUserEmail(email: string) {
+    let haveSubscribed = await prisma.subscribeUsers.findUnique({ where: { email } });
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    if (haveSubscribed != null) {
+      return null;
+    } else {
+      let data = {
+        email: email,
+        createTime: currentDateTime,
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let result = await prisma.subscribeUsers.create({ data: data });
+      return result;
+    }
+  }
+
+  async isFollowUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
+    let haveFollowed = await prisma.userFollowing.findUnique({
+      where: {
+        userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
+      }
+    });
+    return haveFollowed;
+  }
+
   async fetchUserInfo(user: string, targetUser: string) {
 
     let targetUserInfo: {
