@@ -344,22 +344,6 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Success).setData(result);
   }
 
-  @Post("/users/check/user/isfollow")
-  async checkIsFollow(
-    @BodyParam("userAddress", { required: true }) user: string,
-    @BodyParam("followerAddress", { required: true }) follower: string
-  ) {
-    const apiTest = process.env.API_TEST;
-    if (!apiTest) {
-      throw Error("not found");
-    }
-    let result = await this.userService.isFollowUser(user, follower);
-    if (result) {
-      return new ApiResponse(ResponseStatus.Success).setData(result);
-    }
-    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("not exists");
-  }
-
   @Authorized("auth-token")
   @Post("/users/follow")
   async follow(
