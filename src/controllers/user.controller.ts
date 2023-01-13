@@ -454,7 +454,8 @@ export class UserController {
 
       await this.userService.updateUserInfos({
         data: {
-          isInputCode: true
+          isInputCode: true,
+          hasTraded: true
         },
         where: {
           userAddress: userAddress.toLowerCase()
