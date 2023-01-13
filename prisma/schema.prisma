@@ -63,6 +63,7 @@ model UserInfo {
   amm               String?   @db.VarChar
   isInputCode       Boolean   @default(false)
   countReferralCode Int       @default(0)
+  hasTraded         Boolean   @default(false)
   user              User      @relation(fields: [userAddress], references: [userAddress])
 
   @@schema("api")
