@@ -303,6 +303,29 @@ export class UserController {
 
   @Post("/users/subscribe/email")
   async subscribeEmail(@BodyParam("email", { required: true }) email: string) {
+    const descriptor: Rules = {
+      email: [
+        { type: 'email', required: true, message: "invalid email" },
+        {
+          validator() {
+            return [];
+          }
+        }
+      ],
+    };
+    let emailValidator = new Schema(descriptor);
+    try {
+      await emailValidator.validate({ email: email }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
 
     let result = await this.userService.subscribeUserEmail(email)
     if (result != null) {
