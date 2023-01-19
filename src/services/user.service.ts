@@ -7,7 +7,7 @@ import { bufferToHex } from "ethereumjs-util";
 type Follower = { followerAddress: string; followers: number; ranking: number };
 @Service()
 export class UserService {
-  constructor() {}
+  constructor() { }
   async create(data: Prisma.UserCreateInput) {
     return prisma.user.create({
       data: data
@@ -56,6 +56,62 @@ export class UserService {
      `;
 
     return info.length === 1 ? info[0] : null;
+  }
+
+  // 保存连接钱包的地址
+  async saveConnectWalletAddress(userAddress: string) {
+    let haveOne = await prisma.connectHistory.findUnique({ where: { userAddress } });
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    if (haveOne) {
+      return haveOne;
+    } else {
+      let data = {
+        userAddress: userAddress,
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let user = await prisma.connectHistory.create({ data: data });
+      return user;
+    }
+  }
+
+  // 查询地址是否连接过
+  async fetchConnectWallet(userAddress: string) {
+    let haveOne = await prisma.connectHistory.findUnique({ where: { userAddress } });
+    return haveOne;
+  }
+
+  // 查询地址是不是在whitelist
+  async fetchWhitelist(userAddress: string) {
+    let haveOne = await prisma.whitelist.findUnique({ where: { userAddress } });
+    return haveOne;
+  }
+
+  // 将地址加入whitelist
+  async saveWhitelist(list: string[]) {
+    let datalist = []
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    for (let i = 0; i < list.length; i++) {
+      const address = list[i];
+      let data = {
+        userAddress: address.toLowerCase(),
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let haveOne = await prisma.whitelist.findUnique({ where: { userAddress: address.toLowerCase() } })
+      if (haveOne == null || haveOne == undefined) {
+        datalist.push(data)
+      }
+    }
+    if (datalist.length > 0) {
+      let result = await prisma.whitelist.createMany({ data: datalist })
+      return result;
+    }
+    return null;
   }
 
   // 根据参数地址获取followers
@@ -222,7 +278,7 @@ export class UserService {
     if (myUserInfo.isInputCode) {
       return null;
     }
-    
+
     let item = await prisma.referralEvents.findFirst({ where: { userAddress: userAddress.toLowerCase() } });
     if (item == null) {
       let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
@@ -237,19 +293,43 @@ export class UserService {
     }
   }
 
-  async saveEvent(name: string, params: any) {
+  async saveEvent(name: string, params: any, ip: string, userAgent: string) {
     let currentDateTime = new Date().toISOString();
     let currentTimestamp = Math.floor(Date.now() / 1000);
-    await prisma.userEventsLog.create({
-      data: {
-        name: name,
-        event: params,
-        createTime: currentDateTime,
-        createTimestamp: currentTimestamp,
-        updateTime: currentDateTime,
-        updateTimestamp: currentTimestamp
+    if (Array.isArray(params)) {
+      let datalist = []
+      for (let i = 0; i < params.length; i++) {
+        const element = params[i];
+        let data = {
+          name: name,
+          event: element,
+          ip: ip,
+          userAgent: userAgent,
+          createTime: currentDateTime,
+          createTimestamp: currentTimestamp,
+          updateTime: currentDateTime,
+          updateTimestamp: currentTimestamp
+        }
+        datalist.push(data)
       }
-    });
+      await prisma.userEventsLog.createMany({
+        data: datalist
+      });
+    } else {
+      await prisma.userEventsLog.create({
+        data: {
+          name: name,
+          event: params,
+          ip: ip,
+          userAgent: userAgent,
+          createTime: currentDateTime,
+          createTimestamp: currentTimestamp,
+          updateTime: currentDateTime,
+          updateTimestamp: currentTimestamp
+        }
+      });
+    }
+
   }
 
   async authUserService(signature: string, publicAddress: string) {
@@ -395,7 +475,39 @@ export class UserService {
     }
   }
 
+  async subscribeUserEmail(email: string) {
+    let haveSubscribed = await prisma.subscribeUsers.findUnique({ where: { email } });
+    let currentDateTime = new Date().toISOString();
+    let currentTimestamp = Math.floor(Date.now() / 1000);
+    if (haveSubscribed != null) {
+      return null;
+    } else {
+      let data = {
+        email: email,
+        createTime: currentDateTime,
+        createTimestamp: currentTimestamp,
+        updateTime: currentDateTime,
+        updateTimestamp: currentTimestamp,
+      }
+      let result = await prisma.subscribeUsers.create({ data: data });
+      return result;
+    }
+  }
+
+  async isFollowUser(userAddress: string, followerAddress: string) {
+    if (userAddress.toLowerCase() == followerAddress.toLowerCase()) {
+      return null;
+    }
+    let haveFollowed = await prisma.userFollowing.findUnique({
+      where: {
+        userAddress_followerAddress: { userAddress: userAddress.toLowerCase(), followerAddress: followerAddress.toLowerCase() }
+      }
+    });
+    return haveFollowed;
+  }
+
   async fetchUserInfo(user: string, targetUser: string) {
+
     let targetUserInfo: {
       id: string;
       userAddress: string;
@@ -409,6 +521,11 @@ export class UserService {
       isFollowing?: boolean;
       referralUsersCount?: number;
     } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
+
+    if (targetUserInfo == null) {
+      return null
+    }
+
     let haveFollowed = await prisma.userFollowing.findUnique({
       where: {
         userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
@@ -418,6 +535,7 @@ export class UserService {
     if (haveFollowed != null) {
       isFollowing = true;
     }
+
     let referralUsersCount = await prisma.referralEvents.count({
       where: { referralCode: targetUserInfo.referralCode }
     });
@@ -435,7 +553,7 @@ export class UserService {
   }
 
   async test() {
-    let result: { userAddress: string }[] = await prisma.userInfo.findMany();
+    let result: { userAddress: string }[] = await prisma.userInfo.findMany({ where: { referralCode: null } });
     for (let i = 0; i < result.length; i++) {
       const element: { userAddress: string } = result[i];
       await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${element.userAddress.toLowerCase()}::TEXT);`;

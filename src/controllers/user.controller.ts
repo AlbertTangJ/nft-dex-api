@@ -1,4 +1,4 @@
-import { JsonController, Get, QueryParam, Post, BodyParam, Authorized } from "routing-controllers";
+import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req, Param } from "routing-controllers";
 import { AchievementService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
@@ -42,6 +42,30 @@ export class UserController {
     };
 
     this.twoAddressValidator = new Schema(followListAPICheck);
+  }
+
+  @Post("/users/connect/wallet")
+  async connectWallet(@BodyParam("address") address: string) {
+    if (!address) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("Missing parameters").toObject();
+    }
+
+    const user = await this.userService.saveConnectWalletAddress(address.toLowerCase())
+    if (!user) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
+    } else {
+      return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
+    }
+  }
+
+  @Get("/users/find/connected/:address")
+  async fetchConnectedAddress(@Param("address") address: string) {
+    const user = await this.userService.fetchConnectWallet(address.toLowerCase());
+    if (!user) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
+    } else {
+      return new ApiResponse(ResponseStatus.Success).setData(user).toObject();
+    }
   }
 
   @Get("/users/find")
@@ -226,9 +250,11 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Get("/test")
-  async test() {
+  // @Authorized("auth-token")
+  @Post("/test")
+  async test(@BodyParam("userAddress", { required: true }) userAddress: string) {
     await this.userService.test();
+    return new ApiResponse(ResponseStatus.Success);
   }
 
   @Post("/users")
@@ -262,6 +288,60 @@ export class UserController {
 
     let result = await this.userService.followingList(user, targetUser, pageNo, pageSize);
     return new ApiResponse(ResponseStatus.Success).setData(result);
+  }
+
+  // @Post("/users/create/whitelist")
+  // async createWhitelist(@BodyParam("users", { required: true }) users: []) {
+
+  //   let result = await this.userService.saveWhitelist(users)
+  //   if (result != null) {
+  //     return new ApiResponse(ResponseStatus.Success);
+  //   }
+  //   return new ApiResponse(ResponseStatus.Failure);
+  // }
+
+
+  @Post("/users/subscribe/email")
+  async subscribeEmail(@BodyParam("email", { required: true }) email: string) {
+    const descriptor: Rules = {
+      email: [
+        { type: 'email', required: true, message: "invalid email" },
+        {
+          validator() {
+            return [];
+          }
+        }
+      ],
+    };
+    let emailValidator = new Schema(descriptor);
+    try {
+      await emailValidator.validate({ email: email }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
+
+    let result = await this.userService.subscribeUserEmail(email)
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success);
+    }
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("duplicate email");
+  }
+
+  @Get("/users/whitelist/:address")
+  async findAddressInWhitelist(@Param("address") address: string) {
+
+    let result = await this.userService.fetchWhitelist(address.toLowerCase())
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
   }
 
   @Post("/followers/list")
@@ -307,12 +387,11 @@ export class UserController {
     @BodyParam("userAddress", { required: true }) user: string,
     @BodyParam("followerAddress", { required: true }) follower: string
   ) {
-    console.log("unfollow");
     let result = await this.userService.unFollowUser(user, follower);
     if (result) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
-    return new ApiResponse(ResponseStatus.Failure);
+    return new ApiResponse(ResponseStatus.Failure).setErrorMessage("no this follower");
   }
 
   @Post("/users/auth")
@@ -324,9 +403,12 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
+
   @Post("/users/event")
-  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any) {
-    await this.userService.saveEvent(name, event);
+  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any, @Req() request: any) {
+    let userAgent = request.headers['user-agent'];
+    let ip = request.ip.replace('::ffff:', '');
+    await this.userService.saveEvent(name, event, ip, userAgent);
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
 
@@ -371,10 +453,11 @@ export class UserController {
     ) {
 
       await this.userService.updateUserInfos({
-        data:{
-          isInputCode: true
+        data: {
+          isInputCode: true,
+          hasTraded: true
         },
-        where:{
+        where: {
           userAddress: userAddress.toLowerCase()
         }
       });

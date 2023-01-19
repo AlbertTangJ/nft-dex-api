@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev -r tsconfig-paths/register app.ts",
+    "dev": "export NODE_ENV=DEV;export API_TEST=true;ts-node-dev -r tsconfig-paths/register app.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "rimraf dist",
     "compile": "tsc",
-    "local": "export NODE_ENV=LOCAL; npm-run-all clean compile dev",
+    "local": "export NODE_ENV=LOCAL;export API_TEST=true;ts-node-dev -r tsconfig-paths/register app.ts",
     "start": "ts-node -r tsconfig-paths/register app.ts",
     "generate": "dotenv -e .env.local"
   },
