@@ -69,6 +69,18 @@ model UserInfo {
   @@schema("api")
 }
 
+model AdminUser {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email             String    @unique @db.VarChar
+  password          String    @db.VarChar
+  updateTimestamp   Int?      
+  createTimestamp   Int?
+  updateTime        DateTime? @db.Timestamp(6)
+  createTime        DateTime? @default(now()) @db.Timestamp(6)
+  
+  @@schema("api")
+}
+
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
 model BadWords {
   id   String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
