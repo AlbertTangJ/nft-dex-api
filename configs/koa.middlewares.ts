@@ -7,7 +7,8 @@ export const useMiddlewares = <T extends Koa>(app: T): T => {
   if (isProd()) {
     app.use(logger())
   }
-
+  
+  app.proxy = true
   app.use(bodyParser())
 
   return app

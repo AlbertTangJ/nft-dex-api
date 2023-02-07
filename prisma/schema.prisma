@@ -1,11 +1,12 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["interactiveTransactions"]
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["api"]
 }
 
 model UserFollowing {
@@ -21,36 +22,51 @@ model UserFollowing {
   followingUser   User     @relation("followings", fields: [userAddress], references: [userAddress])
 
   @@unique([userAddress, followerAddress])
+  @@schema("api")
 }
 
 model User {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String            @unique @db.VarChar(255)
-  status          Int               @default(1)
-  isDeleted       Int               @default(0)
-  createTime      DateTime          @default(now()) @db.Timestamp(6)
-  createTimestamp Int
-  updateTime      DateTime          @db.Timestamp(6)
-  updateTimestamp Int
-  userAchievement UserAchievement[]
-  followers       UserFollowing[]   @relation("followers")
-  followings      UserFollowing[]   @relation("followings")
-  userInfo        UserInfo?
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress         String            @unique @db.VarChar(255)
+  status              Int               @default(1)
+  isDeleted           Int               @default(0)
+  createTime          DateTime          @default(now()) @db.Timestamp(6)
+  createTimestamp     Int
+  updateTime          DateTime          @db.Timestamp(6)
+  updateTimestamp     Int
+  referralAchievement UserAchievement[] @relation("referralUser")
+  userAchievement     UserAchievement[]
+  followers           UserFollowing[]   @relation("followers")
+  followings          UserFollowing[]   @relation("followings")
+  userInfo            UserInfo?
+
+  @@schema("api")
 }
 
 model UserInfo {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress     String    @unique @db.VarChar
-  nonce           Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
-  username        String    @db.VarChar
-  about           String?
-  updateNameTimes Int?      @default(0)
-  updateTimestamp Int?
-  createTimestamp Int?
-  updateTime      DateTime? @db.Timestamp(6)
-  createTime      DateTime? @default(now()) @db.Timestamp(6)
-  points          Int       @default(0)
-  user            User      @relation(fields: [userAddress], references: [userAddress])
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress       String    @unique @db.VarChar
+  nonce             Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
+  username          String    @db.VarChar
+  about             String?
+  updateNameTimes   Int?      @default(0)
+  updateTimestamp   Int?
+  createTimestamp   Int?
+  updateTime        DateTime? @db.Timestamp(6)
+  createTime        DateTime? @default(now()) @db.Timestamp(6)
+  points            Int       @default(0)
+  followers         Int       @default(0)
+  ranking           Int       @default(0)
+  referralCode      String?   @unique(map: "UserInfo_code_unique") @db.VarChar
+  following         Int       @default(0)
+  referralPoints    Int       @default(0)
+  amm               String?   @db.VarChar
+  isInputCode       Boolean   @default(false)
+  countReferralCode Int       @default(0)
+  hasTraded         Boolean   @default(false)
+  user              User      @relation(fields: [userAddress], references: [userAddress])
+
+  @@schema("api")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
@@ -59,12 +75,21 @@ model BadWords {
   word String? @db.VarChar
 
   @@ignore
+  @@schema("api")
 }
 
 model UserEventsLog {
-  id    String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  event Json?
-  name  String? @db.VarChar
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event           Json?
+  name            String?   @db.VarChar
+  createTime      DateTime? @default(now()) @db.Timestamp(6)
+  createTimestamp Int?
+  updateTime      DateTime? @db.Timestamp(6)
+  updateTimestamp Int?
+  ip              String?   @db.VarChar
+  userAgent       String?   @db.VarChar
+
+  @@schema("api")
 }
 
 model Achievement {
@@ -80,18 +105,285 @@ model Achievement {
   isGlobal            Boolean           @default(false)
   enabled             Boolean           @default(true)
   latestCompletedTime DateTime?         @db.Timestamp(6)
+  code                String
+  referralRelated     Boolean           @default(false)
+  action              String?           @db.VarChar
+  page                String?           @db.VarChar
+  step                Int               @default(1)
+  type                String?           @db.VarChar
+  displayStep         String            @default("")
+  endTime             DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
+
+  @@schema("api")
 }
 
 model UserAchievement {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userAddress   String      @db.VarChar
-  achievementId String      @db.Uuid
-  pointEarned   Int
-  createTime    DateTime    @default(now()) @db.Timestamp(6)
-  updateTime    DateTime    @db.Timestamp(6)
-  achievement   Achievement @relation(fields: [achievementId], references: [id])
-  user          User        @relation(fields: [userAddress], references: [userAddress])
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress         String      @db.VarChar
+  achievementId       String      @db.Uuid
+  pointEarned         Int
+  createTime          DateTime    @default(now()) @db.Timestamp(6)
+  updateTime          DateTime    @db.Timestamp(6)
+  referralUserAddress String?     @db.VarChar
+  txHash              String?     @db.VarChar
+  hidden              Boolean     @default(false)
+  completed           Boolean     @default(false)
+  data                Json?
+  progress            Int         @default(1)
+  ended               Boolean     @default(false)
+  achievement         Achievement @relation(fields: [achievementId], references: [id])
+  referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
+  user                User        @relation(fields: [userAddress], references: [userAddress])
+
+  @@schema("api")
+}
+
+model ReferralEvents {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress  String   @unique(map: "ReferralEvents_userAddress_unique") @db.VarChar
+  referralCode String?  @db.VarChar
+  createTime   DateTime @default(now()) @db.Timestamp(6)
+
+  @@schema("api")
+}
+
+model Events {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title           String
+  description     String
+  startTime       Int
+  endTime         Int
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model ConnectHistory {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model Whitelist {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model SubscribeUsers {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String   @unique @db.VarChar(255)
+  createTime      DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp Int
+  updateTime      DateTime @db.Timestamp(6)
+  updateTimestamp Int
+
+  @@schema("api")
+}
+
+model AggregateJob {
+  id                                             Int     @id @default(autoincrement())
+  adjustKLastUpdatedBlockNumber                  Int     @default(0)
+  fundingRateUpdatedEventLastUpdatedBlockNumber  Int     @default(0)
+  marginChangedEventLastUpdatedBlockNumber       Int     @default(0)
+  positionChangedEventLastUpdatedBlockNumber     Int     @default(0)
+  repegLastUpdatedBlockNumber                    Int     @default(0)
+  revervesSnapshottedEventLastUpdatedBlockNumber Int     @default(0)
+  running                                        Boolean @default(false)
+  reservesAdjustedLastUpdatedBlockNumber         Int     @default(0)
+
+  @@schema("api")
+}
+
+model Amm {
+  address                   String              @id @db.VarChar(255)
+  name                      String              @db.VarChar(255)
+  nftAddress                String              @db.VarChar(255)
+  cumulativeNotional        Decimal             @db.Decimal
+  settlementPrice           Decimal?            @db.Decimal
+  totalPositionSize         Decimal             @db.Decimal
+  tradeLimitRatio           Decimal             @db.Decimal
+  quoteAssetReserve         Decimal             @db.Decimal
+  baseAssetReserve          Decimal             @db.Decimal
+  fluctuationLimitRatio     Decimal             @db.Decimal
+  tollRatio                 Decimal             @db.Decimal
+  spreadRatio               Decimal             @db.Decimal
+  maxHoldingBaseAsset       Decimal             @db.Decimal
+  openInterestNotionalCap   Decimal             @db.Decimal
+  spotPriceTwapInterval     Decimal             @db.Decimal
+  fundingPeriod             Decimal             @db.Decimal
+  fundingBufferPeriod       Decimal             @db.Decimal
+  nextFundingTime           Decimal             @db.Decimal
+  priceFeedKey              String              @db.VarChar(255)
+  globalShutdown            String?             @db.VarChar(255)
+  isOpen                    Boolean
+  isAdjustable              Boolean
+  canLowerK                 Boolean
+  createTime                DateTime            @default(now()) @db.Timestamp(6)
+  updateTime                DateTime?           @db.Timestamp(6)
+  initialBaseAssetReserve   Decimal             @db.Decimal
+  initialQuoteAssetReserve  Decimal             @db.Decimal
+  cumulativePremiumFraction Decimal             @default(0) @db.Decimal
+  initMarginRatio           Decimal             @default(0) @db.Decimal
+  liquidationFeeRatio       Decimal             @default(0) @db.Decimal
+  maintenanceMarginRatio    Decimal             @default(0) @db.Decimal
+  partialLiquidationRatio   Decimal             @default(0) @db.Decimal
+  sortOrder                 Int                 @default(0)
+  openInterestNotional      Decimal             @default(0) @db.Decimal
+  openInterestSize          Decimal             @default(0) @db.Decimal
+  positionBalance           Decimal             @default(0) @db.Decimal
+  tradingVolume             Decimal             @default(0) @db.Decimal
+  AmmFundingPayment         AmmFundingPayment[]
+  AmmReserve                AmmReserve[]
+  Position                  Position[]
+  TradeData                 TradeData[]
+
+  @@index([sortOrder])
+  @@schema("api")
+}
+
+model AmmFundingPayment {
+  id                        Int       @id @default(autoincrement())
+  ammAddress                String    @db.VarChar(255)
+  premiumFraction           Decimal   @db.Decimal
+  fundingRate               Decimal   @db.Decimal
+  timestamp                 Int
+  createTime                DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                DateTime? @db.Timestamp(6)
+  cumulativePremiumFraction Decimal   @db.Decimal
+  underlyingPrice           Decimal   @db.Decimal
+  timestampIndex            Decimal   @db.Decimal
+  Amm                       Amm       @relation(fields: [ammAddress], references: [address])
+
+  @@index([ammAddress, timestampIndex(sort: Desc)])
+  @@index([ammAddress, timestamp(sort: Desc)])
+  @@index([timestampIndex])
+  @@schema("api")
+}
+
+model AmmReserve {
+  id                Int       @id @default(autoincrement())
+  ammAddress        String    @db.VarChar(255)
+  quoteAssetReserve Decimal   @db.Decimal
+  baseAssetReserve  Decimal   @db.Decimal
+  spotPrice         Decimal   @db.Decimal
+  timestamp         Int
+  createTime        DateTime  @default(now()) @db.Timestamp(6)
+  updateTime        DateTime? @db.Timestamp(6)
+  timestampIndex    Decimal   @db.Decimal
+  Amm               Amm       @relation(fields: [ammAddress], references: [address])
+
+  @@index([ammAddress, timestampIndex(sort: Desc)])
+  @@index([ammAddress, timestamp(sort: Desc)])
+  @@schema("api")
+}
+
+model Position {
+  id                                      Int       @id @default(autoincrement())
+  userAddress                             String    @db.VarChar(255)
+  margin                                  Decimal   @db.Decimal
+  openNotional                            Decimal   @db.Decimal
+  exchangedPositionSize                   Decimal   @db.Decimal
+  fee                                     Decimal   @db.Decimal
+  size                                    Decimal   @db.Decimal
+  lastUpdatedCumulativePremiumFraction    Decimal   @db.Decimal
+  realizedPnl                             Decimal   @db.Decimal
+  badDebt                                 Decimal   @db.Decimal
+  timestamp                               Int
+  createTime                              DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                              DateTime? @db.Timestamp(6)
+  action                                  Action
+  ammAddress                              String    @db.VarChar(255)
+  cumulativeBadDebt                       Decimal   @db.Decimal
+  cumulativeFee                           Decimal   @db.Decimal
+  cumulativeFundingPayment                Decimal   @db.Decimal
+  cumulativeLiquidationPenalty            Decimal   @db.Decimal
+  cumulativeRealizedPnl                   Decimal   @db.Decimal
+  liquidationPenalty                      Decimal   @db.Decimal
+  baseAssetReserve                        Decimal   @db.Decimal
+  quoteAssetReserve                       Decimal   @db.Decimal
+  positionNotional                        Decimal   @db.Decimal
+  timestampIndex                          Decimal   @db.Decimal
+  latestCumulativePremiumFraction         Decimal   @db.Decimal
+  cumulativeFundingPaymentWithdrawAmount  Decimal   @default(0) @db.Decimal
+  cumulativeMarginWithdrawAmount          Decimal   @default(0) @db.Decimal
+  cumulativeRealizedPnlWithdrawAmount     Decimal   @default(0) @db.Decimal
+  fundingPaymentWithdrawAmount            Decimal   @default(0) @db.Decimal
+  marginWithdrawAmount                    Decimal   @default(0) @db.Decimal
+  positionCumulativeFundingPayment        Decimal   @default(0) @db.Decimal
+  positionCumulativeRealizedPnl           Decimal   @default(0) @db.Decimal
+  realizedPnlWithdrawAmount               Decimal   @default(0) @db.Decimal
+  openMargin                              Decimal   @default(0) @db.Decimal
+  batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fundingPayment                          Decimal   @db.Decimal
+  txHash                                  String    @db.VarChar(255)
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
+  Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
+
+  @@index([ammAddress, timestampIndex(sort: Desc)])
+  @@index([timestampIndex(sort: Desc)])
+  @@index([userAddress, ammAddress, timestampIndex(sort: Desc)])
+  @@index([userAddress, ammAddress, timestamp(sort: Desc)])
+  @@schema("api")
+}
+
+model TradeData {
+  id                            Int       @id @default(autoincrement())
+  ammAddress                    String    @db.VarChar(255)
+  resolution                    Int
+  index                         Int
+  startTimestamp                Int
+  endTimestamp                  Int
+  open                          Decimal   @db.Decimal
+  high                          Decimal   @db.Decimal
+  low                           Decimal   @db.Decimal
+  close                         Decimal   @db.Decimal
+  average                       Decimal   @db.Decimal
+  volume                        Decimal   @db.Decimal
+  txCount                       Int
+  createTime                    DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                    DateTime? @db.Timestamp(6)
+  startIndex                    Int
+  closeBaseAssetReserve         Decimal   @db.Decimal
+  closeQuoteAssetReserve        Decimal   @db.Decimal
+  closeCumulativePremiumFaction Decimal   @db.Decimal
+  lastUpdatedTimestampIndex     Decimal   @db.Decimal
+  Amm                           Amm       @relation(fields: [ammAddress], references: [address])
+
+  @@index([ammAddress, endTimestamp])
+  @@index([ammAddress, resolution, endTimestamp])
+  @@index([ammAddress, resolution])
+  @@index([ammAddress, resolution, index(sort: Desc)])
+  @@index([ammAddress, resolution, startTimestamp])
+  @@index([ammAddress, startTimestamp])
+  @@index([ammAddress(ops: raw("gin_trgm_ops"))], map: "trgm_amm_address_idx", type: Gin)
+  @@schema("api")
+}
+
+model TethBalanceHistory {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress String  @db.VarChar(255)
+  balance     Decimal @db.Decimal
+  timestamp   Int
+
+  @@index([userAddress, timestamp])
+  @@schema("api")
 }
 
 enum RepeatPeriod {
@@ -100,4 +392,14 @@ enum RepeatPeriod {
   Weekly
   Monthly
   Yearly
+
+  @@schema("api")
+}
+
+enum Action {
+  Trade
+  AdjustMargin
+  Liquidation
+
+  @@schema("api")
 }
