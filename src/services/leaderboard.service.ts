@@ -53,7 +53,7 @@ export class LeaderBoardService {
         for (let i = 0; i < result.length; i++) {
             const reward: Reward = result[i];
             if (reward.address == userAddress.toLowerCase()) {
-                const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i }
+                const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
                 userRanking = item;
                 break
             }

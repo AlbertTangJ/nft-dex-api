@@ -449,7 +449,7 @@ export class UserController {
     if (
       (decodedData.name === "openPosition" || decodedData.name === "closePosition") &&
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
-      tx.to.toLowerCase() === "0x8547663f06361dC43b7C153Db5cFAca47e1709bD".toLowerCase() // Move to .env
+      tx.to.toLowerCase() === "0x481AD75e7874c967e3E26eED23b61eE538b51042".toLowerCase() // Move to .env
     ) {
 
       await this.userService.updateUserInfos({
