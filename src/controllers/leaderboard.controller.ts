@@ -29,6 +29,24 @@ export class LeaderBoardController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
+    @Get("/fetch/leaderboard/ranking/save/:round")
+    async saveLeaderBoardRanking(@Param("round") round: number) {
+        let result = await this.leaderBoardService.leaderBoardRankingSave(round);
+        if (result != null) {
+            return new ApiResponse(ResponseStatus.Success).setData(result);
+        }
+        return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    @Get("/fetch/leaderboard/bots/ranking/save/:round")
+    async saveLeaderBoardBotsRanking(@Param("round") round: number) {
+        let result = await this.leaderBoardService.leaderBoardBotsRankingSave(round);
+        if (result != null) {
+            return new ApiResponse(ResponseStatus.Success).setData(result);
+        }
+        return new ApiResponse(ResponseStatus.Failure);
+    }
+
     @Get("/fetch/user/ranking/:userAddress/:round")
     async userRanking(@Param("userAddress") userAddress: string, @Param("round") round: number) {
         let result = await this.leaderBoardService.fetchRangingByUser(userAddress, round)
