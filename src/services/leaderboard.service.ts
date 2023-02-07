@@ -31,7 +31,7 @@ export class LeaderBoardService {
         let i = (page * size) + 1
         for (let a = 0; a < result.length; a++) {
             const reward: Reward = result[a];
-            const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
+            const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i }
             rewards.push(item)
             i = i + 1
         }
