@@ -30,7 +30,7 @@ export class LeaderBoardService {
             const item = { "user": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
             rewards.push(item)
         }
-        
+
         let rankingJsonStr = { result: { rewards: rewards } };//JSON.stringify() ;
         let currentDate = parseInt(format(new Date(), "yyyyMMddhhmm"))
         let uuid = uuidv4().replace("-", "")
@@ -57,7 +57,7 @@ export class LeaderBoardService {
             const item = { "user": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
             rewards.push(item)
         }
-        
+
         let rankingJsonStr = { result: { rewards: rewards } };//JSON.stringify() ;
         let currentDate = parseInt(format(new Date(), "yyyyMMddhhmm"))
         let uuid = uuidv4().replace("-", "")
@@ -83,7 +83,7 @@ export class LeaderBoardService {
                                                                ) t
         ON t.address = userinfo."userAddress"
         ORDER BY total DESC
-        LIMIT ${size} OFFSET ${page}`;
+        LIMIT ${size} OFFSET ${page * size}`;
         let lastUpdateTime = await this.prismaClient.$queryRaw`SELECT update_timestamp FROM public.rewards ORDER BY update_timestamp DESC LIMIT 1`;
         let rewards = []
         let i = (page * size) + 1
