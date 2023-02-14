@@ -67,10 +67,12 @@ export class ClearingHouseController {
     if (!trader) {
       throw new BadRequestError("trader is required");
     }
+    trader = trader.toLowerCase();
+    ammAddress = ammAddress.toLowerCase();
     let amm = await this.ammService.amm(ammAddress);
 
     if (!amm) {
-      return new ApiResponse(ResponseStatus.Failure).setData({ error: "Amm not found" }).toObject();
+      return new ApiResponse(1).setData({ error: "Amm not found" }).toObject();
     }
 
     let position = timestamp
@@ -91,18 +93,30 @@ export class ClearingHouseController {
     let remainMargin = getRemainMarginWithFundingPayment(
       position,
       unrealizedPnl,
-      toBN(amm.cumulativePremiumFraction)
+      toBN(
+        position.size.gt(0)
+          ? amm.cumulativePremiumFractionLong
+          : amm.cumulativePremiumFractionShort
+      )
     );
     let marginRatio = getMarginRatio(
       position,
       toBN(amm.quoteAssetReserve),
       toBN(amm.baseAssetReserve),
-      toBN(amm.cumulativePremiumFraction)
+      toBN(
+        position.size.gt(0)
+          ? amm.cumulativePremiumFractionLong
+          : amm.cumulativePremiumFractionShort
+      )
     );
     let accumulatedFundingPayment = getFundingPayment(
       toBN(position.size),
       toBN(position.lastUpdatedCumulativePremiumFraction),
-      toBN(amm.cumulativePremiumFraction)
+      toBN(
+        position.size.gt(0)
+          ? amm.cumulativePremiumFractionLong
+          : amm.cumulativePremiumFractionShort
+      )
     );
 
     let positionDetail = new PositionDetail(
@@ -140,9 +154,18 @@ export class ClearingHouseController {
     let fundingPayments = timestamp
       ? await this.ammService.allFundingPaymentsByTime(timestamp)
       : await this.ammService.allLatestFundingPayments();
+    let initialTethValue = timestamp
+      ? await this.clearingHouseService.getTethBalanceHistoryByTime(
+          trader,
+          timestamp
+        )
+      : await this.clearingHouseService.getLatestTethBalanceHistory(trader);
+
     let positionDetails: PositionDetail[] = [];
     let portfolioCollateralValue = BigNumber.from(0);
-    let totalAccountValue = utils.parseEther("20");
+    let totalAccountValue = initialTethValue
+      ? BigNumber.from(initialTethValue.balance.toString())
+      : utils.parseEther("20");
     let totalAccumulativeFundingPayment = BigNumber.from(0);
     let totalUnrealizedPnl = BigNumber.from(0);
     let allTimePriceChangePnl = BigNumber.from(0);
@@ -164,13 +187,28 @@ export class ClearingHouseController {
           allTimeAccumulativeFundingPayment.add(
             toBN(position.cumulativeFundingPayment)
           );
+        // if (
+        //   position.ammAddress == "0x5b16022F803D63Fb2D2258C5b35dd6221217F156"
+        // ) {
+        //   console.log(
+        //     BigNumber.from(0)
+        //       .add(toBN(position.cumulativeRealizedPnl))
+        //       .sub(toBN(position.cumulativeFee))
+        //       .sub(toBN(position.cumulativeFundingPayment))
+        //       .sub(toBN(position.cumulativeLiquidationPenalty))
+        //       .add(BigNumber.from("7075834652536223634"))
+        //       .toString()
+        //   );
+        // }
         continue;
       }
       let ammReserve = ammReserves.find(
-        (reserve) => reserve.ammAddress == position.ammAddress
+        (reserve) =>
+          reserve.ammAddress.toLowerCase() == position.ammAddress.toLowerCase()
       );
       let fundingPayment = fundingPayments.find(
-        (payment) => payment.ammAddress == position.ammAddress
+        (payment) =>
+          payment.ammAddress.toLowerCase() == position.ammAddress.toLowerCase()
       );
       let [positionNotional, unrealizedPnl] =
         getPositionNotionalAndUnrealizedPnl(
@@ -183,18 +221,36 @@ export class ClearingHouseController {
       let remainMargin = getRemainMarginWithFundingPayment(
         position,
         unrealizedPnl,
-        toBN(fundingPayment.cumulativePremiumFraction)
+        toBN(
+          fundingPayment
+            ? position.size.gt(0)
+              ? fundingPayment.cumulativePremiumFractionLong
+              : fundingPayment.cumulativePremiumFractionShort
+            : new Decimal(0)
+        )
       );
       let marginRatio = getMarginRatio(
         position,
         toBN(ammReserve.quoteAssetReserve),
         toBN(ammReserve.baseAssetReserve),
-        toBN(fundingPayment.cumulativePremiumFraction)
+        toBN(
+          fundingPayment
+            ? position.size.gt(0)
+              ? fundingPayment.cumulativePremiumFractionLong
+              : fundingPayment.cumulativePremiumFractionShort
+            : new Decimal(0)
+        )
       );
       let accumulatedFundingPayment = getFundingPayment(
         toBN(position.size),
         toBN(position.lastUpdatedCumulativePremiumFraction),
-        toBN(fundingPayment.cumulativePremiumFraction)
+        toBN(
+          fundingPayment
+            ? position.size.gt(0)
+              ? fundingPayment.cumulativePremiumFractionLong
+              : fundingPayment.cumulativePremiumFractionShort
+            : new Decimal(0)
+        )
       );
       totalAccumulativeFundingPayment = totalAccumulativeFundingPayment.add(
         accumulatedFundingPayment
@@ -211,7 +267,13 @@ export class ClearingHouseController {
           position,
           toBN(ammReserve.quoteAssetReserve),
           toBN(ammReserve.baseAssetReserve),
-          toBN(fundingPayment.cumulativePremiumFraction)
+          toBN(
+            fundingPayment
+              ? position.size.gt(0)
+                ? fundingPayment.cumulativePremiumFractionLong
+                : fundingPayment.cumulativePremiumFractionShort
+              : new Decimal(0)
+          )
         )
       );
       totalAccountValue = totalAccountValue.add(
@@ -219,9 +281,26 @@ export class ClearingHouseController {
           position,
           toBN(ammReserve.quoteAssetReserve),
           toBN(ammReserve.baseAssetReserve),
-          toBN(fundingPayment.cumulativePremiumFraction)
+          toBN(
+            fundingPayment
+              ? position.size.gt(0)
+                ? fundingPayment.cumulativePremiumFractionLong
+                : fundingPayment.cumulativePremiumFractionShort
+              : new Decimal(0)
+          )
         )
       );
+      // if (position.ammAddress == "0x5b16022F803D63Fb2D2258C5b35dd6221217F156") {
+      //   console.log(
+      //     "why",
+      //     getTotalAccountValue(
+      //       position,
+      //       toBN(ammReserve.quoteAssetReserve),
+      //       toBN(ammReserve.baseAssetReserve),
+      //       toBN(fundingPayment.cumulativePremiumFraction)
+      //     ).toString()
+      //   );
+      // }
       allTimePriceChangePnl = allTimePriceChangePnl.add(
         getPriceChangePnl(
           position,
@@ -232,7 +311,9 @@ export class ClearingHouseController {
 
       positionDetails.push(
         new PositionDetail(
-          amms.find((a) => a.address == position.ammAddress),
+          amms.find(
+            (a) => a.address.toLowerCase() == position.ammAddress.toLowerCase()
+          ),
           position,
           unrealizedPnl,
           accumulatedFundingPayment,
@@ -353,6 +434,9 @@ export class ClearingHouseController {
       startRoundTime,
       resolution
     );
+    let tethBalanceHistories =
+      await this.clearingHouseService.allTethBalanceHistory(trader);
+
     let positionMap = new Map<
       number,
       Map<string, [TradeData, Position] | null>
@@ -397,6 +481,17 @@ export class ClearingHouseController {
     for (let endTimestamp of positionMap.keys()) {
       let tradeDataAndPositionsAtEndTime = positionMap.get(endTimestamp);
       let totalAccountValue = utils.parseEther("20");
+
+      if (tethBalanceHistories.length > 0) {
+        for (let tethBalanceHistory of tethBalanceHistories) {
+          if (tethBalanceHistory.timestamp <= endTimestamp) {
+            totalAccountValue = BigNumber.from(
+              tethBalanceHistory.balance.toString()
+            );
+          }
+        }
+      }
+
       let portfolioCollateralValue = BigNumber.from(0);
       let positionCount = 0;
 
@@ -410,7 +505,11 @@ export class ClearingHouseController {
               position,
               toBN(tradeData.closeQuoteAssetReserve),
               toBN(tradeData.closeBaseAssetReserve),
-              toBN(tradeData.closeCumulativePremiumFaction)
+              toBN(
+                position.size.gt(0)
+                  ? tradeData.closeCumulativePremiumFactionLong
+                  : tradeData.closeCumulativePremiumFactionShort
+              )
             )
           );
 
@@ -419,7 +518,11 @@ export class ClearingHouseController {
               position,
               toBN(tradeData.closeQuoteAssetReserve),
               toBN(tradeData.closeBaseAssetReserve),
-              toBN(tradeData.closeCumulativePremiumFaction)
+              toBN(
+                position.size.gt(0)
+                  ? tradeData.closeCumulativePremiumFactionLong
+                  : tradeData.closeCumulativePremiumFactionShort
+              )
             )
           );
           positionCount++;
@@ -429,6 +532,7 @@ export class ClearingHouseController {
       if (positionCount < previousPositionCount) {
         // Missing trade data for some amm
         for (let ammAddress of latestPositionForAmm.keys()) {
+          ammAddress = ammAddress.toLowerCase();
           let processedAmm = tradeDataAndPositionsAtEndTime
             ? Array.from(tradeDataAndPositionsAtEndTime.values()).map(
                 (data) => data[0].ammAddress
@@ -444,7 +548,11 @@ export class ClearingHouseController {
                   position,
                   toBN(tradeData.closeQuoteAssetReserve),
                   toBN(tradeData.closeBaseAssetReserve),
-                  toBN(tradeData.closeCumulativePremiumFaction)
+                  toBN(
+                    position.size.gt(0)
+                      ? tradeData.closeCumulativePremiumFactionLong
+                      : tradeData.closeCumulativePremiumFactionShort
+                  )
                 )
               );
 
@@ -453,7 +561,11 @@ export class ClearingHouseController {
                   position,
                   toBN(tradeData.closeQuoteAssetReserve),
                   toBN(tradeData.closeBaseAssetReserve),
-                  toBN(tradeData.closeCumulativePremiumFaction)
+                  toBN(
+                    position.size.gt(0)
+                      ? tradeData.closeCumulativePremiumFactionLong
+                      : tradeData.closeCumulativePremiumFactionShort
+                  )
                 )
               );
             }

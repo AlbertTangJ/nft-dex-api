@@ -28,17 +28,41 @@ export type PositionEvent = {
 
 @Service()
 export class ClearingHouseService {
+  async createPosition(data: Prisma.PositionCreateInput) {
+    return prisma.position.create({
+      data,
+    });
+  }
+
+  async createManyPositions(data: Prisma.PositionCreateManyInput[]) {
+    return prisma.position.createMany({
+      data,
+    });
+  }
+
+  async createManyTradeData(data: Prisma.TradeDataCreateManyInput[]) {
+    return prisma.tradeData.createMany({
+      data,
+    });
+  }
+
+  async updateTradeData(id: number, data: Prisma.TradeDataUpdateInput) {
+    return prisma.tradeData.update({
+      where: {
+        id,
+      },
+      data,
+    });
+  }
 
   async currentPosition(trader: string, amm: string) {
     return prisma.position.findFirst({
       where: {
         userAddress: {
-          equals: trader,
-          mode: "insensitive",
+          equals: trader.toLowerCase(),
         },
         ammAddress: {
-          equals: amm,
-          mode: "insensitive",
+          equals: amm.toLowerCase(),
         },
       },
       orderBy: {
@@ -51,8 +75,7 @@ export class ClearingHouseService {
     return prisma.position.findFirst({
       where: {
         userAddress: {
-          equals: trader,
-          mode: "insensitive",
+          equals: trader.toLowerCase(),
         },
       },
       orderBy: {
@@ -65,12 +88,10 @@ export class ClearingHouseService {
     return prisma.position.findFirst({
       where: {
         userAddress: {
-          equals: trader,
-          mode: "insensitive",
+          equals: trader.toLowerCase(),
         },
         ammAddress: {
-          equals: amm,
-          mode: "insensitive",
+          equals: amm.toLowerCase(),
         },
         timestamp: {
           lte: timestamp,
@@ -82,16 +103,18 @@ export class ClearingHouseService {
     });
   }
 
-  async positionAtTimestampIndex(trader: string, amm: string, timestampIndex: number) {
+  async positionAtTimestampIndex(
+    trader: string,
+    amm: string,
+    timestampIndex: number
+  ) {
     return prisma.position.findFirst({
       where: {
         userAddress: {
-          equals: trader,
-          mode: "insensitive",
+          equals: trader.toLowerCase(),
         },
         ammAddress: {
-          equals: amm,
-          mode: "insensitive",
+          equals: amm.toLowerCase(),
         },
         timestampIndex: {
           lte: timestampIndex,
@@ -107,8 +130,7 @@ export class ClearingHouseService {
     return prisma.position.findMany({
       where: {
         userAddress: {
-          equals: trader,
-          mode: "insensitive",
+          equals: trader.toLowerCase(),
         },
         timestamp: {
           gte: timestamp,
@@ -121,29 +143,30 @@ export class ClearingHouseService {
   }
 
   async allPositions(trader: string) {
+    trader = trader.toLowerCase();
     return prisma.$queryRaw<Position[]>`SELECT * FROM api."Position" 
       where ("Position"."ammAddress", "Position"."timestampIndex") in 
       (SELECT "Position"."ammAddress", max("Position"."timestampIndex") 
       FROM api."Position" group by "ammAddress", "userAddress"
-      having "userAddress" = ${trader.toLowerCase()})`;
+      having "userAddress" = ${trader})`;
   }
 
   async allPositionsAtTime(trader: string, timestamp: number) {
+    trader = trader.toLowerCase();
     return prisma.$queryRaw<Position[]>`SELECT * FROM api."Position" 
       where ("Position"."ammAddress", "Position"."timestampIndex") in 
       (SELECT "Position"."ammAddress", max("Position"."timestampIndex") 
       FROM api."Position" 
       where "Position"."timestamp" <= ${timestamp}
       group by "ammAddress", "userAddress"
-      having "userAddress" = ${trader.toLowerCase()})`;
+      having "userAddress" = ${trader})`;
   }
 
   async latestAmmRecord(address: string) {
     return prisma.amm.findFirst({
       where: {
         address: {
-          equals: address,
-          mode: "insensitive",
+          equals: address.toLowerCase(),
         },
       },
       orderBy: {
@@ -168,8 +191,7 @@ export class ClearingHouseService {
     return prisma.tradeData.findFirst({
       where: {
         ammAddress: {
-          equals: amm,
-          mode: "insensitive",
+          equals: amm.toLowerCase(),
         },
         index: {
           equals: index,
@@ -190,8 +212,7 @@ export class ClearingHouseService {
     return prisma.tradeData.findFirst({
       where: {
         ammAddress: {
-          equals: amm,
-          mode: "insensitive",
+          equals: amm.toLowerCase(),
         },
         index: {
           lt: index,
@@ -252,71 +273,52 @@ export class ClearingHouseService {
     });
   }
 
-  async positionEventsAfter(
-    startAfterBlock: number,
-    limit: number,
-    offset: number,
-    blockLimit: number
-  ) {
-    return prisma.$queryRaw<PositionEvent[]>`select * from (
-      (select block_number as "block_number", 
-      block_timestamp as "block_timestamp", 
-      transaction_hash as "transaction_hash",
-      contract_address as "contract_address",
-      log_index as "log_index",
-      create_time as "create_time",
-      create_timestamp as "create_timestamp",
-      event_fundingpayment as "event_fundingpayment",
-      event_amm as "event_amm",
-      event_trader as "event_trader",
-      
-      event_margin as "event_margin",
-      event_positionnotional as "event_positionnotional",
-      event_exchangedpositionsize as "event_exchangedpositionsize",
-      event_fee as "event_fee",
-      event_positionsizeafter as "event_positionsizeafter",
-      event_realizedpnl as "event_realizedpnl",
-      event_unrealizedpnlafter as "event_unrealizedpnlafter",
-      event_baddebt as "event_baddebt",
-      event_liquidationpenalty as "event_liquidationpenalty",
-      event_spotprice as "event_spotprice",
-      
-      NULL as "event_amount"
-      
-      from public.clearinghouse_positionchanged)
-      UNION ALL 
-      (select block_number as "block_number", 
-      block_timestamp as "block_timestamp", 
-      transaction_hash as "transaction_hash",
-      contract_address as "contract_address",
-      log_index as "log_index",
-      create_time as "create_time",
-      create_timestamp as "create_timestamp",
-      event_fundingpayment as "event_fundingpayment",
-      event_amm as "event_amm",
-      event_sender as "event_trader",
-      
-      NULL as "event_margin",
-      NULL as "event_positionnotional",
-      NULL as "event_exchangedpositionsize",
-      NULL as "event_fee",
-      NULL as "event_positionsizeafter",
-      NULL as "event_realizedpnl",
-      NULL as "event_unrealizedpnlafter",
-      NULL as "event_baddebt",
-      NULL as "event_liquidationpenalty",
-      NULL as "event_spotprice",
-      
-      event_amount as "event_amount"
-      
-      from public.clearinghouse_marginchanged)
-      ) results
-      WHERE block_number > ${startAfterBlock}
-      AND block_number <= ${blockLimit}
-      ORDER BY block_timestamp ASC, log_index ASC
-      limit ${limit}
-      offset ${offset}
-      `;
+  async allTethBalanceHistory(userAddress: string) {
+    return prisma.tethBalanceHistory.findMany({
+      where: {
+        userAddress: userAddress.toLowerCase(),
+      },
+      orderBy: {
+        timestamp: "asc",
+      },
+    });
   }
-  
+
+  async getLatestTethBalanceHistory(userAddress: string) {
+    return prisma.tethBalanceHistory.findFirst({
+      where: {
+        userAddress: userAddress.toLowerCase(),
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+    });
+  }
+
+  async getTethBalanceHistoryByTime(userAddress: string, timestamp: number) {
+    return prisma.tethBalanceHistory.findFirst({
+      where: {
+        userAddress: userAddress.toLowerCase(),
+        timestamp: {
+          lte: timestamp,
+        },
+      },
+      orderBy: {
+        timestamp: "desc",
+      },
+    });
+  }
+
+  async createManyTethBalanceHistory(addresses: string[], amounts: string[]) {
+    const data = addresses.map((address, index) => {
+      return {
+        userAddress: address.toLowerCase(),
+        balance: amounts[index],
+        timestamp: 1600000000,
+      };
+    });
+    return prisma.tethBalanceHistory.createMany({
+      data
+    });
+  }
 }

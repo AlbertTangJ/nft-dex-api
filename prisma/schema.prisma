@@ -49,19 +49,19 @@ model UserInfo {
   nonce             Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
   username          String    @db.VarChar
   about             String?
+  points            Int       @default(0)
   updateNameTimes   Int?      @default(0)
   updateTimestamp   Int?
   createTimestamp   Int?
   updateTime        DateTime? @db.Timestamp(6)
   createTime        DateTime? @default(now()) @db.Timestamp(6)
-  points            Int       @default(0)
+  amm               String?   @db.VarChar
   followers         Int       @default(0)
+  following         Int       @default(0)
+  isInputCode       Boolean   @default(false)
   ranking           Int       @default(0)
   referralCode      String?   @unique(map: "UserInfo_code_unique") @db.VarChar
-  following         Int       @default(0)
   referralPoints    Int       @default(0)
-  amm               String?   @db.VarChar
-  isInputCode       Boolean   @default(false)
   countReferralCode Int       @default(0)
   hasTraded         Boolean   @default(false)
   user              User      @relation(fields: [userAddress], references: [userAddress])
@@ -70,14 +70,14 @@ model UserInfo {
 }
 
 model AdminUser {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email             String    @unique @db.VarChar
-  password          String    @db.VarChar
-  updateTimestamp   Int?      
-  createTimestamp   Int?
-  updateTime        DateTime? @db.Timestamp(6)
-  createTime        DateTime? @default(now()) @db.Timestamp(6)
-  
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String    @unique @db.VarChar
+  password        String    @db.VarChar
+  updateTimestamp Int?
+  createTimestamp Int?
+  updateTime      DateTime? @db.Timestamp(6)
+  createTime      DateTime? @default(now()) @db.Timestamp(6)
+
   @@schema("api")
 }
 
@@ -109,22 +109,22 @@ model Achievement {
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
+  isGlobal            Boolean           @default(false)
   points              Int
   redeemLimit         Int               @default(1)
   repeatPeriod        RepeatPeriod
-  createTime          DateTime          @default(now()) @db.Timestamp(6)
-  updateTime          DateTime          @db.Timestamp(6)
-  isGlobal            Boolean           @default(false)
   enabled             Boolean           @default(true)
   latestCompletedTime DateTime?         @db.Timestamp(6)
+  createTime          DateTime          @default(now()) @db.Timestamp(6)
+  updateTime          DateTime          @db.Timestamp(6)
   code                String
   referralRelated     Boolean           @default(false)
   action              String?           @db.VarChar
+  displayStep         String            @default("")
+  endTime             DateTime?         @db.Timestamp(6)
   page                String?           @db.VarChar
   step                Int               @default(1)
   type                String?           @db.VarChar
-  displayStep         String            @default("")
-  endTime             DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 
   @@schema("api")
@@ -142,8 +142,8 @@ model UserAchievement {
   hidden              Boolean     @default(false)
   completed           Boolean     @default(false)
   data                Json?
-  progress            Int         @default(1)
   ended               Boolean     @default(false)
+  progress            Int         @default(1)
   achievement         Achievement @relation(fields: [achievementId], references: [id])
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
@@ -222,64 +222,68 @@ model AggregateJob {
 }
 
 model Amm {
-  address                   String              @id @db.VarChar(255)
-  name                      String              @db.VarChar(255)
-  nftAddress                String              @db.VarChar(255)
-  cumulativeNotional        Decimal             @db.Decimal
-  settlementPrice           Decimal?            @db.Decimal
-  totalPositionSize         Decimal             @db.Decimal
-  tradeLimitRatio           Decimal             @db.Decimal
-  quoteAssetReserve         Decimal             @db.Decimal
-  baseAssetReserve          Decimal             @db.Decimal
-  fluctuationLimitRatio     Decimal             @db.Decimal
-  tollRatio                 Decimal             @db.Decimal
-  spreadRatio               Decimal             @db.Decimal
-  maxHoldingBaseAsset       Decimal             @db.Decimal
-  openInterestNotionalCap   Decimal             @db.Decimal
-  spotPriceTwapInterval     Decimal             @db.Decimal
-  fundingPeriod             Decimal             @db.Decimal
-  fundingBufferPeriod       Decimal             @db.Decimal
-  nextFundingTime           Decimal             @db.Decimal
-  priceFeedKey              String              @db.VarChar(255)
-  globalShutdown            String?             @db.VarChar(255)
-  isOpen                    Boolean
-  isAdjustable              Boolean
-  canLowerK                 Boolean
-  createTime                DateTime            @default(now()) @db.Timestamp(6)
-  updateTime                DateTime?           @db.Timestamp(6)
-  initialBaseAssetReserve   Decimal             @db.Decimal
-  initialQuoteAssetReserve  Decimal             @db.Decimal
-  cumulativePremiumFraction Decimal             @default(0) @db.Decimal
-  initMarginRatio           Decimal             @default(0) @db.Decimal
-  liquidationFeeRatio       Decimal             @default(0) @db.Decimal
-  maintenanceMarginRatio    Decimal             @default(0) @db.Decimal
-  partialLiquidationRatio   Decimal             @default(0) @db.Decimal
-  sortOrder                 Int                 @default(0)
-  openInterestNotional      Decimal             @default(0) @db.Decimal
-  openInterestSize          Decimal             @default(0) @db.Decimal
-  positionBalance           Decimal             @default(0) @db.Decimal
-  tradingVolume             Decimal             @default(0) @db.Decimal
-  AmmFundingPayment         AmmFundingPayment[]
-  AmmReserve                AmmReserve[]
-  Position                  Position[]
-  TradeData                 TradeData[]
+  address                        String              @id @db.VarChar(255)
+  name                           String              @db.VarChar(255)
+  nftAddress                     String              @db.VarChar(255)
+  cumulativeNotional             Decimal             @db.Decimal
+  settlementPrice                Decimal?            @db.Decimal
+  totalPositionSize              Decimal             @db.Decimal
+  tradeLimitRatio                Decimal             @db.Decimal
+  quoteAssetReserve              Decimal             @db.Decimal
+  baseAssetReserve               Decimal             @db.Decimal
+  fluctuationLimitRatio          Decimal             @db.Decimal
+  tollRatio                      Decimal             @db.Decimal
+  spreadRatio                    Decimal             @db.Decimal
+  maxHoldingBaseAsset            Decimal             @db.Decimal
+  openInterestNotionalCap        Decimal             @db.Decimal
+  spotPriceTwapInterval          Decimal             @db.Decimal
+  fundingPeriod                  Decimal             @db.Decimal
+  fundingBufferPeriod            Decimal             @db.Decimal
+  nextFundingTime                Decimal             @db.Decimal
+  priceFeedKey                   String              @db.VarChar(255)
+  globalShutdown                 String?             @db.VarChar(255)
+  isOpen                         Boolean
+  isAdjustable                   Boolean
+  canLowerK                      Boolean
+  createTime                     DateTime            @default(now()) @db.Timestamp(6)
+  updateTime                     DateTime?           @db.Timestamp(6)
+  initialBaseAssetReserve        Decimal             @db.Decimal
+  initialQuoteAssetReserve       Decimal             @db.Decimal
+  initMarginRatio                Decimal             @default(0) @db.Decimal
+  liquidationFeeRatio            Decimal             @default(0) @db.Decimal
+  maintenanceMarginRatio         Decimal             @default(0) @db.Decimal
+  partialLiquidationRatio        Decimal             @default(0) @db.Decimal
+  sortOrder                      Int                 @default(0)
+  openInterestNotional           Decimal             @default(0) @db.Decimal
+  openInterestSize               Decimal             @default(0) @db.Decimal
+  positionBalance                Decimal             @default(0) @db.Decimal
+  tradingVolume                  Decimal             @default(0) @db.Decimal
+  cumulativePremiumFractionLong  Decimal             @default(0) @db.Decimal
+  cumulativePremiumFractionShort Decimal             @default(0) @db.Decimal
+  AmmFundingPayment              AmmFundingPayment[]
+  AmmReserve                     AmmReserve[]
+  Position                       Position[]
+  TradeData                      TradeData[]
 
   @@index([sortOrder])
   @@schema("api")
 }
 
 model AmmFundingPayment {
-  id                        Int       @id @default(autoincrement())
-  ammAddress                String    @db.VarChar(255)
-  premiumFraction           Decimal   @db.Decimal
-  fundingRate               Decimal   @db.Decimal
-  timestamp                 Int
-  createTime                DateTime  @default(now()) @db.Timestamp(6)
-  updateTime                DateTime? @db.Timestamp(6)
-  cumulativePremiumFraction Decimal   @db.Decimal
-  underlyingPrice           Decimal   @db.Decimal
-  timestampIndex            Decimal   @db.Decimal
-  Amm                       Amm       @relation(fields: [ammAddress], references: [address])
+  id                             Int       @id @default(autoincrement())
+  ammAddress                     String    @db.VarChar(255)
+  timestamp                      Int
+  createTime                     DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                     DateTime? @db.Timestamp(6)
+  underlyingPrice                Decimal   @db.Decimal
+  timestampIndex                 Decimal   @db.Decimal
+  cumulativePremiumFractionLong  Decimal   @db.Decimal
+  cumulativePremiumFractionShort Decimal   @db.Decimal
+  fundingRateLong                Decimal   @db.Decimal
+  fundingRateShort               Decimal   @db.Decimal
+  premiumFractionLong            Decimal   @db.Decimal
+  premiumFractionShort           Decimal   @db.Decimal
+  Amm                            Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
   @@index([ammAddress, timestamp(sort: Desc)])
@@ -330,22 +334,17 @@ model Position {
   quoteAssetReserve                       Decimal   @db.Decimal
   positionNotional                        Decimal   @db.Decimal
   timestampIndex                          Decimal   @db.Decimal
-  latestCumulativePremiumFraction         Decimal   @db.Decimal
-  cumulativeFundingPaymentWithdrawAmount  Decimal   @default(0) @db.Decimal
-  cumulativeMarginWithdrawAmount          Decimal   @default(0) @db.Decimal
-  cumulativeRealizedPnlWithdrawAmount     Decimal   @default(0) @db.Decimal
-  fundingPaymentWithdrawAmount            Decimal   @default(0) @db.Decimal
-  marginWithdrawAmount                    Decimal   @default(0) @db.Decimal
   positionCumulativeFundingPayment        Decimal   @default(0) @db.Decimal
   positionCumulativeRealizedPnl           Decimal   @default(0) @db.Decimal
-  realizedPnlWithdrawAmount               Decimal   @default(0) @db.Decimal
   openMargin                              Decimal   @default(0) @db.Decimal
   batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fundingPayment                          Decimal   @db.Decimal
   txHash                                  String    @db.VarChar(255)
-  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
   cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
   cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
+  latestCumulativePremiumFractionLong     Decimal   @db.Decimal
+  latestCumulativePremiumFractionShort    Decimal   @db.Decimal
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
@@ -356,27 +355,28 @@ model Position {
 }
 
 model TradeData {
-  id                            Int       @id @default(autoincrement())
-  ammAddress                    String    @db.VarChar(255)
-  resolution                    Int
-  index                         Int
-  startTimestamp                Int
-  endTimestamp                  Int
-  open                          Decimal   @db.Decimal
-  high                          Decimal   @db.Decimal
-  low                           Decimal   @db.Decimal
-  close                         Decimal   @db.Decimal
-  average                       Decimal   @db.Decimal
-  volume                        Decimal   @db.Decimal
-  txCount                       Int
-  createTime                    DateTime  @default(now()) @db.Timestamp(6)
-  updateTime                    DateTime? @db.Timestamp(6)
-  startIndex                    Int
-  closeBaseAssetReserve         Decimal   @db.Decimal
-  closeQuoteAssetReserve        Decimal   @db.Decimal
-  closeCumulativePremiumFaction Decimal   @db.Decimal
-  lastUpdatedTimestampIndex     Decimal   @db.Decimal
-  Amm                           Amm       @relation(fields: [ammAddress], references: [address])
+  id                                 Int       @id @default(autoincrement())
+  ammAddress                         String    @db.VarChar(255)
+  resolution                         Int
+  index                              Int
+  startTimestamp                     Int
+  endTimestamp                       Int
+  open                               Decimal   @db.Decimal
+  high                               Decimal   @db.Decimal
+  low                                Decimal   @db.Decimal
+  close                              Decimal   @db.Decimal
+  average                            Decimal   @db.Decimal
+  volume                             Decimal   @db.Decimal
+  txCount                            Int
+  createTime                         DateTime  @default(now()) @db.Timestamp(6)
+  updateTime                         DateTime? @db.Timestamp(6)
+  startIndex                         Int
+  closeBaseAssetReserve              Decimal   @db.Decimal
+  closeQuoteAssetReserve             Decimal   @db.Decimal
+  lastUpdatedTimestampIndex          Decimal   @db.Decimal
+  closeCumulativePremiumFactionLong  Decimal   @db.Decimal
+  closeCumulativePremiumFactionShort Decimal   @db.Decimal
+  Amm                                Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, endTimestamp])
   @@index([ammAddress, resolution, endTimestamp])
