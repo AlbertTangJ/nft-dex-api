@@ -239,6 +239,7 @@ export class AmmService {
           gt: timestampIndex,
         },
       },
+      distinct: ["timestamp"],
       orderBy: {
         timestampIndex: "asc",
       },
