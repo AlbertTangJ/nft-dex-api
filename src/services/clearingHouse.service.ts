@@ -327,7 +327,7 @@ export class ClearingHouseService {
     ORDER BY "Position"."timestampIndex" desc
     LIMIT 1
     )
-    AND "action" = 'Trade'
+    AND "action" != 'AdjustMargin'
     ORDER BY "Position"."timestampIndex" asc`;
   }
 }
