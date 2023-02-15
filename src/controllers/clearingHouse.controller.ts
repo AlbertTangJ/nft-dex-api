@@ -496,13 +496,15 @@ export class ClearingHouseController {
         position = currentPositionHistory[currentPositionHistoryIndex];
       }
 
+      
+
       let fundingPaymentPnl = (position.size.gt(0)
       ? position.size.mul(fundingPayment.premiumFractionLong).div(1e18).round()
       : position.size.mul(fundingPayment.premiumFractionShort).div(1e18).round()).mul(-1)
 
       total = total.add(fundingPaymentPnl);
       fundingPaymentPnlHistory.push({
-        timestamp: position.timestamp,
+        timestamp: fundingPayment.timestamp,
         fundingPaymentPnl
       });
     }
