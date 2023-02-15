@@ -186,25 +186,6 @@ export class AmmService {
     });
   }
 
-  async ammFundingPaymentByTimestampIndex(
-    address: string,
-    timestampIndex: Prisma.Decimal
-  ) {
-    return prisma.ammFundingPayment.findFirst({
-      where: {
-        ammAddress: {
-          equals: address,
-        },
-        timestampIndex: {
-          lte: timestampIndex,
-        },
-      },
-      orderBy: {
-        timestampIndex: "desc",
-      },
-    });
-  }
-
   async ammFundingPaymentsInRange(
     address: string,
     startTimestampIndex: Prisma.Decimal,
@@ -241,6 +222,25 @@ export class AmmService {
       },
       orderBy: {
         timestampIndex: "desc",
+      },
+    });
+  }
+
+  async allFundingPaymentsAfter(
+    address: string,
+    timestampIndex: Prisma.Decimal
+  ) {
+    return prisma.ammFundingPayment.findMany({
+      where: {
+        ammAddress: {
+          equals: address.toLowerCase(),
+        },
+        timestampIndex: {
+          gt: timestampIndex,
+        },
+      },
+      orderBy: {
+        timestampIndex: "asc",
       },
     });
   }
