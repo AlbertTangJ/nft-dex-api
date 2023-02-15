@@ -480,11 +480,18 @@ export class ClearingHouseController {
     }
 
     const currentPositionHistory = await this.clearingHouseService.getCurrentPositionHistory(trader, amm);
-    if (currentPositionHistory.length == 0) return new ApiResponse(ResponseStatus.Failure).toObject();
+    if (
+      currentPositionHistory.length == 0 ||
+      currentPositionHistory.find(position => {
+        position.size.eq(0);
+      })
+    ) {
+      return new ApiResponse(ResponseStatus.Failure).toObject();
+    }
 
     let fundingPaymentPnlHistory = [];
 
-    let total:Decimal = new Decimal(0);
+    let total: Decimal = new Decimal(0);
 
     const fundingPaymentHistory = await this.ammService.allFundingPaymentsAfter(amm, currentPositionHistory[0].timestampIndex);
     let currentPositionHistoryIndex = 0;
@@ -496,11 +503,11 @@ export class ClearingHouseController {
         position = currentPositionHistory[currentPositionHistoryIndex];
       }
 
-      
-
-      let fundingPaymentPnl = (position.size.gt(0)
-      ? position.size.mul(fundingPayment.premiumFractionLong).div(1e18).round()
-      : position.size.mul(fundingPayment.premiumFractionShort).div(1e18).round()).mul(-1)
+      let fundingPaymentPnl = (
+        position.size.gt(0)
+          ? position.size.mul(fundingPayment.premiumFractionLong).div(1e18).round()
+          : position.size.mul(fundingPayment.premiumFractionShort).div(1e18).round()
+      ).mul(-1);
 
       total = total.add(fundingPaymentPnl);
       fundingPaymentPnlHistory.push({
