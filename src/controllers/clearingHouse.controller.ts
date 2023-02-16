@@ -518,7 +518,7 @@ export class ClearingHouseController {
 
     return new ApiResponse(ResponseStatus.Success)
       .setData({
-        fundingPaymentPnlHistory,
+        fundingPaymentPnlHistory: fundingPaymentPnlHistory.reverse(),
         total
       })
       .toObject();
