@@ -330,4 +330,42 @@ export class ClearingHouseService {
     AND "action" != 'AdjustMargin'
     ORDER BY "Position"."timestampIndex" asc`;
   }
+
+  async getLatestTradeRecord(trader: string) {
+    return prisma.position.findFirst({
+      where: {
+        userAddress: trader.toLowerCase(),
+        action: "Trade"
+      }
+    });
+  }
+
+  async getLatestPartialCloseRecord(trader: string) {
+    return prisma.position.findFirst({
+      where: {
+        userAddress: trader.toLowerCase(),
+        action: "Trade",
+        OR: [
+          {
+            size: {
+              gt: 0
+            },
+            exchangedPositionSize: {
+              lt: 0
+            },
+          },
+          {
+            size: {
+              lt: 0
+            },
+            exchangedPositionSize: {
+              gt: 0
+            },
+          }
+        ]
+      }
+    });
+  }
+
+
 }
