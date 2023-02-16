@@ -498,7 +498,7 @@ export class ClearingHouseController {
     for (let i = 0; i < fundingPaymentHistory.length; i++) {
       const fundingPayment = fundingPaymentHistory[i];
       let position = currentPositionHistory[currentPositionHistoryIndex];
-      while (currentPositionHistory[currentPositionHistoryIndex + 1] && position.timestampIndex < fundingPayment.timestampIndex) {
+      while (currentPositionHistory[currentPositionHistoryIndex + 1] && currentPositionHistory[currentPositionHistoryIndex + 1].timestampIndex < fundingPayment.timestampIndex) {
         currentPositionHistoryIndex++;
         position = currentPositionHistory[currentPositionHistoryIndex];
       }
