@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import prisma from "src/helpers/client";
 import { Service } from "typedi";
 import { format } from 'date-fns'
 import { uuidv4 } from "@firebase/util";
+import BigNumber from "bignumber.js";
 type Reward = { address: string, username: string, unrealizedpnl: string, fundingpayment: string, realizedpnl: string, updatetimestamp: number, total: string }
 
 @Service()
@@ -89,7 +89,7 @@ export class LeaderBoardService {
         let i = (page * size) + 1
         for (let a = 0; a < result.length; a++) {
             const reward: Reward = result[a];
-            const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i }
+            const item = { "address": reward.address, "username": reward.username, "total": BigNumber(reward.total).toFixed(), "updatetime": lastUpdateTime[0].update_timestamp, "rank": i }
             rewards.push(item)
             i = i + 1
         }
