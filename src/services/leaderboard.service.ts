@@ -12,7 +12,6 @@ export class LeaderBoardService {
     prismaClient: PrismaClient;
     constructor() {
         this.prismaClient = new PrismaClient();
-        
     }
 
     async leaderBoardRankingSave(round: number) {
