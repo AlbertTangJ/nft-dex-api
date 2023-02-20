@@ -4,6 +4,7 @@ import { Service } from "typedi";
 import { format } from 'date-fns'
 import { uuidv4 } from "@firebase/util";
 import BigNumber from "bignumber.js";
+import { ethers } from "ethers";
 type Reward = { address: string, username: string, unrealizedpnl: string, fundingpayment: string, realizedpnl: string, updatetimestamp: number, total: string }
 
 @Service()
