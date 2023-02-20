@@ -3,6 +3,7 @@ import { Service } from "typedi";
 import { format } from 'date-fns'
 import { uuidv4 } from "@firebase/util";
 import BigNumber from "bignumber.js";
+
 type Reward = { address: string, username: string, unrealizedpnl: string, fundingpayment: string, realizedpnl: string, updatetimestamp: number, total: string }
 
 @Service()
@@ -27,7 +28,7 @@ export class LeaderBoardService {
         let lastUpdateTime = await this.prismaClient.$queryRaw`SELECT update_timestamp FROM public.rewards ORDER BY update_timestamp DESC LIMIT 1`;
         for (let i = 0; i < result.length; i++) {
             const reward: Reward = result[i];
-            const item = { "user": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
+            const item = { "user": reward.address, "username": reward.username, "total": BigNumber(reward.total).toFixed(), "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
             rewards.push(item)
         }
 
@@ -54,7 +55,7 @@ export class LeaderBoardService {
         let lastUpdateTime = await this.prismaClient.$queryRaw`SELECT update_timestamp FROM public.rewards ORDER BY update_timestamp DESC LIMIT 1`;
         for (let i = 0; i < result.length; i++) {
             const reward: Reward = result[i];
-            const item = { "user": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
+            const item = { "user": reward.address, "username": reward.username, "total": BigNumber(reward.total).toFixed(), "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
             rewards.push(item)
         }
 
@@ -110,8 +111,9 @@ export class LeaderBoardService {
         let lastUpdateTime = await this.prismaClient.$queryRaw`SELECT update_timestamp FROM public.rewards ORDER BY update_timestamp DESC LIMIT 1`;
         for (let i = 0; i < result.length; i++) {
             const reward: Reward = result[i];
+
             if (reward.address == userAddress.toLowerCase()) {
-                const item = { "address": reward.address, "username": reward.username, "total": reward.total, "updatetime": lastUpdateTime[0].update_timestamp, "rank": i }
+                const item = { "address": reward.address, "username": reward.username, "total": BigNumber(reward.total).toFixed(), "updatetime": lastUpdateTime[0].update_timestamp, "rank": i + 1 }
                 userRanking = item;
                 break
             }
