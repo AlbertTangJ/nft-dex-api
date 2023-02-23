@@ -555,7 +555,7 @@ export class ClearingHouseController {
         data.fee = history.fee;
         data.realizedPnl = history.realizedPnl;
         data.amount = history.amount;
-        data.fundingPayment = history.exchangedPositionSize.eq(0) ? history.positionCumulativeFundingPayment : new Decimal(0)
+        data.fundingPayment = history.size.eq(0) ? history.positionCumulativeFundingPayment : new Decimal(0)
         data.notionalChange = history.openNotional.sub(history.previousOpenNotional);
         data.liquidationPenalty = history.liquidationPenalty;
       }else if (history.action == "AdjustMargin"){
