@@ -352,7 +352,7 @@ export class ClearingHouseService {
             },
             exchangedPositionSize: {
               lt: 0
-            },
+            }
           },
           {
             size: {
@@ -360,12 +360,27 @@ export class ClearingHouseService {
             },
             exchangedPositionSize: {
               gt: 0
-            },
+            }
           }
         ]
       }
     });
   }
 
-
+  async getTradeHistory(trader: string, amm: string, limit: number, offset: number) {
+    return prisma.position.findMany({
+      where: {
+        userAddress: trader.toLowerCase(),
+        ammAddress: amm.toLowerCase(),
+        action: {
+          not: "Liquidation"
+        },
+      },
+      orderBy: {
+        timestampIndex: "desc"
+      },
+      take: limit,
+      skip: offset
+    });
+  }
 }

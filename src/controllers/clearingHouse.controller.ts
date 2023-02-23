@@ -523,4 +523,51 @@ export class ClearingHouseController {
       })
       .toObject();
   }
+
+  @Get("/tradeHistory")
+  async tradeHistory(@QueryParam("trader") trader: string, @QueryParam("amm") amm: string) {
+    if (!trader) {
+      throw new BadRequestError("trader is required");
+    }
+    if (!amm) {
+      throw new BadRequestError("amm is required");
+    }
+
+    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, amm, 500 ,0);
+
+    const processedTradeHistory = [];
+
+    for (let history of tradeHistory) {
+      let data: any = {
+        txHash: history.txHash,
+        entryPrice: history.openNotional.mul(1e18).div(history.size).round(),
+        ammAddress: history.ammAddress,
+        timestamp: history.timestamp,
+        amount: history.amount,
+        collateralChange: history.margin.sub(history.previousMargin)
+      };
+
+      if (history.action == "Trade"){
+        data.type = "trade";
+        data.exchangedPositionSize = history.exchangedPositionSize;
+        data.positionSizeAfter = history.size;
+        data.positionNotional = history.positionNotional;
+        data.fee = history.fee;
+        data.realizedPnl = history.realizedPnl;
+        data.amount = history.amount;
+        data.fundingPayment = history.exchangedPositionSize.eq(0) ? history.positionCumulativeFundingPayment : new Decimal(0)
+        data.notionalChange = history.openNotional.sub(history.previousOpenNotional);
+        data.liquidationPenalty = history.liquidationPenalty;
+      }else if (history.action == "AdjustMargin"){
+        data.type = "adjust"
+      }
+      processedTradeHistory.push(data)
+    }
+
+    return new ApiResponse(ResponseStatus.Success)
+      .setData({
+        tradeHistory: processedTradeHistory
+      })
+      .toObject();
+  }
 }

@@ -49,19 +49,19 @@ model UserInfo {
   nonce             Int       @default(dbgenerated("floor((random() * (1000000)::double precision))"))
   username          String    @db.VarChar
   about             String?
-  points            Int       @default(0)
   updateNameTimes   Int?      @default(0)
   updateTimestamp   Int?
   createTimestamp   Int?
   updateTime        DateTime? @db.Timestamp(6)
   createTime        DateTime? @default(now()) @db.Timestamp(6)
-  amm               String?   @db.VarChar
+  points            Int       @default(0)
   followers         Int       @default(0)
-  following         Int       @default(0)
-  isInputCode       Boolean   @default(false)
   ranking           Int       @default(0)
   referralCode      String?   @unique(map: "UserInfo_code_unique") @db.VarChar
+  following         Int       @default(0)
   referralPoints    Int       @default(0)
+  amm               String?   @db.VarChar
+  isInputCode       Boolean   @default(false)
   countReferralCode Int       @default(0)
   hasTraded         Boolean   @default(false)
   user              User      @relation(fields: [userAddress], references: [userAddress])
@@ -109,22 +109,22 @@ model Achievement {
   title               String            @db.VarChar
   description         String?           @db.VarChar
   icon                String?           @db.VarChar
-  isGlobal            Boolean           @default(false)
   points              Int
   redeemLimit         Int               @default(1)
   repeatPeriod        RepeatPeriod
-  enabled             Boolean           @default(true)
-  latestCompletedTime DateTime?         @db.Timestamp(6)
   createTime          DateTime          @default(now()) @db.Timestamp(6)
   updateTime          DateTime          @db.Timestamp(6)
+  isGlobal            Boolean           @default(false)
+  enabled             Boolean           @default(true)
+  latestCompletedTime DateTime?         @db.Timestamp(6)
   code                String
   referralRelated     Boolean           @default(false)
   action              String?           @db.VarChar
-  displayStep         String            @default("")
-  endTime             DateTime?         @db.Timestamp(6)
   page                String?           @db.VarChar
   step                Int               @default(1)
   type                String?           @db.VarChar
+  displayStep         String            @default("")
+  endTime             DateTime?         @db.Timestamp(6)
   userAchievement     UserAchievement[]
 
   @@schema("api")
@@ -142,8 +142,8 @@ model UserAchievement {
   hidden              Boolean     @default(false)
   completed           Boolean     @default(false)
   data                Json?
-  ended               Boolean     @default(false)
   progress            Int         @default(1)
+  ended               Boolean     @default(false)
   achievement         Achievement @relation(fields: [achievementId], references: [id])
   referralUser        User?       @relation("referralUser", fields: [referralUserAddress], references: [userAddress])
   user                User        @relation(fields: [userAddress], references: [userAddress])
@@ -277,10 +277,10 @@ model AmmFundingPayment {
   updateTime                     DateTime? @db.Timestamp(6)
   underlyingPrice                Decimal   @db.Decimal
   timestampIndex                 Decimal   @db.Decimal
-  cumulativePremiumFractionLong  Decimal   @db.Decimal
-  cumulativePremiumFractionShort Decimal   @db.Decimal
   fundingRateLong                Decimal   @db.Decimal
   fundingRateShort               Decimal   @db.Decimal
+  cumulativePremiumFractionLong  Decimal   @db.Decimal
+  cumulativePremiumFractionShort Decimal   @db.Decimal
   premiumFractionLong            Decimal   @db.Decimal
   premiumFractionShort           Decimal   @db.Decimal
   Amm                            Amm       @relation(fields: [ammAddress], references: [address])
@@ -340,11 +340,14 @@ model Position {
   batchId                                 String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fundingPayment                          Decimal   @db.Decimal
   txHash                                  String    @db.VarChar(255)
+  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
   cumulativeFullLiquidationPenalty        Decimal   @default(0) @db.Decimal
   cumulativeFullLiquidationRealizedPnl    Decimal   @default(0) @db.Decimal
-  cumulativeFullLiquidationFundingPayment Decimal   @default(0) @db.Decimal
   latestCumulativePremiumFractionLong     Decimal   @db.Decimal
   latestCumulativePremiumFractionShort    Decimal   @db.Decimal
+  amount                                  Decimal   @default(0) @db.Decimal
+  previousOpenNotional                    Decimal   @db.Decimal
+  previousMargin                          Decimal   @db.Decimal
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([ammAddress, timestampIndex(sort: Desc)])
