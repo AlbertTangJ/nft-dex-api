@@ -367,11 +367,10 @@ export class ClearingHouseService {
     });
   }
 
-  async getTradeHistory(trader: string, amm: string, limit: number, offset: number) {
+  async getTradeHistory(trader: string, limit: number, offset: number) {
     return prisma.position.findMany({
       where: {
         userAddress: trader.toLowerCase(),
-        ammAddress: amm.toLowerCase(),
         action: {
           not: "Liquidation"
         },

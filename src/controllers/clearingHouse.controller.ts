@@ -525,7 +525,7 @@ export class ClearingHouseController {
   }
 
   @Get("/tradeHistory")
-  async tradeHistory(@QueryParam("trader") trader: string, @QueryParam("amm") amm: string) {
+  async tradeHistory(@QueryParam("trader") trader: string) {
     if (!trader) {
       throw new BadRequestError("trader is required");
     }
@@ -533,7 +533,7 @@ export class ClearingHouseController {
       throw new BadRequestError("amm is required");
     }
 
-    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, amm, 500 ,0);
+    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500 ,0);
 
     const processedTradeHistory = [];
 
