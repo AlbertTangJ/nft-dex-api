@@ -548,6 +548,10 @@ export class ClearingHouseController {
       };
 
       if (history.action == "Trade"){
+        if (history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0)){ //Partial close
+          data.collateralChange = new Decimal(0)
+        }
+
         data.type = "trade";
         data.exchangedPositionSize = history.exchangedPositionSize;
         data.positionSizeAfter = history.size;
