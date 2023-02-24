@@ -529,12 +529,8 @@ export class ClearingHouseController {
     if (!trader) {
       throw new BadRequestError("trader is required");
     }
-    if (!amm) {
-      throw new BadRequestError("amm is required");
-    }
 
     const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500 ,0);
-
     const processedTradeHistory = [];
 
     for (let history of tradeHistory) {
