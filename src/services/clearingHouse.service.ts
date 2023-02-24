@@ -373,7 +373,7 @@ export class ClearingHouseService {
         userAddress: trader.toLowerCase(),
         action: {
           not: "Liquidation"
-        },
+        }
       },
       orderBy: {
         timestampIndex: "desc"
@@ -381,5 +381,10 @@ export class ClearingHouseService {
       take: limit,
       skip: offset
     });
+  }
+
+  async getLatestUpdatedPositionBlockNumber() {
+    let record = await prisma.aggregateJob.findFirst({});
+    return record ? record.positionChangedEventLastUpdatedBlockNumber : 0;
   }
 }

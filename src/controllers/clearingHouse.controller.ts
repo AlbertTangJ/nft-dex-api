@@ -498,7 +498,10 @@ export class ClearingHouseController {
     for (let i = 0; i < fundingPaymentHistory.length; i++) {
       const fundingPayment = fundingPaymentHistory[i];
       let position = currentPositionHistory[currentPositionHistoryIndex];
-      while (currentPositionHistory[currentPositionHistoryIndex + 1] && currentPositionHistory[currentPositionHistoryIndex + 1].timestampIndex < fundingPayment.timestampIndex) {
+      while (
+        currentPositionHistory[currentPositionHistoryIndex + 1] &&
+        currentPositionHistory[currentPositionHistoryIndex + 1].timestampIndex < fundingPayment.timestampIndex
+      ) {
         currentPositionHistoryIndex++;
         position = currentPositionHistory[currentPositionHistoryIndex];
       }
@@ -530,7 +533,7 @@ export class ClearingHouseController {
       throw new BadRequestError("trader is required");
     }
 
-    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500 ,0);
+    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500, 0);
     const processedTradeHistory = [];
 
     for (let history of tradeHistory) {
@@ -543,9 +546,10 @@ export class ClearingHouseController {
         collateralChange: history.margin.sub(history.previousMargin)
       };
 
-      if (history.action == "Trade"){
-        if (history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0)){ //Partial close
-          data.collateralChange = new Decimal(0)
+      if (history.action == "Trade") {
+        if (history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0)) {
+          //Partial close
+          data.collateralChange = new Decimal(0);
         }
 
         data.type = "trade";
@@ -555,18 +559,28 @@ export class ClearingHouseController {
         data.fee = history.fee;
         data.realizedPnl = history.realizedPnl;
         data.amount = history.amount;
-        data.fundingPayment = history.size.eq(0) ? history.positionCumulativeFundingPayment : new Decimal(0)
+        data.fundingPayment = history.size.eq(0) ? history.positionCumulativeFundingPayment : new Decimal(0);
         data.notionalChange = history.openNotional.sub(history.previousOpenNotional);
         data.liquidationPenalty = history.liquidationPenalty;
-      }else if (history.action == "AdjustMargin"){
-        data.type = "adjust"
+      } else if (history.action == "AdjustMargin") {
+        data.type = "adjust";
       }
-      processedTradeHistory.push(data)
+      processedTradeHistory.push(data);
     }
 
     return new ApiResponse(ResponseStatus.Success)
       .setData({
         tradeHistory: processedTradeHistory
+      })
+      .toObject();
+  }
+
+  @Get("/lastUpdatedBlock")
+  async lastUpdatedBlock() {
+    const lastUpdatedBlock = await this.clearingHouseService.getLatestUpdatedPositionBlockNumber();
+    return new ApiResponse(ResponseStatus.Success)
+      .setData({
+        lastUpdatedBlock
       })
       .toObject();
   }
