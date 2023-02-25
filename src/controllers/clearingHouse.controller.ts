@@ -539,7 +539,7 @@ export class ClearingHouseController {
     for (let history of tradeHistory) {
       let data: any = {
         txHash: history.txHash,
-        entryPrice: history.openNotional.mul(1e18).div(history.size).round(),
+        entryPrice: history.openNotional.mul(1e18).div(history.size.abs()).round(),
         ammAddress: history.ammAddress,
         timestamp: history.timestamp,
         amount: history.amount,
