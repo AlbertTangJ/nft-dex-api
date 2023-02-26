@@ -370,10 +370,7 @@ export class ClearingHouseService {
   async getTradeHistory(trader: string, limit: number, offset: number) {
     return prisma.position.findMany({
       where: {
-        userAddress: trader.toLowerCase(),
-        action: {
-          not: "Liquidation"
-        }
+        userAddress: trader.toLowerCase()
       },
       orderBy: {
         timestampIndex: "desc"

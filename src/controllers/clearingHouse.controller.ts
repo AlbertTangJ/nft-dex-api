@@ -546,8 +546,8 @@ export class ClearingHouseController {
         collateralChange: history.margin.sub(history.previousMargin)
       };
 
-      if (history.action == "Trade") {
-        if (history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0)) {
+      if (history.action == "Trade" || history.action == "Liquidation") {
+        if (history.action == "Trade"  && history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0)) {
           //Partial close
           data.collateralChange = new Decimal(0);
         }
