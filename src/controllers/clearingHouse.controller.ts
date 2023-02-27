@@ -547,7 +547,12 @@ export class ClearingHouseController {
       };
 
       if (history.action == "Trade" || history.action == "Liquidation") {
-        if (history.action == "Trade"  && history.exchangedPositionSize.mul(history.size).isNeg() && history.liquidationPenalty.eq(0) && history.size.abs().gt(0)) {
+        if (
+          history.action == "Trade" &&
+          history.exchangedPositionSize.mul(history.size).isNeg() &&
+          history.liquidationPenalty.eq(0) &&
+          history.size.abs().gt(0)
+        ) {
           //Partial close
           data.collateralChange = new Decimal(0);
         }
@@ -559,7 +564,11 @@ export class ClearingHouseController {
         data.fee = history.fee;
         data.realizedPnl = history.realizedPnl;
         data.amount = history.amount;
-        data.fundingPayment = history.size.eq(0) ? history.positionCumulativeFundingPayment.mul(-1) : new Decimal(0);
+        data.fundingPayment = history.size.eq(0)
+          ? history.positionCumulativeFundingPayment.isZero()
+            ? history.positionCumulativeFundingPayment
+            : history.positionCumulativeFundingPayment.mul(-1)
+          : new Decimal(0);
         data.notionalChange = history.openNotional.sub(history.previousOpenNotional);
         data.liquidationPenalty = history.liquidationPenalty;
       } else if (history.action == "AdjustMargin") {
