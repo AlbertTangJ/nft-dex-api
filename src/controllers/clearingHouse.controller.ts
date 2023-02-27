@@ -539,11 +539,12 @@ export class ClearingHouseController {
     for (let history of tradeHistory) {
       let data: any = {
         txHash: history.txHash,
-        entryPrice: history.openNotional.mul(1e18).div(history.size.abs()).round(),
+        entryPrice: history.positionNotional.mul(1e18).div(history.exchangedPositionSize.abs()).round(),
         ammAddress: history.ammAddress,
         timestamp: history.timestamp,
         amount: history.amount,
-        collateralChange: history.margin.sub(history.previousMargin)
+        collateralChange: history.margin.sub(history.previousMargin),
+        realizedFundingPayment: history.fundingPayment,
       };
 
       if (history.action == "Trade" || history.action == "Liquidation") {
