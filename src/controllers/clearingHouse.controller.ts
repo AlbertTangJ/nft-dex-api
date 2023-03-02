@@ -544,7 +544,9 @@ export class ClearingHouseController {
         timestamp: history.timestamp,
         amount: history.amount,
         collateralChange: history.margin.sub(history.previousMargin),
-        realizedFundingPayment: history.fundingPayment,
+        margin: history.margin,
+        previousMargin: history.previousMargin,
+        fundingPayment: history.fundingPayment,
       };
 
       if (history.action == "Trade" || history.action == "Liquidation") {
@@ -564,14 +566,16 @@ export class ClearingHouseController {
         data.positionNotional = history.positionNotional;
         data.fee = history.fee;
         data.realizedPnl = history.realizedPnl;
-        data.amount = history.amount;
-        data.fundingPayment = history.size.eq(0)
+        data.totalFundingPayment = history.size.eq(0)
           ? history.positionCumulativeFundingPayment.isZero()
             ? history.positionCumulativeFundingPayment
             : history.positionCumulativeFundingPayment.mul(-1)
           : new Decimal(0);
         data.notionalChange = history.openNotional.sub(history.previousOpenNotional);
         data.liquidationPenalty = history.liquidationPenalty;
+        data.badDebt = history.badDebt;
+        data.openNotional = history.openNotional;
+        data.previousOpenNotional = history.previousOpenNotional;
       } else if (history.action == "AdjustMargin") {
         data.type = "adjust";
       }
