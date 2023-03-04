@@ -5,6 +5,8 @@ WORKDIR /home/tribe3/tribe3-api
 
 ARG API_DATABASE_URL
 ENV DATABASE_URL=${API_DATABASE_URL}
+ARG SYNC_ID
+ENV SYNC_ID=${SYNC_ID}
 RUN npm install
 RUN npx prisma generate
 
