@@ -2,59 +2,10 @@ import prisma from "../helpers/client";
 import { Service } from "typedi";
 import { Prisma, Position } from "@prisma/client";
 
-export type PositionEvent = {
-  block_number: number | null;
-  block_timestamp: number | null;
-  contract_address: string | null;
-  transaction_hash: string | null;
-  log_index: number | null;
-  create_time: Date | null;
-  create_timestamp: number | null;
-  event_trader: string | null;
-  event_amm: string | null;
-  event_margin: Prisma.Decimal | null;
-  event_positionnotional: Prisma.Decimal | null;
-  event_exchangedpositionsize: Prisma.Decimal | null;
-  event_fee: Prisma.Decimal | null;
-  event_positionsizeafter: Prisma.Decimal | null;
-  event_realizedpnl: Prisma.Decimal | null;
-  event_unrealizedpnlafter: Prisma.Decimal | null;
-  event_baddebt: Prisma.Decimal | null;
-  event_liquidationpenalty: Prisma.Decimal | null;
-  event_spotprice: Prisma.Decimal | null;
-  event_fundingpayment: Prisma.Decimal | null;
-  event_amount: Prisma.Decimal | null;
-};
+const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
 
 @Service()
 export class ClearingHouseService {
-  async createPosition(data: Prisma.PositionCreateInput) {
-    return prisma.position.create({
-      data
-    });
-  }
-
-  async createManyPositions(data: Prisma.PositionCreateManyInput[]) {
-    return prisma.position.createMany({
-      data
-    });
-  }
-
-  async createManyTradeData(data: Prisma.TradeDataCreateManyInput[]) {
-    return prisma.tradeData.createMany({
-      data
-    });
-  }
-
-  async updateTradeData(id: number, data: Prisma.TradeDataUpdateInput) {
-    return prisma.tradeData.update({
-      where: {
-        id
-      },
-      data
-    });
-  }
-
   async currentPosition(trader: string, amm: string) {
     return prisma.position.findFirst({
       where: {
@@ -63,7 +14,8 @@ export class ClearingHouseService {
         },
         ammAddress: {
           equals: amm.toLowerCase()
-        }
+        },
+        syncId
       },
       orderBy: {
         timestampIndex: "desc"
@@ -76,7 +28,8 @@ export class ClearingHouseService {
       where: {
         userAddress: {
           equals: trader.toLowerCase()
-        }
+        },
+        syncId
       },
       orderBy: {
         timestampIndex: "asc"
@@ -95,7 +48,8 @@ export class ClearingHouseService {
         },
         timestamp: {
           lte: timestamp
-        }
+        },
+        syncId
       },
       orderBy: {
         timestampIndex: "desc"
@@ -114,7 +68,8 @@ export class ClearingHouseService {
         },
         timestampIndex: {
           lte: timestampIndex
-        }
+        },
+        syncId
       },
       orderBy: {
         timestampIndex: "desc"
@@ -130,7 +85,8 @@ export class ClearingHouseService {
         },
         timestamp: {
           gte: timestamp
-        }
+        },
+        syncId
       },
       orderBy: {
         timestampIndex: "asc"
@@ -143,19 +99,27 @@ export class ClearingHouseService {
     return prisma.$queryRaw<Position[]>`SELECT * FROM api."Position" 
       WHERE ("Position"."ammAddress", "Position"."timestampIndex") in 
       (SELECT "Position"."ammAddress", max("Position"."timestampIndex") 
-      FROM api."Position" group by "ammAddress", "userAddress"
-      having "userAddress" = ${trader})`;
+      FROM api."Position" group by "ammAddress", "userAddress", "syncId"
+      HAVING "userAddress" = ${trader}
+      AND "syncId" = ${syncId}
+      )
+      AND "syncId" = ${syncId}
+      `;
   }
 
   async allPositionsAtTime(trader: string, timestamp: number) {
     trader = trader.toLowerCase();
     return prisma.$queryRaw<Position[]>`SELECT * FROM api."Position" 
-      WHERE ("Position"."ammAddress", "Position"."timestampIndex") in 
+      where ("Position"."ammAddress", "Position"."timestampIndex") in 
       (SELECT "Position"."ammAddress", max("Position"."timestampIndex") 
       FROM api."Position" 
-      WHERE "Position"."timestamp" <= ${timestamp}
-      group by "ammAddress", "userAddress"
-      having "userAddress" = ${trader})`;
+      where "Position"."timestamp" <= ${timestamp}
+      group by "ammAddress", "userAddress", "syncId"
+      having "userAddress" = ${trader}
+      AND "syncId" = ${syncId}
+      )
+      AND "syncId" = ${syncId}
+      `;
   }
 
   async latestAmmRecord(address: string) {
@@ -175,6 +139,9 @@ export class ClearingHouseService {
     return prisma.position.findMany({
       take: limit,
       skip: offset,
+      where: {
+        syncId
+      },
       orderBy: [
         {
           timestampIndex: "asc"
@@ -194,7 +161,8 @@ export class ClearingHouseService {
         },
         resolution: {
           equals: resolution
-        }
+        },
+        syncId
       },
       orderBy: [
         {
@@ -215,7 +183,8 @@ export class ClearingHouseService {
         },
         resolution: {
           equals: resolution
-        }
+        },
+        syncId
       },
       orderBy: [
         {
@@ -233,7 +202,8 @@ export class ClearingHouseService {
         },
         resolution: {
           equals: resolution
-        }
+        },
+        syncId
       },
       orderBy: [
         {
@@ -251,21 +221,14 @@ export class ClearingHouseService {
         },
         endTimestamp: {
           lt: timestamp
-        }
+        },
+        syncId
       },
       orderBy: [
         {
           startTimestamp: "asc"
         }
       ]
-    });
-  }
-
-  async deleteAllAdjustMarginPosition() {
-    return prisma.position.deleteMany({
-      where: {
-        action: "AdjustMargin"
-      }
     });
   }
 
@@ -324,10 +287,12 @@ export class ClearingHouseService {
     (SELECT "Position"."batchId" FROM api."Position"
     WHERE "userAddress" = ${trader.toLowerCase()}
     AND "ammAddress" = ${amm.toLowerCase()}
+    AND "syncId" = ${syncId}
     ORDER BY "Position"."timestampIndex" desc
     LIMIT 1
     )
     AND "action" != 'AdjustMargin'
+    AND "syncId" = ${syncId}
     ORDER BY "Position"."timestampIndex" asc`;
   }
 
@@ -335,7 +300,8 @@ export class ClearingHouseService {
     return prisma.position.findFirst({
       where: {
         userAddress: trader.toLowerCase(),
-        action: "Trade"
+        action: "Trade",
+        syncId
       }
     });
   }
@@ -345,6 +311,7 @@ export class ClearingHouseService {
       where: {
         userAddress: trader.toLowerCase(),
         action: "Trade",
+        syncId,
         OR: [
           {
             size: {
@@ -370,7 +337,8 @@ export class ClearingHouseService {
   async getTradeHistory(trader: string, limit: number, offset: number) {
     return prisma.position.findMany({
       where: {
-        userAddress: trader.toLowerCase()
+        userAddress: trader.toLowerCase(),
+        syncId
       },
       orderBy: {
         timestampIndex: "desc"
@@ -381,7 +349,11 @@ export class ClearingHouseService {
   }
 
   async getLatestUpdatedPositionBlockNumber() {
-    let record = await prisma.aggregateJob.findFirst({});
+    let record = await prisma.aggregateJob.findFirst({
+      where: {
+        syncId
+      }
+    });
     return record ? record.positionChangedEventLastUpdatedBlockNumber : 0;
   }
 }

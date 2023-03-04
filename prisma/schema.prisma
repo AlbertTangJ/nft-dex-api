@@ -217,53 +217,45 @@ model AggregateJob {
   revervesSnapshottedEventLastUpdatedBlockNumber Int     @default(0)
   running                                        Boolean @default(false)
   reservesAdjustedLastUpdatedBlockNumber         Int     @default(0)
+  syncId                                         Int     @unique @default(0)
 
   @@schema("api")
 }
 
 model Amm {
-  address                        String              @id @db.VarChar(255)
-  name                           String              @db.VarChar(255)
-  nftAddress                     String              @db.VarChar(255)
-  cumulativeNotional             Decimal             @db.Decimal
-  settlementPrice                Decimal?            @db.Decimal
-  totalPositionSize              Decimal             @db.Decimal
-  tradeLimitRatio                Decimal             @db.Decimal
-  quoteAssetReserve              Decimal             @db.Decimal
-  baseAssetReserve               Decimal             @db.Decimal
-  fluctuationLimitRatio          Decimal             @db.Decimal
-  tollRatio                      Decimal             @db.Decimal
-  spreadRatio                    Decimal             @db.Decimal
-  maxHoldingBaseAsset            Decimal             @db.Decimal
-  openInterestNotionalCap        Decimal             @db.Decimal
-  spotPriceTwapInterval          Decimal             @db.Decimal
-  fundingPeriod                  Decimal             @db.Decimal
-  fundingBufferPeriod            Decimal             @db.Decimal
-  nextFundingTime                Decimal             @db.Decimal
-  priceFeedKey                   String              @db.VarChar(255)
-  globalShutdown                 String?             @db.VarChar(255)
-  isOpen                         Boolean
-  isAdjustable                   Boolean
-  canLowerK                      Boolean
-  createTime                     DateTime            @default(now()) @db.Timestamp(6)
-  updateTime                     DateTime?           @db.Timestamp(6)
-  initialBaseAssetReserve        Decimal             @db.Decimal
-  initialQuoteAssetReserve       Decimal             @db.Decimal
-  initMarginRatio                Decimal             @default(0) @db.Decimal
-  liquidationFeeRatio            Decimal             @default(0) @db.Decimal
-  maintenanceMarginRatio         Decimal             @default(0) @db.Decimal
-  partialLiquidationRatio        Decimal             @default(0) @db.Decimal
-  sortOrder                      Int                 @default(0)
-  openInterestNotional           Decimal             @default(0) @db.Decimal
-  openInterestSize               Decimal             @default(0) @db.Decimal
-  positionBalance                Decimal             @default(0) @db.Decimal
-  tradingVolume                  Decimal             @default(0) @db.Decimal
-  cumulativePremiumFractionLong  Decimal             @default(0) @db.Decimal
-  cumulativePremiumFractionShort Decimal             @default(0) @db.Decimal
-  AmmFundingPayment              AmmFundingPayment[]
-  AmmReserve                     AmmReserve[]
-  Position                       Position[]
-  TradeData                      TradeData[]
+  address                  String              @id @db.VarChar(255)
+  name                     String              @db.VarChar(255)
+  nftAddress               String              @db.VarChar(255)
+  cumulativeNotional       Decimal             @db.Decimal
+  settlementPrice          Decimal?            @db.Decimal
+  totalPositionSize        Decimal             @db.Decimal
+  tradeLimitRatio          Decimal             @db.Decimal
+  fluctuationLimitRatio    Decimal             @db.Decimal
+  tollRatio                Decimal             @db.Decimal
+  spreadRatio              Decimal             @db.Decimal
+  maxHoldingBaseAsset      Decimal             @db.Decimal
+  openInterestNotionalCap  Decimal             @db.Decimal
+  spotPriceTwapInterval    Decimal             @db.Decimal
+  fundingPeriod            Decimal             @db.Decimal
+  fundingBufferPeriod      Decimal             @db.Decimal
+  priceFeedKey             String              @db.VarChar(255)
+  globalShutdown           String?             @db.VarChar(255)
+  isOpen                   Boolean
+  isAdjustable             Boolean
+  canLowerK                Boolean
+  createTime               DateTime            @default(now()) @db.Timestamp(6)
+  updateTime               DateTime?           @db.Timestamp(6)
+  initialBaseAssetReserve  Decimal             @db.Decimal
+  initialQuoteAssetReserve Decimal             @db.Decimal
+  initMarginRatio          Decimal             @default(0) @db.Decimal
+  liquidationFeeRatio      Decimal             @default(0) @db.Decimal
+  maintenanceMarginRatio   Decimal             @default(0) @db.Decimal
+  partialLiquidationRatio  Decimal             @default(0) @db.Decimal
+  sortOrder                Int                 @default(0)
+  AmmFundingPayment        AmmFundingPayment[]
+  AmmReserve               AmmReserve[]
+  Position                 Position[]
+  TradeData                TradeData[]
 
   @@index([sortOrder])
   @@schema("api")
@@ -283,11 +275,12 @@ model AmmFundingPayment {
   cumulativePremiumFractionShort Decimal   @db.Decimal
   premiumFractionLong            Decimal   @db.Decimal
   premiumFractionShort           Decimal   @db.Decimal
+  syncId                         Int       @default(0)
   Amm                            Amm       @relation(fields: [ammAddress], references: [address])
 
-  @@index([ammAddress, timestampIndex(sort: Desc)])
-  @@index([ammAddress, timestamp(sort: Desc)])
-  @@index([timestampIndex])
+  @@index([syncId, ammAddress, timestampIndex(sort: Desc)])
+  @@index([syncId, ammAddress, timestamp(sort: Desc)])
+  @@index([syncId, timestampIndex])
   @@schema("api")
 }
 
@@ -301,10 +294,11 @@ model AmmReserve {
   createTime        DateTime  @default(now()) @db.Timestamp(6)
   updateTime        DateTime? @db.Timestamp(6)
   timestampIndex    Decimal   @db.Decimal
+  syncId            Int       @default(0)
   Amm               Amm       @relation(fields: [ammAddress], references: [address])
 
-  @@index([ammAddress, timestampIndex(sort: Desc)])
-  @@index([ammAddress, timestamp(sort: Desc)])
+  @@index([syncId, ammAddress, timestampIndex(sort: Desc)])
+  @@index([syncId, ammAddress, timestamp(sort: Desc)])
   @@schema("api")
 }
 
@@ -348,12 +342,13 @@ model Position {
   amount                                  Decimal   @default(0) @db.Decimal
   previousOpenNotional                    Decimal   @db.Decimal
   previousMargin                          Decimal   @db.Decimal
+  syncId                                  Int       @default(0)
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
-  @@index([ammAddress, timestampIndex(sort: Desc)])
-  @@index([timestampIndex(sort: Desc)])
-  @@index([userAddress, ammAddress, timestampIndex(sort: Desc)])
-  @@index([userAddress, ammAddress, timestamp(sort: Desc)])
+  @@index([syncId, ammAddress, timestampIndex(sort: Desc)])
+  @@index([syncId, timestampIndex(sort: Desc)])
+  @@index([syncId, userAddress, ammAddress, timestampIndex(sort: Desc)])
+  @@index([syncId, userAddress, ammAddress, timestamp(sort: Desc)])
   @@schema("api")
 }
 
@@ -379,15 +374,16 @@ model TradeData {
   lastUpdatedTimestampIndex          Decimal   @db.Decimal
   closeCumulativePremiumFactionLong  Decimal   @db.Decimal
   closeCumulativePremiumFactionShort Decimal   @db.Decimal
+  syncId                             Int       @default(0)
   Amm                                Amm       @relation(fields: [ammAddress], references: [address])
 
-  @@index([ammAddress, endTimestamp])
-  @@index([ammAddress, resolution, endTimestamp])
-  @@index([ammAddress, resolution])
-  @@index([ammAddress, resolution, index(sort: Desc)])
-  @@index([ammAddress, resolution, startTimestamp])
-  @@index([ammAddress, startTimestamp])
   @@index([ammAddress(ops: raw("gin_trgm_ops"))], map: "trgm_amm_address_idx", type: Gin)
+  @@index([syncId, ammAddress, endTimestamp])
+  @@index([syncId, ammAddress, resolution, endTimestamp])
+  @@index([syncId, ammAddress, resolution])
+  @@index([syncId, ammAddress, resolution, index(sort: Desc)])
+  @@index([syncId, ammAddress, resolution, startTimestamp])
+  @@index([syncId, ammAddress, startTimestamp])
   @@schema("api")
 }
 
@@ -398,6 +394,24 @@ model TethBalanceHistory {
   timestamp   Int
 
   @@index([userAddress, timestamp])
+  @@schema("api")
+}
+
+model Liquidation {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress        String   @db.VarChar(255)
+  amm                String?  @db.VarChar
+  positionNotional   Decimal? @default(0) @db.Decimal
+  positionSize       Decimal? @default(0) @db.Decimal
+  feeToLiquidator    Decimal? @default(0) @db.Decimal
+  feeToInsurancefund Decimal? @default(0) @db.Decimal
+  Liquidator         String?  @db.VarChar
+  badDebt            Decimal? @default(0) @db.Decimal
+  cumulativeBadDebt  Decimal? @default(0) @db.Decimal
+  syncId             Int      @default(0)
+  timestamp          Int
+
+  @@index([syncId, userAddress, timestamp])
   @@schema("api")
 }
 

@@ -3,6 +3,7 @@ import { Decimal } from "@prisma/client/runtime";
 import { Service } from "typedi";
 import prisma from "../helpers/client";
 
+const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
 
 @Service()
 export class AmmService {
@@ -11,49 +12,17 @@ export class AmmService {
       where: {
         address: {
           equals: address,
-          mode: "insensitive",
-        },
-      },
-    });
-  }
-
-  async create(session: Prisma.AmmCreateInput) {
-    return prisma.amm.create({
-      data: session,
-    });
-  }
-
-  async updateByAddress(address: string, data: Prisma.AmmUpdateInput) {
-    return prisma.amm.updateMany({
-      where: {
-        address: {
-          equals: address,
-          mode: "insensitive",
-        },
-      },
-      data,
+          mode: "insensitive"
+        }
+      }
     });
   }
 
   async allAmms() {
     return prisma.amm.findMany({
       orderBy: {
-        sortOrder: "asc",
-      },
-    });
-  }
-
-  async createManyAmmReserve(data: Prisma.AmmReserveCreateManyInput[]) {
-    return prisma.ammReserve.createMany({
-      data: data,
-    });
-  }
-
-  async createManyFundingPayment(
-    data: Prisma.AmmFundingPaymentCreateManyInput[]
-  ) {
-    return prisma.ammFundingPayment.createMany({
-      data: data,
+        sortOrder: "asc"
+      }
     });
   }
 
@@ -62,12 +31,12 @@ export class AmmService {
       where: {
         address: {
           equals: address,
-          mode: "insensitive",
-        },
+          mode: "insensitive"
+        }
       },
       orderBy: {
-        updateTime: "desc",
-      },
+        updateTime: "desc"
+      }
     });
   }
 
@@ -75,12 +44,13 @@ export class AmmService {
     return prisma.ammReserve.findFirst({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "asc",
-      },
+        timestampIndex: "asc"
+      }
     });
   }
 
@@ -88,12 +58,13 @@ export class AmmService {
     return prisma.ammReserve.findFirst({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
@@ -101,15 +72,16 @@ export class AmmService {
     return prisma.ammReserve.findMany({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
         timestamp: {
-          lte: timestamp,
+          lte: timestamp
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
@@ -117,132 +89,132 @@ export class AmmService {
     return prisma.ammReserve.findFirst({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
         timestamp: {
-          lte: timestamp,
+          lte: timestamp
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
   async allLatestAmmReserves() {
     return prisma.$queryRaw<AmmReserve[]>`SELECT * FROM api."AmmReserve" 
-   where ("AmmReserve"."ammAddress", "AmmReserve"."timestampIndex") in 
+    WHERE ("AmmReserve"."ammAddress", "AmmReserve"."timestampIndex") in 
    (SELECT "AmmReserve"."ammAddress", max("AmmReserve"."timestampIndex") 
-   FROM api."AmmReserve" 
-   group by "ammAddress")`;
+   FROM api."AmmReserve"
+   WHERE "AmmReserve"."syncId" = ${syncId}
+   group by "ammAddress")
+   AND "AmmReserve"."syncId" = ${syncId}
+   `;
   }
 
   async allAmmReservesByTime(timestamp: number) {
     return prisma.$queryRaw<AmmReserve[]>`SELECT * FROM api."AmmReserve" 
-   where ("AmmReserve"."ammAddress", "AmmReserve"."timestampIndex") in 
+    WHERE ("AmmReserve"."ammAddress", "AmmReserve"."timestampIndex") in 
    (SELECT "AmmReserve"."ammAddress", max("AmmReserve"."timestampIndex") 
    FROM api."AmmReserve"
-   where timestamp <= ${timestamp} 
-   group by "ammAddress")`;
+   WHERE timestamp <= ${timestamp}
+   AND "AmmReserve"."syncId" = ${syncId}
+   group by "ammAddress")
+   AND "AmmReserve"."syncId" = ${syncId}
+   `;
   }
 
   async allLatestFundingPayments() {
-    return prisma.$queryRaw<
-      AmmFundingPayment[]
-    >`SELECT * FROM api."AmmFundingPayment" 
-    where ("AmmFundingPayment"."ammAddress", "AmmFundingPayment"."timestampIndex") in 
-    (SELECT "AmmFundingPayment"."ammAddress", max("AmmFundingPayment"."timestampIndex") 
-    FROM api."AmmFundingPayment" 
-    group by "ammAddress")`;
+    return prisma.$queryRaw<AmmFundingPayment[]>`SELECT * FROM api."AmmFundingPayment" 
+    WHERE ("AmmFundingPayment"."ammAddress", "AmmFundingPayment"."timestampIndex") in 
+    (SELECT "AmmFundingPayment"."ammAddress", max("AmmFundingPayment"."timestampIndex")
+    FROM api."AmmFundingPayment"
+    WHERE "AmmFundingPayment"."syncId" = ${syncId}
+    group by "ammAddress")
+    AND "AmmFundingPayment"."syncId" = ${syncId}
+    `;
   }
 
   async allFundingPaymentsByTime(timestamp: number) {
-    return prisma.$queryRaw<
-      AmmFundingPayment[]
-    >`SELECT * FROM api."AmmFundingPayment" 
-    where ("AmmFundingPayment"."ammAddress", "AmmFundingPayment"."timestampIndex") in 
+    return prisma.$queryRaw<AmmFundingPayment[]>`SELECT * FROM api."AmmFundingPayment" 
+    WHERE ("AmmFundingPayment"."ammAddress", "AmmFundingPayment"."timestampIndex") in 
     (SELECT "AmmFundingPayment"."ammAddress", max("AmmFundingPayment"."timestampIndex") 
     FROM api."AmmFundingPayment"
-    where timestamp <= ${timestamp} 
-    group by "ammAddress")`;
+    WHERE timestamp <= ${timestamp} 
+    AND "AmmFundingPayment"."syncId" = ${syncId}
+    group by "ammAddress")
+    AND "AmmFundingPayment"."syncId" = ${syncId}
+    `;
   }
 
-  async ammReserveByTimestampIndex(
-    address: string,
-    timestampIndex: Prisma.Decimal
-  ) {
+  async ammReserveByTimestampIndex(address: string, timestampIndex: Prisma.Decimal) {
     return prisma.ammReserve.findFirst({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
         timestampIndex: {
-          lte: timestampIndex,
+          lte: timestampIndex
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
-  async ammFundingPaymentsInRange(
-    address: string,
-    startTimestampIndex: Prisma.Decimal,
-    endTimestampIndex: Prisma.Decimal
-  ) {
+  async ammFundingPaymentsInRange(address: string, startTimestampIndex: Prisma.Decimal, endTimestampIndex: Prisma.Decimal) {
     return prisma.ammFundingPayment.findMany({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
         timestampIndex: {
           gte: startTimestampIndex,
-          lte: endTimestampIndex,
+          lte: endTimestampIndex
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
-  async ammFundingPaymentsBefore(
-    address: string,
-    timestampIndex: Decimal
-  ) {
+  async ammFundingPaymentsBefore(address: string, timestampIndex: Decimal) {
     return prisma.ammFundingPayment.findMany({
       where: {
         ammAddress: {
-          equals: address,
+          equals: address
         },
         timestampIndex: {
-          lte: timestampIndex,
+          lte: timestampIndex
         },
+        syncId
       },
       orderBy: {
-        timestampIndex: "desc",
-      },
+        timestampIndex: "desc"
+      }
     });
   }
 
-  async allFundingPaymentsAfter(
-    address: string,
-    timestampIndex: Prisma.Decimal
-  ) {
+  async allFundingPaymentsAfter(address: string, timestampIndex: Prisma.Decimal) {
     return prisma.ammFundingPayment.findMany({
       where: {
         ammAddress: {
-          equals: address.toLowerCase(),
+          equals: address.toLowerCase()
         },
         timestampIndex: {
-          gt: timestampIndex,
+          gt: timestampIndex
         },
+        syncId
       },
       distinct: ["timestamp"],
       orderBy: {
-        timestampIndex: "asc",
-      },
+        timestampIndex: "asc"
+      }
     });
   }
 }
