@@ -44,63 +44,63 @@ export class ClearingHouseController {
     return new ApiResponse(ResponseStatus.Success).setData({ unrealizedPnl: unrealizedPnl.toString() }).toObject();
   }
 
-  @Get("/position")
-  async position(@QueryParam("amm") ammAddress: string, @QueryParam("trader") trader: string, @QueryParam("timestamp") timestamp: number) {
-    if (!trader) {
-      throw new BadRequestError("trader is required");
-    }
-    trader = trader.toLowerCase();
-    ammAddress = ammAddress.toLowerCase();
-    let amm = await this.ammService.amm(ammAddress);
+  // @Get("/position")
+  // async position(@QueryParam("amm") ammAddress: string, @QueryParam("trader") trader: string, @QueryParam("timestamp") timestamp: number) {
+  //   if (!trader) {
+  //     throw new BadRequestError("trader is required");
+  //   }
+  //   trader = trader.toLowerCase();
+  //   ammAddress = ammAddress.toLowerCase();
+  //   let amm = await this.ammService.amm(ammAddress);
 
-    if (!amm) {
-      return new ApiResponse(1).setData({ error: "Amm not found" }).toObject();
-    }
+  //   if (!amm) {
+  //     return new ApiResponse(1).setData({ error: "Amm not found" }).toObject();
+  //   }
 
-    let position = timestamp
-      ? await this.clearingHouseService.positionAtTime(trader, ammAddress, timestamp)
-      : await this.clearingHouseService.currentPosition(trader, ammAddress);
+  //   let position = timestamp
+  //     ? await this.clearingHouseService.positionAtTime(trader, ammAddress, timestamp)
+  //     : await this.clearingHouseService.currentPosition(trader, ammAddress);
 
-    let [positionNotional, unrealizedPnl] = getPositionNotionalAndUnrealizedPnl(
-      toBN(position.openNotional),
-      toBN(position.size),
-      toBN(amm.quoteAssetReserve),
-      toBN(amm.baseAssetReserve)
-    );
+  //   let [positionNotional, unrealizedPnl] = getPositionNotionalAndUnrealizedPnl(
+  //     toBN(position.openNotional),
+  //     toBN(position.size),
+  //     toBN(amm.quoteAssetReserve),
+  //     toBN(amm.baseAssetReserve)
+  //   );
 
-    let remainMargin = getRemainMarginWithFundingPayment(
-      position,
-      unrealizedPnl,
-      toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
-    );
-    let marginRatio = getMarginRatio(
-      position,
-      toBN(amm.quoteAssetReserve),
-      toBN(amm.baseAssetReserve),
-      toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
-    );
-    let accumulatedFundingPayment = getFundingPayment(
-      toBN(position.size),
-      toBN(position.lastUpdatedCumulativePremiumFraction),
-      toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
-    );
+  //   let remainMargin = getRemainMarginWithFundingPayment(
+  //     position,
+  //     unrealizedPnl,
+  //     toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
+  //   );
+  //   let marginRatio = getMarginRatio(
+  //     position,
+  //     toBN(amm.quoteAssetReserve),
+  //     toBN(amm.baseAssetReserve),
+  //     toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
+  //   );
+  //   let accumulatedFundingPayment = getFundingPayment(
+  //     toBN(position.size),
+  //     toBN(position.lastUpdatedCumulativePremiumFraction),
+  //     toBN(position.size.gt(0) ? amm.cumulativePremiumFractionLong : amm.cumulativePremiumFractionShort)
+  //   );
 
-    let positionDetail = new PositionDetail(
-      amm,
-      position,
-      unrealizedPnl,
-      accumulatedFundingPayment,
-      marginRatio,
-      positionNotional,
-      remainMargin
-    ).toObject();
+  //   let positionDetail = new PositionDetail(
+  //     amm,
+  //     position,
+  //     unrealizedPnl,
+  //     accumulatedFundingPayment,
+  //     marginRatio,
+  //     positionNotional,
+  //     remainMargin
+  //   ).toObject();
 
-    return new ApiResponse(ResponseStatus.Success)
-      .setData({
-        position: positionDetail
-      })
-      .toObject();
-  }
+  //   return new ApiResponse(ResponseStatus.Success)
+  //     .setData({
+  //       position: positionDetail
+  //     })
+  //     .toObject();
+  // }
 
   @Get("/allPositions")
   async allPositions(@QueryParam("trader") trader: string, @QueryParam("timestamp") timestamp: number) {
@@ -250,6 +250,8 @@ export class ClearingHouseController {
       positionDetails.push(
         new PositionDetail(
           amms.find(a => a.address.toLowerCase() == position.ammAddress.toLowerCase()),
+          toBN(ammReserve.quoteAssetReserve),
+          toBN(ammReserve.baseAssetReserve),
           position,
           unrealizedPnl,
           accumulatedFundingPayment,
@@ -546,7 +548,7 @@ export class ClearingHouseController {
         collateralChange: history.margin.sub(history.previousMargin),
         margin: history.margin,
         previousMargin: history.previousMargin,
-        fundingPayment: history.fundingPayment,
+        fundingPayment: history.fundingPayment
       };
 
       if (history.action == "Trade" || history.action == "Liquidation") {

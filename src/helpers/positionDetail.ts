@@ -5,6 +5,8 @@ import { toBN } from "./decimalHelper";
 export class PositionDetail {
   constructor(
     private amm: Amm,
+    private quoteAssetReserve: BigNumber,
+    private baseAssetReserve: BigNumber,
     private position: Position,
     private unrealizedPnl: BigNumber,
     private accumulatedFundingPayment: BigNumber,
@@ -41,7 +43,7 @@ export class PositionDetail {
 
     return {
       pair: this.amm.name,
-      currentPrice: this.amm.quoteAssetReserve.mul(utils.parseEther("1").toString()).div(this.amm.baseAssetReserve).round().toString(),
+      currentPrice: this.quoteAssetReserve.mul(utils.parseEther("1").toString()).div(this.baseAssetReserve).toString(),
       initMarginRatio: this.amm.initMarginRatio.toString(),
       maintenanceMarginRatio: this.amm.maintenanceMarginRatio.toString(),
       ammAddress: this.position.ammAddress,
