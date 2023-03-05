@@ -1,9 +1,9 @@
 import { PrismaClient } from "@prisma/client";
-import prisma from "src/helpers/client";
 import { Service } from "typedi";
 import { format } from 'date-fns'
 import { uuidv4 } from "@firebase/util";
 import BigNumber from "bignumber.js";
+
 type Reward = { address: string, username: string, unrealizedpnl: string, fundingpayment: string, realizedpnl: string, updatetimestamp: number, total: string }
 
 @Service()

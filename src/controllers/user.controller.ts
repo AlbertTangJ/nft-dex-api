@@ -1,5 +1,5 @@
 import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req, Param } from "routing-controllers";
-import { AchievementService, UserService } from "../services";
+import { AchievementService, ClearingHouseService, UserService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 import { isAddress } from "ethers/lib/utils";
@@ -19,7 +19,11 @@ const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
 export class UserController {
   private twoAddressValidator: Schema;
 
-  constructor(private userService: UserService, private achievementService: AchievementService) {
+  constructor(
+    private userService: UserService,
+    private achievementService: AchievementService,
+    private clearingHouseService: ClearingHouseService
+  ) {
     const followListAPICheck: Rules = {
       user: {
         type: "string",
@@ -50,7 +54,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage("Missing parameters").toObject();
     }
 
-    const user = await this.userService.saveConnectWalletAddress(address.toLowerCase())
+    const user = await this.userService.saveConnectWalletAddress(address.toLowerCase());
     if (!user) {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage("User not found").toObject();
     } else {
@@ -300,18 +304,17 @@ export class UserController {
   //   return new ApiResponse(ResponseStatus.Failure);
   // }
 
-
   @Post("/users/subscribe/email")
   async subscribeEmail(@BodyParam("email", { required: true }) email: string) {
     const descriptor: Rules = {
       email: [
-        { type: 'email', required: true, message: "invalid email" },
+        { type: "email", required: true, message: "invalid email" },
         {
           validator() {
             return [];
           }
         }
-      ],
+      ]
     };
     let emailValidator = new Schema(descriptor);
     try {
@@ -327,7 +330,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
 
-    let result = await this.userService.subscribeUserEmail(email)
+    let result = await this.userService.subscribeUserEmail(email);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success);
     }
@@ -336,8 +339,7 @@ export class UserController {
 
   @Get("/users/whitelist/:address")
   async findAddressInWhitelist(@Param("address") address: string) {
-
-    let result = await this.userService.fetchWhitelist(address.toLowerCase())
+    let result = await this.userService.fetchWhitelist(address.toLowerCase());
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
@@ -403,11 +405,14 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-
   @Post("/users/event")
-  async eventLog(@BodyParam("name", { required: true }) name: string, @BodyParam("params", { required: true }) event: any, @Req() request: any) {
-    let userAgent = request.headers['user-agent'];
-    let ip = request.ip.replace('::ffff:', '');
+  async eventLog(
+    @BodyParam("name", { required: true }) name: string,
+    @BodyParam("params", { required: true }) event: any,
+    @Req() request: any
+  ) {
+    let userAgent = request.headers["user-agent"];
+    let ip = request.ip.replace("::ffff:", "");
     await this.userService.saveEvent(name, event, ip, userAgent);
     return new ApiResponse(ResponseStatus.Success).toObject();
   }
@@ -451,7 +456,6 @@ export class UserController {
       tx.from.toLowerCase() === userAddress.toLowerCase() &&
       tx.to.toLowerCase() === "0x481AD75e7874c967e3E26eED23b61eE538b51042".toLowerCase() // Move to .env
     ) {
-
       await this.userService.updateUserInfos({
         data: {
           isInputCode: true,
@@ -504,5 +508,33 @@ export class UserController {
       }
     }
     return new ApiResponse(ResponseStatus.Success).toObject();
+  }
+
+  @Authorized("auth-token")
+  @Post("/users/trade/validateState")
+  async validateState(@BodyParam("userAddress", { required: true }) userAddress: string) {
+    let result = await this.clearingHouseService.getLatestTradeRecord(userAddress);
+    if (result) {
+      await this.userService.updateUserInfos({
+        data: {
+          isInputCode: true,
+          hasTraded: true
+        },
+        where: {
+          userAddress: userAddress.toLowerCase()
+        }
+      });
+    }
+    let user = await this.userService.findUsersInfoByAddress(userAddress);
+    return new ApiResponse(ResponseStatus.Success).setData({
+      isInputCode: user.isInputCode,
+      hasTraded: user.hasTraded
+    }).toObject();
+  }
+
+  @Get("/users/hasPartialClosed")
+  async hasPartialClosed(@QueryParam("userAddress", { required: true }) userAddress: string) {
+    let result = await this.clearingHouseService.getLatestPartialCloseRecord(userAddress);
+    return new ApiResponse(ResponseStatus.Success).setData({ hasPartialClosed: result != null }).toObject();
   }
 }

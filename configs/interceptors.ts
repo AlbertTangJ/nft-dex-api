@@ -8,7 +8,7 @@ export class AutoAssignJSONInterceptor implements InterceptorInterface {
     if (typeof content === 'object') {
       let message = "success"
       if (content.code != 0) {
-        message = "fails"
+        message = "fail"
       }
       return JSON.stringify(Object.assign({ message: message }, content))
     }
