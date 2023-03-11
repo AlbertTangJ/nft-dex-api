@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 
 // "before" will trigger before the app lift.
 export const bootstrapBefore = (): DotenvParseOutput | undefined => {
+  Prisma.Decimal.set({ rounding: Prisma.Decimal.ROUND_FLOOR, toExpPos: 1000, toExpNeg: -1000 });
   // const result = dotenv.config({ path: join(__dirname, "../.env") });
   // 先构造出.env*文件的绝对路径
   const appDirectory = fs.realpathSync(process.cwd());
@@ -30,7 +31,6 @@ export const bootstrapBefore = (): DotenvParseOutput | undefined => {
     return {};
   }
   // solve ncc path link.
-  Prisma.Decimal.set({ rounding: Prisma.Decimal.ROUND_FLOOR, toExpPos: 1000, toExpNeg: -1000 });
   print.log(".env loaded.");
   return result.parsed;
 };
