@@ -32,6 +32,7 @@ export class PointsService {
             LEFT JOIN (SELECT "userAddress", sum("positionNotional") AS trade_vol FROM "Position" WHERE action='Trade' GROUP BY "userAddress") s
             ON r."userAddress" = s."userAddress"
             WHERE u."userAddress" = ${user}`;
+            
         return result
     }
 
