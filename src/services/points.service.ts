@@ -46,8 +46,24 @@ export class PointsService {
             let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referringRewardPoints;
             let convergePoints = userPoints.converge.points;
             let total = tradeVolPoints + referralPoints + convergePoints
-            pointsLeaderBoardList.push({ total: total, tradeVolPoints: tradeVolPoints, referralPoints: referralPoints, convergePoints: convergePoints })
+            let name = user.username
+            if (user.username == null || user.username == "") {
+                name = user.userAddress
+            }
+
+            pointsLeaderBoardList.push({ total: total, tradeVolPoints: tradeVolPoints, referralPoints: referralPoints, convergePoints: convergePoints, multiplier: 1, user: name })
         }
+        pointsLeaderBoardList.sort(function (a, b) { return a.total - b.total })
+        for (let i = 0; i < pointsLeaderBoardList.length; i++) {
+            const element = pointsLeaderBoardList[i];
+            let rank = i + 1
+            element.rank = rank
+            let multiplierResult = await prisma.rank_multiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
+            if (multiplierResult != null) {
+                element.multiplier = parseFloat(multiplierResult.multiplier.toString())
+            }
+        }
+        return pointsLeaderBoardList
     }
 
     async calculateUserPoints(user: string) {
@@ -127,14 +143,23 @@ export class PointsService {
         return result
     }
 
+    async fetchUserRank(user: string) {
+        let userOrders = await this.pointsLeaderBoard();
+        let rank = null
+        for (let i = 0; i < userOrders.length; i++) {
+            const userOrder = userOrders[i];
+            if (userOrder.userAddress.toLowerCase() == user.toLowerCase()) {
+                rank = userOrder
+            }
+        }
+
+        return rank
+    }
 
     async userPoints(user: string, show: string) {
-        let userTradeResult = await this.userTradeVol(user);
-        let unitEth = BigNumber(utils.parseEther("1").toString())
-        let limitEth = BigNumber(utils.parseEther("5").toString())
-        let referredReward = 0.02
-        let referringReward = 0.03
-        if (userTradeResult == null) {
+        let points = await this.calculateUserPoints(user)
+        let rankData = await this.fetchUserRank(user);
+        if (rankData == null) {
             return {
                 rank: 0,
                 multiplier: 0,
@@ -142,72 +167,28 @@ export class PointsService {
                 referral: {
                     referralSelfRewardPoints: 0,
                     referringRewardPoints: 0
+                }, converge: {
+                    points: 0
                 }
             }
         }
-        let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
-        let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(Math.pow(10, 18));
-        let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
-        // 找到推荐当前用户的人
-        let userReferredResult = await this.userReferredPoints(user);
-        // 先看当前用户够不够5个eth
-        // null 当前用户没有推荐人 ，当前用户的2% 奖励 是需要看 当前用户的推荐人，有没有超过5个eth
-        if (userReferredResult == null || userCurrentTradeVolBigNumber.lte(limitEth)) {
-            referredReward = 0
-        } else {
-            let code = userReferredResult.referralCode
-            let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-            let codeOwner = userInfo.userAddress;
-            let referredUserTradeVol = await this.userTradeVol(codeOwner);
-            let referredUserTradeVolNumber = new BigNumber(referredUserTradeVol.totalTradingVolume.toString());
-            if (referredUserTradeVolNumber.lt(limitEth)) {
-                referredReward = 0
-            }
-        }
-
-        // 当前用户的成交量 * referredReward = 当前用户的referred奖励 , 当前用户需要trade vol >= 5
-        let referralSelfRewardPoints = referredReward * parseFloat(tradeVolNumber) * 10;
-        // 
-        let referringRewardPoints = 0
-        if (userCurrentTradeVolBigNumber.gte(limitEth)) {
-            let userReferralPoints = await this.userReferringPoints(user);
-            for (let i = 0; i < userReferralPoints.length; i++) {
-                const points = userReferralPoints[i].tradeVol;
-                if (points != null) {
-                    let pointsBig = BigNumber(points)
-                    if (pointsBig.gte(limitEth)) {
-                        let currentPoints = pointsBig.dividedBy(Math.pow(10, 18)).toFixed(2);
-                        referringRewardPoints += parseFloat(currentPoints) * referringReward * 10
-                    }
-                }
-            }
-        }
-
-
-        // console.log(leaderBoard)
-        let multiplierNumber = 1
-        // // console.log(userReferralPoints)
-        let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints) * multiplierNumber
         let result = {
-            rank: rank,
-            multiplier: multiplierNumber,
-            total: total
+            rank: rankData.rank,
+            multiplier: rankData.multiplier,
+            total: rankData.total
         }
         let showData = show.split(",")
         if (showData.indexOf("tradeVol") != -1) {
-            result['tradeVol'] = { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) }
+            result['tradeVol'] = points.tradeVol
         }
         if (showData.indexOf('referral') != -1) {
-            result['referral'] = {
-                referralSelfRewardPoints: referralSelfRewardPoints,
-                referringRewardPoints: referringRewardPoints
-            }
+            result['referral'] = points.referral
         }
         if (showData.indexOf('og') != -1) {
             result['og'] = 0
         }
         if (showData.indexOf('converge') != -1) {
-            result['converge'] = 0
+            result['converge'] = points.converge
         }
 
         return result

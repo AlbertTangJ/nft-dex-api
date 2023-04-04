@@ -20,6 +20,15 @@ export class PointsController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
+    @Get("/fetch/points/rank")
+    async fetchPointsLeaderBoard() {
+        let result = await this.pointService.pointsLeaderBoard();
+        if (result != null) {
+            return new ApiResponse(ResponseStatus.Success).setData(result);
+        }
+        return new ApiResponse(ResponseStatus.Failure);
+    }
+
     @Get("/fetch/:user/points")
     async fetchPoints(@Param("user") user: string, @QueryParam("show") show: string) {
         let result = await this.pointService.userPoints(user.toLowerCase(), show);
