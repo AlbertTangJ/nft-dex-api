@@ -17,7 +17,7 @@ export class PointsService {
 
     async userTradeVol(user: string) {
         // let rewards = []
-        let tradeVol: TradeVol[] = await this.prismaClient.$queryRaw<TradeVol[]>`SELECT "userAddress", sum("positionNotional") AS "tradeVol" FROM "Position" WHERE action='Trade' AND "userAddress" = ${user.toLocaleLowerCase()} GROUP BY "userAddress";`;
+        let tradeVol: TradeVol[] = await this.prismaClient.$queryRaw<TradeVol[]>`SELECT "userAddress", sum("positionNotional") AS "tradeVol" FROM "Position" WHERE action='Trade' AND "userAddress" = ${user.toLowerCase()} GROUP BY "userAddress";`;
         if (tradeVol.length > 0) {
             return tradeVol.shift()
         }
@@ -31,8 +31,8 @@ export class PointsService {
             ON u."referralCode" = r."referralCode"
             LEFT JOIN (SELECT "userAddress", sum("positionNotional") AS trade_vol FROM "Position" WHERE action='Trade' GROUP BY "userAddress") s
             ON r."userAddress" = s."userAddress"
-            WHERE u."userAddress" = ${user}`;
-            
+            WHERE u."userAddress" = ${user.toLowerCase()}`;
+
         return result
     }
 
