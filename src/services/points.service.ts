@@ -83,7 +83,7 @@ export class PointsService {
             for (let i = 0; i < userReferralPoints.length; i++) {
                 const points = userReferralPoints[i].tradeVol;
                 if (points != null) {
-                    console.log(points)
+                    // console.log(points)
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
                         let currentPoints = pointsBig.dividedBy(Math.pow(10, 18)).toFixed(2);
