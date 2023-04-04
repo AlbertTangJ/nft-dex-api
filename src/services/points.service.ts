@@ -17,7 +17,7 @@ export class PointsService {
 
     async userTradeVol(user: string) {
         // let rewards = []
-        let tradeVol: TradeVol[] = await this.prismaClient.$queryRaw<TradeVol[]>`SELECT "userAddress", sum("positionNotional") AS "tradeVol" FROM "Position" WHERE action='Trade' AND "userAddress" = ${user} GROUP BY "userAddress";`;
+        let tradeVol: TradeVol[] = await this.prismaClient.$queryRaw<TradeVol[]>`SELECT "userAddress", sum("positionNotional") AS "tradeVol" FROM "Position" WHERE action='Trade' AND "userAddress" = ${user.toLocaleLowerCase()} GROUP BY "userAddress";`;
         if (tradeVol.length > 0) {
             return tradeVol.shift()
         }
@@ -47,6 +47,17 @@ export class PointsService {
         let limitEth = BigNumber(utils.parseEther("5").toString())
         let referredReward = 0.02
         let referringReward = 0.03
+        if (userTradeResult == null) {
+            return {
+                rank: 0,
+                multiplier: 0,
+                tradeVol: { vol: 0, points: 0 },
+                referral: {
+                    referralSelfRewardPoints: 0,
+                    referringRewardPoints: 0
+                }
+            }
+        }
         let userCurrentTradeVol = BigNumber(userTradeResult.tradeVol).dividedBy(Math.pow(10, 18));
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
         // 找到推荐当前用户的人
