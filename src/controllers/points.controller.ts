@@ -21,8 +21,8 @@ export class PointsController {
     }
 
     @Get("/fetch/:user/points")
-    async fetchPoints(@Param("user") user: string) {
-        let result = await this.pointService.userPoints(user);
+    async fetchPoints(@Param("user") user: string, @QueryParam("show") show: string) {
+        let result = await this.pointService.userPoints(user.toLowerCase(), show);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }
