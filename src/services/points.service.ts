@@ -53,7 +53,7 @@ export class PointsService {
 
             pointsLeaderBoardList.push({ total: total, tradeVolPoints: tradeVolPoints, referralPoints: referralPoints, convergePoints: convergePoints, multiplier: 1, user: name })
         }
-        pointsLeaderBoardList.sort(function (a, b) { return a.total - b.total })
+        pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
             let rank = i + 1
