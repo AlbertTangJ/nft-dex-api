@@ -104,7 +104,7 @@ export class PointsService {
             }
         }
 
-        // // console.log(userReferralPoints)
+        // console.log(userReferralPoints)
         let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints) * multiplierNumber
         let result = {
             rank: rank,
