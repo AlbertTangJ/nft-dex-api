@@ -218,6 +218,7 @@ model AggregateJob {
   running                                        Boolean @default(false)
   reservesAdjustedLastUpdatedBlockNumber         Int     @default(0)
   syncId                                         Int     @unique @default(0)
+  liquidationEventLastUpdatedBlockNumber         Int     @default(0)
 
   @@schema("api")
 }
@@ -412,6 +413,15 @@ model Liquidation {
   timestamp          Int
 
   @@index([syncId, userAddress, timestamp])
+  @@schema("api")
+}
+
+model rank_multiplier {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  start_rank Int?
+  end_rank   Int?
+  multiplier Decimal? @db.Decimal
+
   @@schema("api")
 }
 
