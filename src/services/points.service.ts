@@ -98,8 +98,8 @@ export class PointsService {
         }
         let userCurrentConvergeBigNumber = BigNumber(userTradeResult.netConvergenceVolume.toString())
         let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
-        let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(Math.pow(10, 18));
-        let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(Math.pow(10, 18));
+        let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(unitEth);
+        let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
         let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(2);
         // 找到推荐当前用户的人
@@ -130,7 +130,7 @@ export class PointsService {
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
-                        let currentPoints = pointsBig.dividedBy(Math.pow(10, 18)).toFixed(2);
+                        let currentPoints = pointsBig.dividedBy(unitEth).toFixed(2);
                         referringRewardPoints += parseFloat(currentPoints) * referringReward * 10
                     }
                 }
