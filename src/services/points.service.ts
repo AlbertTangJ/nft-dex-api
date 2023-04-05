@@ -35,7 +35,7 @@ export class PointsService {
 
 
 
-    async pointsLeaderBoard() {
+    async pointsLeaderBoard(show: string) {
         let users = await prisma.userInfo.findMany({ where: { totalTradingVolume: { gt: 0 } } })
         let pointsLeaderBoardList = []
         for (let index = 0; index < users.length; index++) {
@@ -46,12 +46,24 @@ export class PointsService {
             let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referringRewardPoints;
             let convergePoints = userPoints.converge.points;
             let total = tradeVolPoints + referralPoints + convergePoints
-            let name = user.username
-            if (user.username == null || user.username == "") {
-                name = user.userAddress
+            let data = { total: total, multiplier: 1, username: user.username, userAddress: user.userAddress }
+            if (show != null) {
+                let showData = show.split(",")
+                if (showData.indexOf("tradeVol") != -1) {
+                    data['tradeVolPoints'] = tradeVolPoints
+                }
+
+                if (showData.indexOf('referral') != -1) {
+                    data['referralPoints'] = referralPoints
+                }
+
+                if (showData.indexOf('convergePoints') != -1) {
+                    data['convergePoints'] = convergePoints
+                }
             }
 
-            pointsLeaderBoardList.push({ total: total, tradeVolPoints: tradeVolPoints, referralPoints: referralPoints, convergePoints: convergePoints, multiplier: 1, user: name })
+
+            pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
@@ -143,8 +155,8 @@ export class PointsService {
         return result
     }
 
-    async fetchUserRank(user: string) {
-        let userOrders = await this.pointsLeaderBoard();
+    async fetchUserRank(user: string, show: string) {
+        let userOrders = await this.pointsLeaderBoard(show);
         let rank = null
         for (let i = 0; i < userOrders.length; i++) {
             const userOrder = userOrders[i];
@@ -158,7 +170,7 @@ export class PointsService {
 
     async userPoints(user: string, show: string) {
         let points = await this.calculateUserPoints(user)
-        let rankData = await this.fetchUserRank(user);
+        let rankData = await this.fetchUserRank(user, show);
         if (rankData == null) {
             return {
                 rank: 0,
@@ -177,6 +189,7 @@ export class PointsService {
             multiplier: rankData.multiplier,
             total: rankData.total
         }
+
         let showData = show.split(",")
         if (showData.indexOf("tradeVol") != -1) {
             result['tradeVol'] = points.tradeVol

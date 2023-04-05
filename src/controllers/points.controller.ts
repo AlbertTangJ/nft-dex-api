@@ -21,8 +21,8 @@ export class PointsController {
     }
 
     @Get("/fetch/points/rank")
-    async fetchPointsLeaderBoard() {
-        let result = await this.pointService.pointsLeaderBoard();
+    async fetchPointsLeaderBoard(@QueryParam("show") show: string) {
+        let result = await this.pointService.pointsLeaderBoard(show);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }
