@@ -420,8 +420,8 @@ model Liquidation {
   @@schema("api")
 }
 
-model rank_multiplier {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model RankMultiplier {
+  id         String   @id(map: "rank_multiplier_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   start_rank Int?
   end_rank   Int?
   multiplier Decimal? @db.Decimal
