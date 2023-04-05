@@ -46,24 +46,22 @@ export class PointsService {
             let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referringRewardPoints;
             let convergePoints = userPoints.converge.points;
             let total = tradeVolPoints + referralPoints + convergePoints
-            let name = user.username
-            if (user.username == null || user.username == "") {
-                name = user.userAddress
+            let data = { total: total, multiplier: 1, username: user.username, userAddress: user.userAddress }
+            if (show != null) {
+                let showData = show.split(",")
+                if (showData.indexOf("tradeVol") != -1) {
+                    data['tradeVolPoints'] = tradeVolPoints
+                }
+
+                if (showData.indexOf('referral') != -1) {
+                    data['referralPoints'] = referralPoints
+                }
+
+                if (showData.indexOf('convergePoints') != -1) {
+                    data['convergePoints'] = convergePoints
+                }
             }
 
-            let data = { total: total, multiplier: 1, user: name }
-            let showData = show.split(",")
-            if (showData.indexOf("tradeVol") != -1) {
-                data['tradeVolPoints'] = tradeVolPoints
-            }
-            
-            if (showData.indexOf('referral') != -1) {
-                data['referralPoints'] = referralPoints
-            }
-
-            if (showData.indexOf('convergePoints') != -1) {
-                data['convergePoints'] = convergePoints
-            }
 
             pointsLeaderBoardList.push(data)
         }
