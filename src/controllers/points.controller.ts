@@ -1,4 +1,4 @@
-import { JsonController, Get, QueryParam, Post, BodyParam, Authorized, Req, Param } from "routing-controllers";
+import { JsonController, Get, QueryParam, Param } from "routing-controllers";
 import { PointsService } from "../services";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
