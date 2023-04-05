@@ -19,12 +19,11 @@ export class PointsService {
     }
 
     async userReferringPoints(user: string) {
-        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol" 
+        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", "netConvergenceVolume" as "convergeVol" 
             FROM "UserInfo" AS u 
             LEFT JOIN "ReferralEvents" AS r 
             ON u."referralCode" = r."referralCode"
             WHERE u."userAddress" = ${user.toLowerCase()} AND u."totalTradingVolume" > 0`;
-
         return result
     }
 
@@ -57,7 +56,7 @@ export class PointsService {
                     data['referralPoints'] = referralPoints
                 }
 
-                if (showData.indexOf('convergePoints') != -1) {
+                if (showData.indexOf('converge') != -1) {
                     data['convergePoints'] = convergePoints
                 }
             }
@@ -97,9 +96,12 @@ export class PointsService {
                 }
             }
         }
+        let userCurrentConvergeBigNumber = BigNumber(userTradeResult.netConvergenceVolume.toString())
         let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
-        let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(Math.pow(10, 18));
+        let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(unitEth);
+        let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
+        let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(2);
         // 找到推荐当前用户的人
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
@@ -128,7 +130,7 @@ export class PointsService {
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
-                        let currentPoints = pointsBig.dividedBy(Math.pow(10, 18)).toFixed(2);
+                        let currentPoints = pointsBig.dividedBy(unitEth).toFixed(2);
                         referringRewardPoints += parseFloat(currentPoints) * referringReward * 10
                     }
                 }
@@ -148,7 +150,7 @@ export class PointsService {
                 referringRewardPoints: referringRewardPoints
             },
             converge: {
-                points: 0
+                points: parseFloat(convergeVolNumber)
             }
         }
 
