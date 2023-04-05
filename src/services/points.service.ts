@@ -50,11 +50,13 @@ export class PointsService {
             if (user.username == null || user.username == "") {
                 name = user.userAddress
             }
+
             let data = { total: total, multiplier: 1, user: name }
             let showData = show.split(",")
             if (showData.indexOf("tradeVol") != -1) {
                 data['tradeVolPoints'] = tradeVolPoints
             }
+            
             if (showData.indexOf('referral') != -1) {
                 data['referralPoints'] = referralPoints
             }
@@ -62,6 +64,7 @@ export class PointsService {
             if (showData.indexOf('convergePoints') != -1) {
                 data['convergePoints'] = convergePoints
             }
+
             pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
