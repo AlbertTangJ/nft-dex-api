@@ -56,7 +56,7 @@ export class PointsService {
                     data['referralPoints'] = referralPoints
                 }
 
-                if (showData.indexOf('convergePoints') != -1) {
+                if (showData.indexOf('converge') != -1) {
                     data['convergePoints'] = convergePoints
                 }
             }
