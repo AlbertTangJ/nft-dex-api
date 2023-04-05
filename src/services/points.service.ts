@@ -32,8 +32,6 @@ export class PointsService {
         return result;
     }
 
-
-
     async pointsLeaderBoard(show: string) {
         let users = await prisma.userInfo.findMany({ where: { totalTradingVolume: { gt: 0 } } })
         let pointsLeaderBoardList = []
@@ -140,7 +138,7 @@ export class PointsService {
         // console.log(leaderBoard)
         let multiplierNumber = 1
         // // console.log(userReferralPoints)
-        let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints) * multiplierNumber
+        let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + parseFloat(convergeVolNumber)) * multiplierNumber
         let result = {
             multiplier: multiplierNumber,
             total: total,
