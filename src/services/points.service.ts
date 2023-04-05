@@ -70,7 +70,7 @@ export class PointsService {
             const element = pointsLeaderBoardList[i];
             let rank = i + 1
             element.rank = rank
-            let multiplierResult = await prisma.rank_multiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
+            let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
             if (multiplierResult != null) {
                 element.multiplier = parseFloat(multiplierResult.multiplier.toString())
             }
