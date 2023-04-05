@@ -32,8 +32,6 @@ export class PointsService {
         return result;
     }
 
-
-
     async pointsLeaderBoard(show: string) {
         let users = await prisma.userInfo.findMany({ where: { totalTradingVolume: { gt: 0 } } })
         let pointsLeaderBoardList = []
