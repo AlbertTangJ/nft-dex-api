@@ -19,12 +19,11 @@ export class PointsService {
     }
 
     async userReferringPoints(user: string) {
-        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol" 
+        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", "netConvergenceVolume" as "convergeVol" 
             FROM "UserInfo" AS u 
             LEFT JOIN "ReferralEvents" AS r 
             ON u."referralCode" = r."referralCode"
             WHERE u."userAddress" = ${user.toLowerCase()} AND u."totalTradingVolume" > 0`;
-
         return result
     }
 
@@ -97,9 +96,12 @@ export class PointsService {
                 }
             }
         }
+        let userCurrentConvergeBigNumber = BigNumber(userTradeResult.netConvergenceVolume.toString())
         let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
         let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(Math.pow(10, 18));
+        let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(Math.pow(10, 18));
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
+        let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(2);
         // 找到推荐当前用户的人
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
@@ -148,7 +150,7 @@ export class PointsService {
                 referringRewardPoints: referringRewardPoints
             },
             converge: {
-                points: 0
+                points: parseFloat(convergeVolNumber)
             }
         }
 
