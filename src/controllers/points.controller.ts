@@ -54,7 +54,7 @@ export class PointsController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
-    @Get("/fetch/points/rank")
+    @Get("/points/rank")
     async fetchPointsLeaderBoard(@QueryParam("show") show: string) {
         try {
             await this.userAddressValidator.validate({ show: show }, errors => {
@@ -75,7 +75,7 @@ export class PointsController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
-    @Get("/fetch/:user/points")
+    @Get("/points/:user")
     async fetchPoints(@Param("user") user: string, @QueryParam("show") show: string) {
         try {
             await this.userAddressValidator.validate({ user: user, show: show }, errors => {
