@@ -40,10 +40,11 @@ export class PointsService {
             let userAddress = user.userAddress;
             let userPoints = await this.calculateUserPoints(userAddress);
             let tradeVolPoints = userPoints.tradeVol.points;
-            let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referringRewardPoints;
+            let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referralSelfRewardPoints;
             let convergePoints = userPoints.converge.points;
             let total = tradeVolPoints + referralPoints + convergePoints
-            let data = { total: total, multiplier: 1, username: user.username, userAddress: user.userAddress, isBan: user.isBan }
+            // console.log(`${tradeVolPoints} + ${referralPoints} + ${convergePoints} = ${total}`)
+            let data = { total: total.toFixed(1), multiplier: 1, username: user.username, userAddress: user.userAddress, isBan: user.isBan }
             if (show != null) {
                 let showData = show.split(",")
                 if (showData.indexOf("tradeVol") != -1) {
@@ -70,7 +71,9 @@ export class PointsService {
             element.rank = element.isBan ? -1 : rank
             let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
             if (multiplierResult != null) {
-                element.multiplier = parseFloat(multiplierResult.multiplier.toString())
+                let multiplier = parseFloat(multiplierResult.multiplier.toString())
+                element.multiplier = multiplier
+                element.total = parseFloat((element.total * multiplier).toFixed(1))
             }
             rankNo = rank
         }
@@ -122,7 +125,7 @@ export class PointsService {
         }
 
         // 当前用户的成交量 * referredReward = 当前用户的referred奖励 , 当前用户需要trade vol >= 5
-        let referralSelfRewardPoints = referredReward * parseFloat(tradeVolNumber) * 10;
+        let referralSelfRewardPoints = (referredReward * parseFloat(tradeVolNumber) * 10);
         // 
         let referringRewardPoints = 0
         if (userCurrentTradeVolBigNumber.gte(limitEth)) {
@@ -133,7 +136,7 @@ export class PointsService {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
                         let currentPoints = pointsBig.dividedBy(unitEth).toFixed(1);
-                        referringRewardPoints += parseFloat(currentPoints) * referringReward * 10
+                        referringRewardPoints += (parseFloat(currentPoints) * referringReward * 10)
                     }
                 }
             }
@@ -152,8 +155,8 @@ export class PointsService {
             total: total,
             tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
             referral: {
-                referralSelfRewardPoints: referralSelfRewardPoints,
-                referringRewardPoints: referringRewardPoints
+                referralSelfRewardPoints: parseFloat(referralSelfRewardPoints.toFixed(1)),
+                referringRewardPoints: parseFloat(referringRewardPoints.toFixed(1))
             },
             converge: {
                 points: convergeVolNumberPoints,
