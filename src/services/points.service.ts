@@ -62,15 +62,17 @@ export class PointsService {
             pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
+        let rankNo = 0
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
             let isNext = element.isBan ? 0 : 1
-            let rank = i + isNext
-            element.rank = rank
+            let rank = rankNo + isNext
+            element.rank = element.isBan ? -1 : rank
             let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
             if (multiplierResult != null) {
                 element.multiplier = parseFloat(multiplierResult.multiplier.toString())
             }
+            rankNo = rank
         }
         return pointsLeaderBoardList
     }
