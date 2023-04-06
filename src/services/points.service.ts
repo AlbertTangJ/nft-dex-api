@@ -4,7 +4,7 @@ import { Service } from "typedi";
 import { utils } from "ethers";
 import BigNumber from "bignumber.js";
 
-type ReferralTradeVol = { codeOwner: string, referralCode: string, reffedUser: string, tradeVol: string }
+type ReferralTradeVol = { codeOwner: string, referralCode: string, reffedUser: string, tradeVol: string, username: string }
 
 @Service()
 export class PointsService {
@@ -19,7 +19,7 @@ export class PointsService {
     }
 
     async userReferringPoints(user: string) {
-        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", "netConvergenceVolume" as "convergeVol" 
+        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", u."username" AS "username", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", "netConvergenceVolume" as "convergeVol" 
             FROM "UserInfo" AS u 
             LEFT JOIN "ReferralEvents" AS r 
             ON u."referralCode" = r."referralCode"
@@ -92,6 +92,9 @@ export class PointsService {
                 multiplier: 0,
                 userAddress: null,
                 username: null,
+                referralCode: "",
+                enterReferralUsers: [],
+                eligibleCount: 0,
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -128,15 +131,22 @@ export class PointsService {
         let referralSelfRewardPoints = (referredReward * parseFloat(tradeVolNumber) * 10);
         // 
         let referringRewardPoints = 0
+        let enterReferralUsers = []
+        let eligibleCount = 0
         if (userCurrentTradeVolBigNumber.gte(limitEth)) {
             let userReferralPoints = await this.userReferringPoints(user);
             for (let i = 0; i < userReferralPoints.length; i++) {
                 const points = userReferralPoints[i].tradeVol;
+                let username = userReferralPoints[i].username
+                let userAddress = userReferralPoints[i].codeOwner
+                let entryCodeUser = { username: username, userAddress: userAddress }
+                enterReferralUsers.push(entryCodeUser)
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
                         let currentPoints = pointsBig.dividedBy(unitEth).toFixed(1);
                         referringRewardPoints += (parseFloat(currentPoints) * referringReward * 10)
+                        eligibleCount += 1
                     }
                 }
             }
@@ -152,7 +162,10 @@ export class PointsService {
             userAddress: userTradeResult.userAddress,
             username: userTradeResult.username,
             multiplier: multiplierNumber,
+            referralCode: userTradeResult.referralCode,
             total: total,
+            enterReferralUsers: enterReferralUsers,
+            eligibleCount: eligibleCount,
             tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
             referral: {
                 referralSelfRewardPoints: parseFloat(referralSelfRewardPoints.toFixed(1)),
@@ -181,7 +194,7 @@ export class PointsService {
     }
 
     async userPoints(user: string, show: string) {
-        let points = await this.calculateUserPoints(user)
+        let points = await this.calculateUserPoints(user);
         let rankData = await this.fetchUserRank(user, show);
         if (rankData == null) {
             return {
@@ -195,7 +208,10 @@ export class PointsService {
                     referringRewardPoints: 0
                 }, converge: {
                     points: 0
-                }
+                },
+                referralUsers: [],
+                eligibleCount: 0,
+                referralCode: ""
             }
         }
         let result = {
@@ -203,7 +219,11 @@ export class PointsService {
             multiplier: rankData.multiplier,
             total: rankData.total,
             userAddress: points.userAddress,
-            username: points.username
+            username: points.username,
+            referralUsers: points.enterReferralUsers,
+            eligibleCount: points.eligibleCount,
+            referralCode: points.referralCode,
+            isBan: rankData.isBan
         }
 
         let showData = show.split(",")
