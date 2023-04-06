@@ -43,7 +43,7 @@ export class PointsService {
             let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referringRewardPoints;
             let convergePoints = userPoints.converge.points;
             let total = tradeVolPoints + referralPoints + convergePoints
-            let data = { total: total, multiplier: 1, username: user.username, userAddress: user.userAddress }
+            let data = { total: total, multiplier: 1, username: user.username, userAddress: user.userAddress, isBan: user.isBan }
             if (show != null) {
                 let showData = show.split(",")
                 if (showData.indexOf("tradeVol") != -1) {
@@ -59,13 +59,13 @@ export class PointsService {
                 }
             }
 
-
             pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
-            let rank = i + 1
+            let isNext = element.isBan ? 0 : 1
+            let rank = i + isNext
             element.rank = rank
             let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
             if (multiplierResult != null) {
@@ -85,6 +85,7 @@ export class PointsService {
             return {
                 rank: 0,
                 multiplier: 0,
+                username: "",
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -136,12 +137,14 @@ export class PointsService {
         }
 
         let convergeVolNumberPoints = parseFloat(convergeVolNumber) > 0 ? parseFloat(convergeVolNumber) : 0
-        
+
         // console.log(leaderBoard)
         let multiplierNumber = 1
         // // console.log(userReferralPoints)
         let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + convergeVolNumberPoints) * multiplierNumber
         let result = {
+            userAddress: userTradeResult.userAddress,
+            username: userTradeResult.username,
             multiplier: multiplierNumber,
             total: total,
             tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
