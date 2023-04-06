@@ -98,8 +98,8 @@ export class PointsService {
         let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
         let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(unitEth);
         let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
-        let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(2);
-        let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(2);
+        let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(1);
+        let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(1);
         // 找到推荐当前用户的人
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
@@ -128,17 +128,19 @@ export class PointsService {
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
-                        let currentPoints = pointsBig.dividedBy(unitEth).toFixed(2);
+                        let currentPoints = pointsBig.dividedBy(unitEth).toFixed(1);
                         referringRewardPoints += parseFloat(currentPoints) * referringReward * 10
                     }
                 }
             }
         }
 
+        let convergeVolNumberPoints = parseFloat(convergeVolNumber) > 0 ? parseFloat(convergeVolNumber) : 0
+        
         // console.log(leaderBoard)
         let multiplierNumber = 1
         // // console.log(userReferralPoints)
-        let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + parseFloat(convergeVolNumber)) * multiplierNumber
+        let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + convergeVolNumberPoints) * multiplierNumber
         let result = {
             multiplier: multiplierNumber,
             total: total,
@@ -148,7 +150,8 @@ export class PointsService {
                 referringRewardPoints: referringRewardPoints
             },
             converge: {
-                points: parseFloat(convergeVolNumber)
+                points: convergeVolNumberPoints,
+                val: parseFloat(userCurrentConvergeVol.toString())
             }
         }
 
