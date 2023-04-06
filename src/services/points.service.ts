@@ -85,7 +85,8 @@ export class PointsService {
             return {
                 rank: 0,
                 multiplier: 0,
-                username: "",
+                userAddress: null,
+                username: null,
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -181,6 +182,8 @@ export class PointsService {
             return {
                 rank: 0,
                 multiplier: 0,
+                userAddress: "",
+                username: "",
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -193,7 +196,9 @@ export class PointsService {
         let result = {
             rank: rankData.rank,
             multiplier: rankData.multiplier,
-            total: rankData.total
+            total: rankData.total,
+            userAddress: points.userAddress,
+            username: points.username
         }
 
         let showData = show.split(",")
