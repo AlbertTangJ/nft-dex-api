@@ -117,6 +117,7 @@ export class PointsService {
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(1);
         let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(1);
         isInputCode = userTradeResult.isInputCode
+        isTrade = userTradeResult.hasTraded
         // 找到推荐当前用户的人
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
