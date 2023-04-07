@@ -19,7 +19,7 @@ export class PointsService {
     }
 
     async userReferringPoints(user: string) {
-        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT reu."username" AS username, u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", u."netConvergenceVolume" as "convergeVol" 
+        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT reu."username" AS username, u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" AS "tradeVol", u."netConvergenceVolume" AS "convergeVol"
             FROM "UserInfo" AS u 
             LEFT JOIN "ReferralEvents" AS r 
             ON u."referralCode" = r."referralCode"
@@ -88,6 +88,8 @@ export class PointsService {
         let limitEth = BigNumber(utils.parseEther("5").toString())
         let referredReward = 0.02
         let referringReward = 0.03
+        let isInputCode = false
+        let isTrade = false
         if (userTradeResult == null) {
             return {
                 rank: 0,
@@ -97,6 +99,8 @@ export class PointsService {
                 referralCode: "",
                 enterReferralUsers: [],
                 eligibleCount: 0,
+                isInputCode: isInputCode,
+                isTrade: isTrade,
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -112,6 +116,7 @@ export class PointsService {
         let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(1);
         let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(1);
+        isInputCode = userTradeResult.isInputCode
         // 找到推荐当前用户的人
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
@@ -135,6 +140,7 @@ export class PointsService {
         let referringRewardPoints = 0
         let enterReferralUsers = []
         let eligibleCount = 0
+
         if (userCurrentTradeVolBigNumber.gte(limitEth)) {
             let userReferralPoints = await this.userReferringPoints(user);
             for (let i = 0; i < userReferralPoints.length; i++) {
@@ -168,6 +174,8 @@ export class PointsService {
             multiplier: multiplierNumber,
             referralCode: userTradeResult.referralCode,
             total: total,
+            isInputCode: isInputCode,
+            isTrade: isTrade,
             enterReferralUsers: enterReferralUsers,
             eligibleCount: eligibleCount,
             tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
@@ -215,7 +223,9 @@ export class PointsService {
                 },
                 referralUsers: [],
                 eligibleCount: 0,
-                referralCode: ""
+                referralCode: "",
+                isInputCode: false,
+                isTrade: false,
             }
         }
         let result = {
@@ -227,7 +237,9 @@ export class PointsService {
             referralUsers: points.enterReferralUsers,
             eligibleCount: points.eligibleCount,
             referralCode: points.referralCode,
-            isBan: rankData.isBan
+            isBan: rankData.isBan,
+            isInputCode: points.isInputCode,
+            isTrade: points.isTrade,
         }
 
         let showData = show.split(",")
