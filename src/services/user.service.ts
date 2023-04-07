@@ -552,13 +552,13 @@ export class UserService {
     return result;
   }
 
-  async test() {
-    let result: { userAddress: string }[] = await prisma.userInfo.findMany({ where: { referralCode: null } });
-    for (let i = 0; i < result.length; i++) {
-      const element: { userAddress: string } = result[i];
-      await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${element.userAddress.toLowerCase()}::TEXT);`;
-    }
-  }
+  // async test() {
+  //   let result: { userAddress: string }[] = await prisma.userInfo.findMany({ where: { referralCode: null } });
+  //   for (let i = 0; i < result.length; i++) {
+  //     const element: { userAddress: string } = result[i];
+  //     await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${element.userAddress.toLowerCase()}::TEXT);`;
+  //   }
+  // }
 
   async createUserInfoService(regUserAddress: string) {
     let userAddress = regUserAddress.toLowerCase();

@@ -18,6 +18,19 @@ export class PointsService {
         return result
     }
 
+    // 获取当前用户输入了谁的code
+    async fetchReferringUser(user: string) {
+        let refererResult = await prisma.referralEvents.findFirst({ where: { userAddress: user.toLowerCase() } })
+        if (refererResult != null) {
+            let code = refererResult.referralCode
+            let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+            if (userInfo != null) {
+                return { username: userInfo.username, userAddress: userInfo.userAddress };
+            }
+        }
+        return {};
+    }
+
     async userReferringPoints(user: string) {
         let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT reu."username" AS username, u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" AS "tradeVol", u."netConvergenceVolume" AS "convergeVol"
             FROM "UserInfo" AS u 
@@ -97,7 +110,7 @@ export class PointsService {
                 userAddress: null,
                 username: null,
                 referralCode: "",
-                enterReferralUsers: [],
+                enterReferralUser: [],
                 eligibleCount: 0,
                 isInputCode: isInputCode,
                 isTrade: isTrade,
@@ -139,19 +152,14 @@ export class PointsService {
         let referralSelfRewardPoints = (referredReward * parseFloat(tradeVolNumber) * 10);
         // 
         let referringRewardPoints = 0
-        let enterReferralUsers = []
         let eligibleCount = 0
 
         if (userCurrentTradeVolBigNumber.gte(limitEth)) {
             let userReferralPoints = await this.userReferringPoints(user);
             for (let i = 0; i < userReferralPoints.length; i++) {
                 const points = userReferralPoints[i].tradeVol;
-                let username = userReferralPoints[i].username
-                let userAddress = userReferralPoints[i].reffedUser
-                if (userAddress != null) {
-                    let entryCodeUser = { username: username, userAddress: userAddress }
-                    enterReferralUsers.push(entryCodeUser)
-                }
+                // let username = userReferralPoints[i].username
+                // let userAddress = userReferralPoints[i].reffedUser
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
@@ -167,7 +175,8 @@ export class PointsService {
 
         // console.log(leaderBoard)
         let multiplierNumber = 1
-        // // console.log(userReferralPoints)
+        // console.log(userReferralPoints)
+        let enterReferralUser = await this.fetchReferringUser(user);
         let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + convergeVolNumberPoints) * multiplierNumber
         let result = {
             userAddress: userTradeResult.userAddress,
@@ -177,7 +186,7 @@ export class PointsService {
             total: total,
             isInputCode: isInputCode,
             isTrade: isTrade,
-            enterReferralUsers: enterReferralUsers,
+            enterReferralUser: enterReferralUser,
             eligibleCount: eligibleCount,
             tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
             referral: {
@@ -223,11 +232,12 @@ export class PointsService {
                 }, converge: {
                     points: 0
                 },
-                referralUsers: points.enterReferralUsers,
+                referralUser: points.enterReferralUser,
                 eligibleCount: points.eligibleCount,
                 referralCode: points.referralCode,
                 isInputCode: points.isInputCode,
                 isTrade: points.isTrade,
+                isBan: false
             }
         }
         let result = {
@@ -236,7 +246,7 @@ export class PointsService {
             total: rankData.total,
             userAddress: points.userAddress,
             username: points.username,
-            referralUsers: points.enterReferralUsers,
+            referralUser: points.enterReferralUser,
             eligibleCount: points.eligibleCount,
             referralCode: points.referralCode,
             isBan: rankData.isBan,
