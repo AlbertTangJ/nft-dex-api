@@ -230,7 +230,8 @@ export class PointsService {
                     referralSelfRewardPoints: 0,
                     referringRewardPoints: 0
                 }, converge: {
-                    points: 0
+                    points: 0,
+                    val: 0
                 },
                 referralUser: points.enterReferralUser,
                 eligibleCount: points.eligibleCount,
