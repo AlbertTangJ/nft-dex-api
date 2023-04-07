@@ -19,10 +19,12 @@ export class PointsService {
     }
 
     async userReferringPoints(user: string) {
-        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT u."userAddress" AS "codeOwner", u."username" AS "username", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", "netConvergenceVolume" as "convergeVol" 
+        let result: ReferralTradeVol[] = await this.prismaClient.$queryRaw<ReferralTradeVol[]>`SELECT reu."username" AS username, u."userAddress" AS "codeOwner", r."referralCode" AS code, r."userAddress" AS "reffedUser", u."totalTradingVolume" as "tradeVol", u."netConvergenceVolume" as "convergeVol" 
             FROM "UserInfo" AS u 
             LEFT JOIN "ReferralEvents" AS r 
             ON u."referralCode" = r."referralCode"
+            LEFT JOIN "UserInfo" AS reu
+			ON r."userAddress" = reu."userAddress"
             WHERE u."userAddress" = ${user.toLowerCase()} AND u."totalTradingVolume" > 0`;
         return result
     }
@@ -138,9 +140,11 @@ export class PointsService {
             for (let i = 0; i < userReferralPoints.length; i++) {
                 const points = userReferralPoints[i].tradeVol;
                 let username = userReferralPoints[i].username
-                let userAddress = userReferralPoints[i].codeOwner
-                let entryCodeUser = { username: username, userAddress: userAddress }
-                enterReferralUsers.push(entryCodeUser)
+                let userAddress = userReferralPoints[i].reffedUser
+                if (userAddress != null) {
+                    let entryCodeUser = { username: username, userAddress: userAddress }
+                    enterReferralUsers.push(entryCodeUser)
+                }
                 if (points != null) {
                     let pointsBig = BigNumber(points)
                     if (pointsBig.gte(limitEth)) {
