@@ -237,6 +237,7 @@ export class PointsService {
                 referralCode: points.referralCode,
                 isInputCode: points.isInputCode,
                 isTrade: points.isTrade,
+                isBan: false
             }
         }
         let result = {
