@@ -119,7 +119,8 @@ export class PointsService {
                     referralSelfRewardPoints: 0,
                     referringRewardPoints: 0
                 }, converge: {
-                    points: 0
+                    points: 0,
+                    vol: 0
                 }
             }
         }
