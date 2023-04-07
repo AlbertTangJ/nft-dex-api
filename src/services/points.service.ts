@@ -213,8 +213,9 @@ export class PointsService {
             return {
                 rank: 0,
                 multiplier: 0,
-                userAddress: "",
-                username: "",
+                total: 0,
+                userAddress: points.userAddress,
+                username: points.username,
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -222,11 +223,11 @@ export class PointsService {
                 }, converge: {
                     points: 0
                 },
-                referralUsers: [],
-                eligibleCount: 0,
-                referralCode: "",
-                isInputCode: false,
-                isTrade: false,
+                referralUsers: points.enterReferralUsers,
+                eligibleCount: points.eligibleCount,
+                referralCode: points.referralCode,
+                isInputCode: points.isInputCode,
+                isTrade: points.isTrade,
             }
         }
         let result = {
