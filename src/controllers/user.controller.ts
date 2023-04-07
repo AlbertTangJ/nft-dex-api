@@ -255,11 +255,11 @@ export class UserController {
   }
 
   // @Authorized("auth-token")
-  @Post("/test")
-  async test(@BodyParam("userAddress", { required: true }) userAddress: string) {
-    await this.userService.test();
-    return new ApiResponse(ResponseStatus.Success);
-  }
+  // @Post("/test")
+  // async test(@BodyParam("userAddress", { required: true }) userAddress: string) {
+  //   await this.userService.test();
+  //   return new ApiResponse(ResponseStatus.Success);
+  // }
 
   @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
