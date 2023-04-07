@@ -21,10 +21,12 @@ export class PointsService {
     // 获取当前用户输入了谁的code
     async fetchReferringUser(user: string) {
         let refererResult = await prisma.referralEvents.findFirst({ where: { userAddress: user.toLowerCase() } })
-        let code = refererResult.referralCode
-        let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-        if (userInfo != null) {
-            return { username: userInfo.username, userAddress: userInfo.userAddress };
+        if (refererResult != null) {
+            let code = refererResult.referralCode
+            let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+            if (userInfo != null) {
+                return { username: userInfo.username, userAddress: userInfo.userAddress };
+            }
         }
         return {};
     }
@@ -150,7 +152,6 @@ export class PointsService {
         let referralSelfRewardPoints = (referredReward * parseFloat(tradeVolNumber) * 10);
         // 
         let referringRewardPoints = 0
-        // let enterReferralUsers = []
         let eligibleCount = 0
 
         if (userCurrentTradeVolBigNumber.gte(limitEth)) {
@@ -231,7 +232,7 @@ export class PointsService {
                 }, converge: {
                     points: 0
                 },
-                referralUsers: points.enterReferralUser,
+                referralUser: points.enterReferralUser,
                 eligibleCount: points.eligibleCount,
                 referralCode: points.referralCode,
                 isInputCode: points.isInputCode,
@@ -244,7 +245,7 @@ export class PointsService {
             total: rankData.total,
             userAddress: points.userAddress,
             username: points.username,
-            referralUsers: points.enterReferralUser,
+            referralUser: points.enterReferralUser,
             eligibleCount: points.eligibleCount,
             referralCode: points.referralCode,
             isBan: rankData.isBan,
