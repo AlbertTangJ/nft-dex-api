@@ -441,6 +441,40 @@ model OraclePrice {
   @@schema("api")
 }
 
+model PointsLeaderBoard {
+  id                       String    @id(map: "PointsLeaderBorad_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress              String    @db.VarChar
+  convergePoints           Decimal?  @default(0) @db.Decimal
+  convergeVol              Decimal?  @default(0) @db.Decimal
+  referralSelfRewardPoints Decimal?  @default(0) @db.Decimal
+  referringRewardPoints    Decimal?  @default(0) @db.Decimal
+  tradeVol                 Decimal?  @default(0) @db.Decimal
+  tradePoints              Decimal?  @default(0) @db.Decimal
+  eligibleCount            Decimal?  @default(0) @db.Decimal
+  ogPoints                 Decimal?  @default(0) @db.Decimal
+  createTime               DateTime? @default(now()) @db.Timestamp(6)
+  createTimestamp          Int?      @default(0)
+  updateTime               DateTime? @db.Timestamp(6)
+  updateTimestamp          Int?      @default(0)
+  total                    Decimal?  @default(0) @db.Decimal
+  tradeCount               Int?      @default(0)
+  session                  Int?      @default(0)
+  sessionStart             Int?      @default(0)
+
+  @@unique([userAddress, session, sessionStart], map: "pointsleaderborad_user_address_unique")
+  @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
+  @@schema("api")
+}
+
+model Session {
+  id           String @id(map: "session_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  round        Int?   @unique(map: "session_round_unique") @default(0)
+  sessionStart Int?   @default(0)
+  sessionEnd   Int?   @default(0)
+
+  @@schema("api")
+}
+
 enum RepeatPeriod {
   None
   Daily

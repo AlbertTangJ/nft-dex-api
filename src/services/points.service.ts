@@ -5,6 +5,7 @@ import { utils } from "ethers";
 import BigNumber from "bignumber.js";
 
 type ReferralTradeVol = { codeOwner: string, referralCode: string, reffedUser: string, tradeVol: string, username: string }
+const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
 
 @Service()
 export class PointsService {
@@ -14,8 +15,18 @@ export class PointsService {
     }
 
     async userTradeVol(user: string) {
-        let result = await prisma.userInfo.findFirst({ where: { userAddress: user.toLowerCase() } })
-        return result
+        let currentSession = await prisma.session.findFirst({ where: { sessionEnd: 0 } })
+        let result: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, uif."isBan" AS "isBan", uif."hasTraded" AS "hasTraded", uif."isInputCode" AS "isInputCode", plb."userAddress" AS "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", total, "tradeCount"
+        FROM api."UserInfo" uif 
+        LEFT JOIN api."PointsLeaderBoard" plb 
+        ON uif."userAddress" = plb."userAddress"
+        WHERE uif."userAddress" = ${user.toLowerCase()} AND plb.session = ${currentSession.round} AND plb."sessionStart" = ${currentSession.sessionStart} 
+        ORDER BY plb."total" DESC`
+        if (result.length > 0) {
+            return result.shift()
+        }
+
+        return {}
     }
 
     // 获取当前用户输入了谁的code
@@ -48,49 +59,74 @@ export class PointsService {
     }
 
     async pointsLeaderBoard(show: string) {
-        let users = await prisma.userInfo.findMany({ where: { totalTradingVolume: { gt: 0 } } })
+        let currentSession = await prisma.session.findFirst({ where: { sessionEnd: 0 } })
+        let rankNo = 0
         let pointsLeaderBoardList = []
-        for (let index = 0; index < users.length; index++) {
-            const user = users[index];
-            let userAddress = user.userAddress;
-            let userPoints = await this.calculateUserPoints(userAddress);
-            let tradeVolPoints = userPoints.tradeVol.points;
-            let referralPoints = userPoints.referral.referringRewardPoints + userPoints.referral.referralSelfRewardPoints;
-            let convergePoints = userPoints.converge.points;
-            let total = tradeVolPoints + referralPoints + convergePoints
+        let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, uif."isBan" AS "isBan", 
+         uif."hasTraded" AS "hasTraded", 
+         uif."isInputCode" AS "isInputCode",
+         plb."tradeCount" AS "tradeCount", 
+         plb."userAddress" AS "userAddress", 
+         plb."convergePoints" AS "convergePoints",
+         plb."convergeVol" AS "convergeVol", 
+         plb."referralSelfRewardPoints" AS "referralSelfRewardPoints",
+         plb."referringRewardPoints" AS "referringRewardPoints", 
+         plb."tradeVol" AS "tradeVol", 
+         plb."tradePoints" AS "tradePoints", 
+         plb."eligibleCount" AS "eligibleCount",
+         plb."ogPoints" AS "ogPoints", 
+         plb.total AS total
+        FROM api."UserInfo" uif 
+        LEFT JOIN api."PointsLeaderBoard" plb 
+        ON uif."userAddress" = plb."userAddress"
+        WHERE plb.session = ${currentSession.round} AND plb."sessionStart" = ${currentSession.sessionStart}
+        ORDER BY plb."total" DESC`
+        for (let index = 0; index < results.length; index++) {
+            const item = results[index];
+            // console.log(item)
+            let userAddress = item.userAddress;
+            let tradeVolPoints = item.tradePoints;
+            let referralPoints = BigNumber(item.referringRewardPoints.toString()).plus(item.referralSelfRewardPoints.toString()).toString();
+            let convergePoints = item.convergePoints;
+            let total = item.total
             // console.log(`${tradeVolPoints} + ${referralPoints} + ${convergePoints} = ${total}`)
-            let data = { total: total.toFixed(1), multiplier: 1, username: user.username, userAddress: user.userAddress, isBan: user.isBan }
+            let data = { total: total.toFixed(1), multiplier: 1, username: item.username, userAddress: userAddress, isBan: item.isBan, tradeVol: item.tradeVol }
             if (show != null) {
                 let showData = show.split(",")
                 if (showData.indexOf("tradeVol") != -1) {
-                    data['tradeVolPoints'] = tradeVolPoints
+                    data['tradeVolPoints'] = parseFloat(tradeVolPoints)
                 }
 
                 if (showData.indexOf('referral') != -1) {
-                    data['referralPoints'] = referralPoints
+                    data['referralPoints'] = parseFloat(referralPoints)
                 }
 
                 if (showData.indexOf('converge') != -1) {
-                    data['convergePoints'] = convergePoints
+                    data['convergePoints'] = parseFloat(convergePoints)
                 }
             }
-
             pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
-        let rankNo = 0
+
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
             let isNext = element.isBan ? 0 : 1
             let rank = rankNo + isNext
-            element.rank = element.isBan ? -1 : rank
-            let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
+            let tradeVolBigNumber = BigNumber(element.tradeVol)
+            if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
+                element.rank = element.isBan ? -1 : rank
+            } else {
+                element.rank = 0
+            }
+            let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: element.rank }, end_rank: { gte: element.rank } } })
             if (multiplierResult != null) {
                 let multiplier = parseFloat(multiplierResult.multiplier.toString())
                 element.multiplier = multiplier
                 element.total = parseFloat((element.total * multiplier).toFixed(1))
             }
             rankNo = rank
+
         }
         return pointsLeaderBoardList
     }
@@ -124,8 +160,8 @@ export class PointsService {
                 }
             }
         }
-        let userCurrentConvergeBigNumber = BigNumber(userTradeResult.netConvergenceVolume.toString())
-        let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.totalTradingVolume.toString())
+        let userCurrentConvergeBigNumber = BigNumber(userTradeResult.convergeVol.toString())
+        let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.tradeVol.toString())
         let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(unitEth);
         let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
         let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(1);
@@ -133,6 +169,7 @@ export class PointsService {
         isInputCode = userTradeResult.isInputCode
         isTrade = userTradeResult.hasTraded
         // 找到推荐当前用户的人
+        
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
         // null 当前用户没有推荐人 ，当前用户的2% 奖励 是需要看 当前用户的推荐人，有没有超过5个eth
@@ -143,7 +180,7 @@ export class PointsService {
             let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
             let codeOwner = userInfo.userAddress;
             let referredUserTradeVol = await this.userTradeVol(codeOwner);
-            let referredUserTradeVolNumber = new BigNumber(referredUserTradeVol.totalTradingVolume.toString());
+            let referredUserTradeVolNumber = new BigNumber(referredUserTradeVol.tradeVol.toString());
             if (referredUserTradeVolNumber.lt(limitEth)) {
                 referredReward = 0
             }
@@ -189,14 +226,14 @@ export class PointsService {
             isTrade: isTrade,
             enterReferralUser: enterReferralUser,
             eligibleCount: eligibleCount,
-            tradeVol: { vol: userCurrentTradeVol.toNumber(), points: parseFloat(tradeVolNumber) },
+            tradeVol: { vol: userCurrentTradeVol.toString(), points: parseFloat(tradeVolNumber) },
             referral: {
                 referralSelfRewardPoints: parseFloat(referralSelfRewardPoints.toFixed(1)),
                 referringRewardPoints: parseFloat(referringRewardPoints.toFixed(1))
             },
             converge: {
                 points: convergeVolNumberPoints,
-                val: parseFloat(userCurrentConvergeVol.toString())
+                val: userCurrentConvergeVol.toString()
             }
         }
 
