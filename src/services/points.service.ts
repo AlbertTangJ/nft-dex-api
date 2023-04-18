@@ -59,6 +59,7 @@ export class PointsService {
     }
 
     async pointsLeaderBoard(show: string) {
+        let multiplierResult = await prisma.rankMultiplier.findMany();
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let rankNo = 0
         let pointsLeaderBoardList = []
@@ -119,14 +120,18 @@ export class PointsService {
             } else {
                 element.rank = 0
             }
-            let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: element.rank }, end_rank: { gte: element.rank } } })
-            if (multiplierResult != null) {
-                let multiplier = parseFloat(multiplierResult.multiplier.toString())
-                element.multiplier = multiplier
-                element.total = parseFloat((element.total * multiplier).toFixed(1))
+            for (let a = 0; a < multiplierResult.length; a++) {
+                const multiplierItem = multiplierResult[a];
+                let startRank = multiplierItem.start_rank;
+                let endRank = multiplierItem.end_rank;
+                if (startRank <= element.rank && element.rank >= endRank) {
+                    let multiplier = parseFloat(multiplierItem.multiplier.toString())
+                    element.multiplier = multiplier
+                    element.total = parseFloat((element.total * multiplier).toFixed(1))
+                    break
+                }
             }
             rankNo = rank
-
         }
         return pointsLeaderBoardList
     }
@@ -169,7 +174,7 @@ export class PointsService {
         isInputCode = userTradeResult.isInputCode
         isTrade = userTradeResult.hasTraded
         // 找到推荐当前用户的人
-        
+
         let userReferredResult = await this.userReferredPoints(user);
         // 先看当前用户够不够5个eth
         // null 当前用户没有推荐人 ，当前用户的2% 奖励 是需要看 当前用户的推荐人，有没有超过5个eth
