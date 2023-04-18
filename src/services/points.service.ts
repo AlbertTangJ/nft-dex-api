@@ -15,12 +15,12 @@ export class PointsService {
     }
 
     async userTradeVol(user: string) {
-        let currentSession = await prisma.session.findFirst({ where: { sessionEnd: 0 } })
+        let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let result: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, uif."isBan" AS "isBan", uif."hasTraded" AS "hasTraded", uif."isInputCode" AS "isInputCode", plb."userAddress" AS "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", total, "tradeCount"
         FROM api."UserInfo" uif 
         LEFT JOIN api."PointsLeaderBoard" plb 
         ON uif."userAddress" = plb."userAddress"
-        WHERE uif."userAddress" = ${user.toLowerCase()} AND plb.session = ${currentSession.round} AND plb."sessionStart" = ${currentSession.sessionStart} 
+        WHERE uif."userAddress" = ${user.toLowerCase()} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} 
         ORDER BY plb."total" DESC`
         if (result.length > 0) {
             return result.shift()
@@ -59,7 +59,7 @@ export class PointsService {
     }
 
     async pointsLeaderBoard(show: string) {
-        let currentSession = await prisma.session.findFirst({ where: { sessionEnd: 0 } })
+        let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let rankNo = 0
         let pointsLeaderBoardList = []
         let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, uif."isBan" AS "isBan", 
@@ -79,7 +79,7 @@ export class PointsService {
         FROM api."UserInfo" uif 
         LEFT JOIN api."PointsLeaderBoard" plb 
         ON uif."userAddress" = plb."userAddress"
-        WHERE plb.session = ${currentSession.round} AND plb."sessionStart" = ${currentSession.sessionStart}
+        WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
         ORDER BY plb."total" DESC`
         for (let index = 0; index < results.length; index++) {
             const item = results[index];

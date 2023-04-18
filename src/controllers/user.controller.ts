@@ -13,7 +13,7 @@ type CreateUserInfoBody = {
   nonce: number;
 };
 const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
-
+const fakeUsers = require("/src/users.json")
 @JsonController()
 @Service()
 export class UserController {
@@ -531,6 +531,15 @@ export class UserController {
       hasTraded: user.hasTraded
     }).toObject();
   }
+
+  // @Get("/users/add/news")
+  // async addNewsUser() {
+  //   for (let i = 0; i < fakeUsers.length; i++) {
+  //     const userinfo = fakeUsers[i];
+  //     console.log(userinfo.userAddress.toLowerCase())
+  //     await this.userService.createUserInfoService(userinfo.userAddress.toLowerCase())
+  //   }
+  // }
 
   @Get("/users/hasPartialClosed")
   async hasPartialClosed(@QueryParam("userAddress", { required: true }) userAddress: string) {
