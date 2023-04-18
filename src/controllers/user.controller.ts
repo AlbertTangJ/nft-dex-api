@@ -13,7 +13,7 @@ type CreateUserInfoBody = {
   nonce: number;
 };
 const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
-const fakeUsers = require("/src/users.json")
+// const fakeUsers = require("/src/users.json")
 @JsonController()
 @Service()
 export class UserController {
