@@ -66,7 +66,7 @@ export class PointsController {
                 }
             });
         } catch (error) {
-            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+            return error;
         }
         let result = await this.pointService.pointsLeaderBoard(show);
         if (result != null) {
@@ -87,7 +87,7 @@ export class PointsController {
                 }
             });
         } catch (error) {
-            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+            return error;
         }
         let result = await this.pointService.userPoints(user.toLowerCase(), show);
         if (result != null) {
