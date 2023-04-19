@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import prisma from "../helpers/client";
 import { Service } from "typedi";
 import { utils } from "ethers";
@@ -62,6 +62,7 @@ export class PointsService {
     }
 
     async pointsLeaderBoard(show: string) {
+        let isStartRank = await this.checkIsSeason()
         let multiplierResult = await prisma.rankMultiplier.findMany();
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let rankNo = 0
@@ -114,29 +115,33 @@ export class PointsService {
             pointsLeaderBoardList.push(data)
         }
         pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
-
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
-            let isNext = element.isBan ? 0 : 1
-            let rank = rankNo + isNext
-            let tradeVolBigNumber = BigNumber(element.tradeVol)
-            if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
-                element.rank = element.isBan ? -1 : rank
+            if (isStartRank) {
+                let isNext = element.isBan ? 0 : 1
+                let rank = rankNo + isNext
+                let tradeVolBigNumber = BigNumber(element.tradeVol)
+                if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
+                    element.rank = element.isBan ? -1 : rank
+                } else {
+                    element.rank = 0
+                }
+                for (let a = 0; a < multiplierResult.length; a++) {
+                    const multiplierItem = multiplierResult[a];
+                    let startRank = multiplierItem.start_rank;
+                    let endRank = multiplierItem.end_rank;
+                    if (startRank <= element.rank && element.rank >= endRank) {
+                        let multiplier = parseFloat(multiplierItem.multiplier.toString())
+                        element.multiplier = multiplier
+                        element.total = parseFloat((element.total * multiplier).toFixed(1))
+                        break
+                    }
+                }
+                rankNo = rank
             } else {
+                element.multiplier = 1
                 element.rank = 0
             }
-            for (let a = 0; a < multiplierResult.length; a++) {
-                const multiplierItem = multiplierResult[a];
-                let startRank = multiplierItem.start_rank;
-                let endRank = multiplierItem.end_rank;
-                if (startRank <= element.rank && element.rank >= endRank) {
-                    let multiplier = parseFloat(multiplierItem.multiplier.toString())
-                    element.multiplier = multiplier
-                    element.total = parseFloat((element.total * multiplier).toFixed(1))
-                    break
-                }
-            }
-            rankNo = rank
         }
         return pointsLeaderBoardList
     }
@@ -249,22 +254,20 @@ export class PointsService {
     //     return result
     // }
 
-    async fetchUserRank(user: string, show: string) {
-        let userOrders = await this.pointsLeaderBoard(show);
-        let rank = null
-        for (let i = 0; i < userOrders.length; i++) {
-            const userOrder = userOrders[i];
-            if (userOrder.userAddress.toLowerCase() == user.toLowerCase()) {
-                rank = userOrder
-            }
+    async checkIsSeason() {
+        let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
+        if (currentSeason.round == 0) {
+            return false
+        } else {
+            return true
         }
-
-        return rank
     }
 
     async userPoints(user: string, show: string) {
+        let multiplierResult = await prisma.rankMultiplier.findMany();
         let enterReferralUser = await this.fetchReferringUser(user);
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
+        let isStartRank = await this.checkIsSeason()
         let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
         var sql = (isBan: boolean) => {
             return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
@@ -327,18 +330,39 @@ export class PointsService {
             }
         }
         let rank = rankData.rank
+        let multiplier = 1
         if (rankData.isBan) {
             rank = "-1"
         } else {
-            let tradeVolBigNumber = BigNumber(rankData.tradeVol)
+            let tradeVolBigNumber = BigNumber(rankData.tradeVol.toString())
+            console.log(tradeVolBigNumber.toString())
             if (tradeVolBigNumber.lt(BigNumber(utils.parseEther("5").toString()))) {
                 rank = 0
             }
         }
+        let total = parseFloat(rankData.total)
+        for (let a = 0; a < multiplierResult.length; a++) {
+            const multiplierItem = multiplierResult[a];
+            let startRank = multiplierItem.start_rank;
+            let endRank = multiplierItem.end_rank;
+            if (startRank <= rank && rank >= endRank) {
+                multiplier = parseFloat(multiplierItem.multiplier.toString())
+                total = parseFloat((total * multiplier).toFixed(1))
+                break
+            }
+        }
+        // 5000000000000000000
+        // 1000000000000000000
+        if (!isStartRank) {
+            rank = 0
+            multiplier = 1
+        }
+
+        // let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
         let result = {
             rank: parseInt(rank),
-            multiplier: parseFloat(rankData.multiplier),
-            total: parseFloat(rankData.total),
+            multiplier: multiplier,
+            total: total,
             userAddress: rankData.userAddress,
             username: rankData.username,
             referralUser: enterReferralUser,
