@@ -6,10 +6,13 @@ import BigNumber from "bignumber.js";
 
 type ReferralTradeVol = { codeOwner: string, referralCode: string, reffedUser: string, tradeVol: string, username: string }
 const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
-
+(BigInt.prototype as any).toJSON = function () {
+    return this.toString()
+}
 @Service()
 export class PointsService {
     prismaClient: PrismaClient;
+
     constructor() {
         this.prismaClient = new PrismaClient();
     }
@@ -259,15 +262,44 @@ export class PointsService {
     }
 
     async userPoints(user: string, show: string) {
-        let points = await this.calculateUserPoints(user);
-        let rankData = await this.fetchUserRank(user, show);
+        // let points = await this.calculateUserPoints(user);
+        let enterReferralUser = await this.fetchReferringUser(user);
+        let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
+        let results: any[] = await this.prismaClient.$queryRaw`SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  rank() OVER (
+            ORDER BY total DESC
+         ) AS "rank",
+         uif."hasTraded" AS "hasTraded",
+         uif."referralCode" AS "referralCode", 
+         uif."isInputCode" AS "isInputCode",
+         plb."tradeCount" AS "tradeCount", 
+         plb."userAddress" AS "userAddress", 
+         plb."convergePoints" AS "convergePoints",
+         plb."convergeVol" AS "convergeVol", 
+         plb."referralSelfRewardPoints" AS "referralSelfRewardPoints",
+         plb."referringRewardPoints" AS "referringRewardPoints", 
+         plb."tradeVol" AS "tradeVol", 
+         plb."tradePoints" AS "tradePoints", 
+         plb."eligibleCount" AS "eligibleCount",
+         plb."ogPoints" AS "ogPoints", 
+         plb.total AS total
+        FROM api."UserInfo" uif 
+        LEFT JOIN api."PointsLeaderBoard" plb 
+        ON uif."userAddress" = plb."userAddress"
+        WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} AND uif."isBan" = false
+        ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = ${user.toLowerCase()}`
+        let rankData = null
+        if (results.length > 0) {
+            rankData = results.shift()
+        }
+        // console.log(results)
+        // let rankData = await this.fetchUserRank(user, show);
         if (rankData == null) {
             return {
                 rank: 0,
                 multiplier: 0,
                 total: 0,
-                userAddress: points.userAddress,
-                username: points.username,
+                userAddress: user,
+                username: rankData.username,
                 tradeVol: { vol: 0, points: 0 },
                 referral: {
                     referralSelfRewardPoints: 0,
@@ -276,40 +308,46 @@ export class PointsService {
                     points: 0,
                     val: 0
                 },
-                referralUser: points.enterReferralUser,
-                eligibleCount: points.eligibleCount,
-                referralCode: points.referralCode,
-                isInputCode: points.isInputCode,
-                isTrade: points.isTrade,
+                referralUser: enterReferralUser,
+                eligibleCount: parseFloat(rankData.eligibleCount),
+                referralCode: rankData.referralCode,
+                isInputCode: rankData.isInputCode,
+                isTrade: rankData.isTrade,
                 isBan: false
             }
         }
         let result = {
-            rank: rankData.rank,
-            multiplier: rankData.multiplier,
-            total: rankData.total,
-            userAddress: points.userAddress,
-            username: points.username,
-            referralUser: points.enterReferralUser,
-            eligibleCount: points.eligibleCount,
-            referralCode: points.referralCode,
+            rank: parseInt(rankData.rank),
+            multiplier: parseFloat(rankData.multiplier),
+            total: parseFloat(rankData.total),
+            userAddress: rankData.userAddress,
+            username: rankData.username,
+            referralUser: enterReferralUser,
+            eligibleCount: parseFloat(rankData.eligibleCount),
+            referralCode: rankData.referralCode,
             isBan: rankData.isBan,
-            isInputCode: points.isInputCode,
-            isTrade: points.isTrade,
+            isInputCode: rankData.isInputCode,
+            isTrade: rankData.isTrade,
         }
 
         let showData = show.split(",")
         if (showData.indexOf("tradeVol") != -1) {
-            result['tradeVol'] = points.tradeVol
+            result['tradeVol'] = { vol: rankData.tradeVol, points: parseFloat(rankData.tradePoints) }
         }
         if (showData.indexOf('referral') != -1) {
-            result['referral'] = points.referral
+            result['referral'] = {
+                referralSelfRewardPoints: parseFloat(rankData.referralSelfRewardPoints),
+                referringRewardPoints: parseFloat(rankData.referringRewardPoints)
+            }
         }
         if (showData.indexOf('og') != -1) {
             result['og'] = 0
         }
         if (showData.indexOf('converge') != -1) {
-            result['converge'] = points.converge
+            result['converge'] = {
+                points: parseFloat(rankData.convergePoints),
+                val: rankData.convergeVol
+            }
         }
 
         return result
