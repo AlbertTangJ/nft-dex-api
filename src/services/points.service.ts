@@ -143,7 +143,16 @@ export class PointsService {
                 element.rank = 0
             }
         }
-        return pointsLeaderBoardList
+
+        let finalRanks = []
+        for (let i = 0; i < pointsLeaderBoardList.length; i++) {
+            const point = pointsLeaderBoardList[i];
+            if (point.rank != 0) {
+                finalRanks.push(point)    
+            }
+        }
+
+        return finalRanks
     }
 
     // async calculateUserPoints(user: string) {
