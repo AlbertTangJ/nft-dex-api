@@ -280,7 +280,7 @@ export class PointsService {
         let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
         var sql = (isBan: boolean) => {
             return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
-                    FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  dense_rank() OVER (
+                    FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
                         ORDER BY total DESC
                     ) AS "rank",
                     uif."hasTraded" AS "hasTraded",
@@ -344,7 +344,7 @@ export class PointsService {
             rank = "-1"
         } else {
             let tradeVolBigNumber = BigNumber(rankData.tradeVol.toString())
-            console.log(tradeVolBigNumber.toString())
+            // console.log(tradeVolBigNumber.toString())
             if (tradeVolBigNumber.lt(BigNumber(utils.parseEther("5").toString()))) {
                 rank = 0
             }
