@@ -55,7 +55,9 @@ export class PointsController {
     }
 
     @Get("/points/rank")
-    async fetchPointsLeaderBoard(@QueryParam("show") show: string) {
+    async fetchPointsLeaderBoard(@QueryParam("show") show: string,
+        @QueryParam("pageNo") pageNo: number = 1,
+        @QueryParam("pageSize") pageSize: number = 250) {
         try {
             await this.userAddressValidator.validate({ show: show }, errors => {
                 if (errors) {
@@ -68,7 +70,14 @@ export class PointsController {
         } catch (error) {
             return error;
         }
-        let result = await this.pointService.pointsLeaderBoard(show);
+        if (pageSize > 250) {
+            pageSize = 250
+        }
+        if (pageNo > 0) {
+            pageNo = pageNo - 1;
+            pageNo = pageNo * pageSize;
+        }
+        let result = await this.pointService.pointsLeaderBoard(show, pageNo, pageSize);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }

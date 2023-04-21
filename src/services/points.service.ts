@@ -61,7 +61,7 @@ export class PointsService {
         return result;
     }
 
-    async pointsLeaderBoard(show: string) {
+    async pointsLeaderBoard(show: string, pageNo: number, pageSize: number) {
         let isStartRank = await this.checkIsSeason()
         let multiplierResult = await prisma.rankMultiplier.findMany();
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
@@ -85,8 +85,10 @@ export class PointsService {
             FROM api."UserInfo" uif
             LEFT JOIN api."PointsLeaderBoard" plb
             ON uif."userAddress" = plb."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
-            ORDER BY plb."total" DESC`
+            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} 
+            ORDER BY plb."total" DESC
+            LIMIT ${pageSize} OFFSET ${pageNo}`
+
         for (let index = 0; index < results.length; index++) {
             const item = results[index];
             // console.log(item)
@@ -114,7 +116,7 @@ export class PointsService {
             }
             pointsLeaderBoardList.push(data)
         }
-        pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
+        // pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
             if (isStartRank) {
@@ -122,7 +124,7 @@ export class PointsService {
                 let rank = rankNo + isNext
                 let tradeVolBigNumber = BigNumber(element.tradeVol)
                 if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
-                    element.rank = element.isBan ? -1 : rank
+                    element.rank = element.isBan ? -1 : rank + pageNo
                 } else {
                     element.rank = 0
                 }
@@ -143,12 +145,12 @@ export class PointsService {
                 element.rank = 0
             }
         }
-
+        // console.log(pointsLeaderBoardList)
         let finalRanks = []
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const point = pointsLeaderBoardList[i];
             if (point.rank != 0) {
-                finalRanks.push(point)    
+                finalRanks.push(point)
             }
         }
 
