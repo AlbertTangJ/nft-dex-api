@@ -470,7 +470,7 @@ export class UserService {
         points, 
         ranking
       FROM "api"."UserInfo"
-      WHERE LOWER(username) LIKE ${searchKeyword.toLowerCase()} OR LOWER("userAddress") LIKE ${searchKeyword.toLowerCase} LIMIT ${pageSize} OFFSET ${pageNo}`;
+      WHERE LOWER(username) LIKE ${searchKeyword.toLowerCase()} OR LOWER("userAddress") LIKE ${searchKeyword.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
       return result;
     }
   }
