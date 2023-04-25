@@ -455,7 +455,7 @@ export class UserService {
             ON uf."userAddress"=${userAddress.toLowerCase()}
             AND uf."followerAddress" = t."followerAddress") mf 
       ON mf."followerAddress" = uif."userAddress"
-      WHERE LOWER(uif.username) LIKE ${searchKeyword.toLowerCase()} OR uif."userAddress" LIKE ${searchKeyword}
+      WHERE LOWER(uif.username) LIKE ${searchKeyword.toLowerCase()} OR uif."userAddress" LIKE ${searchKeyword.toLowerCase()}
       LIMIT ${pageSize} OFFSET ${pageNo}`
       let result = await prisma.$queryRaw(sql);
       return result;
