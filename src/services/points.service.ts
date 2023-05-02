@@ -67,7 +67,7 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let rankNo = 0
         let pointsLeaderBoardList = []
-        let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, uif."isBan" AS "isBan", 
+        let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, plb."isBan" AS "isBan", 
             uif."hasTraded" AS "hasTraded", 
             uif."isInputCode" AS "isInputCode",
             uif."referralCode" AS "referralCode",
@@ -77,6 +77,7 @@ export class PointsService {
             plb."convergeVol" AS "convergeVol", 
             plb."referralSelfRewardPoints" AS "referralSelfRewardPoints",
             plb."referringRewardPoints" AS "referringRewardPoints", 
+            plb."isBan" AS "isBan", 
             plb."tradeVol" AS "tradeVol", 
             plb."tradePoints" AS "tradePoints", 
             plb."eligibleCount" AS "eligibleCount",
