@@ -428,8 +428,7 @@ export class UserService {
     }
     let searchKeyword = "%" + keyword + "%";
     if (isAddress) {
-      let result = await prisma.$queryRaw`
-      SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", uif.followers, uif.following, uif.username, uif.about, uif.points, uif.ranking FROM "api"."UserInfo" AS uif
+      let sql = Prisma.sql`SELECT CASE WHEN mf."isFollowing" IS true THEN true ELSE false END AS "isFollowing", uif."userAddress", uif.followers, uif.following, uif.username, uif.about, uif.points, uif.ranking FROM "api"."UserInfo" AS uif
       LEFT JOIN
       (SELECT
             CASE WHEN uf."userAddress" IS NOT NULL 
@@ -456,8 +455,9 @@ export class UserService {
             ON uf."userAddress"=${userAddress.toLowerCase()}
             AND uf."followerAddress" = t."followerAddress") mf 
       ON mf."followerAddress" = uif."userAddress"
-      WHERE uif.username LIKE ${searchKeyword} OR uif."userAddress" LIKE ${searchKeyword}
-      LIMIT ${pageSize} OFFSET ${pageNo}`;
+      WHERE LOWER(uif.username) LIKE ${searchKeyword.toLowerCase()} OR uif."userAddress" LIKE ${searchKeyword.toLowerCase()}
+      LIMIT ${pageSize} OFFSET ${pageNo}`
+      let result = await prisma.$queryRaw(sql);
       return result;
     } else {
       let result = await prisma.$queryRaw`
@@ -470,7 +470,7 @@ export class UserService {
         points, 
         ranking
       FROM "api"."UserInfo"
-      WHERE username LIKE ${searchKeyword} OR "userAddress" LIKE ${searchKeyword};`;
+      WHERE LOWER(username) LIKE ${searchKeyword.toLowerCase()} OR LOWER("userAddress") LIKE ${searchKeyword.toLowerCase()} LIMIT ${pageSize} OFFSET ${pageNo}`;
       return result;
     }
   }

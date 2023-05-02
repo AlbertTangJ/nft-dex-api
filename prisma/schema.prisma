@@ -54,7 +54,7 @@ model UserInfo {
   createTimestamp      Int?
   updateTime           DateTime? @db.Timestamp(6)
   createTime           DateTime? @default(now()) @db.Timestamp(6)
-  points               Int       @default(0)
+  points               Decimal   @default(0) @db.Decimal
   followers            Int       @default(0)
   ranking              Int       @default(0)
   referralCode         String?   @unique(map: "UserInfo_code_unique") @db.VarChar
@@ -458,19 +458,24 @@ model PointsLeaderBoard {
   updateTimestamp          Int?      @default(0)
   total                    Decimal?  @default(0) @db.Decimal
   tradeCount               Int?      @default(0)
-  session                  Int?      @default(0)
-  sessionStart             Int?      @default(0)
+  season                   Int?      @default(0)
+  seasonStart              Int?      @default(0)
+  blockTimestamp           Int?      @default(0)
+  logIndex                 Decimal?  @default(0) @db.Decimal
+  isBan                    Boolean   @default(false)
 
-  @@unique([userAddress, session, sessionStart], map: "pointsleaderborad_user_address_unique")
+  @@unique([userAddress, season, seasonStart], map: "pointsleaderborad_user_address_unique")
   @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
+  @@index([blockTimestamp, logIndex], map: "pointsleaderboard_logindex_blocktimestamp_btree")
   @@schema("api")
 }
 
-model Session {
-  id           String @id(map: "session_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  round        Int?   @unique(map: "session_round_unique") @default(0)
-  sessionStart Int?   @default(0)
-  sessionEnd   Int?   @default(0)
+model Season {
+  id          String @id(map: "session_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  round       Int?   @unique(map: "session_round_unique") @default(0)
+  seasonStart Int?   @default(0)
+  seasonEnd   Int?   @default(0)
+  scheduleEnd Int?   @default(0)
 
   @@schema("api")
 }
