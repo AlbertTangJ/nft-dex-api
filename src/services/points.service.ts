@@ -117,14 +117,16 @@ export class PointsService {
             }
             pointsLeaderBoardList.push(data)
         }
+        
         // pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];
             if (isStartRank) {
                 let isNext = element.isBan ? 0 : 1
-                let rank = rankNo + isNext
+                let rank = rankNo
                 let tradeVolBigNumber = BigNumber(element.tradeVol)
                 if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
+                    rank = rank + isNext
                     element.rank = element.isBan ? -1 : rank + pageNo
                 } else {
                     element.rank = 0
@@ -268,7 +270,6 @@ export class PointsService {
 
     async checkIsSeason() {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
-        console.log(currentSeason)
         if (currentSeason.round == 0) {
             return false
         } else {
