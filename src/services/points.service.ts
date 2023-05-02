@@ -268,6 +268,7 @@ export class PointsService {
 
     async checkIsSeason() {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
+        console.log(currentSeason)
         if (currentSeason.round == 0) {
             return false
         } else {

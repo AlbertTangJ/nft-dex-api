@@ -54,7 +54,7 @@ model UserInfo {
   createTimestamp      Int?
   updateTime           DateTime? @db.Timestamp(6)
   createTime           DateTime? @default(now()) @db.Timestamp(6)
-  points               Int       @default(0)
+  points               Decimal   @default(0) @db.Decimal
   followers            Int       @default(0)
   ranking              Int       @default(0)
   referralCode         String?   @unique(map: "UserInfo_code_unique") @db.VarChar
