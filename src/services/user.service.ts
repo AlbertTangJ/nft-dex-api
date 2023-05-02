@@ -4,6 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
+import { Decimal } from "@prisma/client/runtime";
 type Follower = { followerAddress: string; followers: number; ranking: number };
 @Service()
 export class UserService {
@@ -515,7 +516,7 @@ export class UserService {
       about: string;
       followers: number;
       following: number;
-      points: number;
+      points: Decimal;
       referralPoints: number;
       referralCode: string;
       isFollowing?: boolean;
