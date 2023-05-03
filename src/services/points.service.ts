@@ -117,7 +117,7 @@ export class PointsService {
             }
             pointsLeaderBoardList.push(data)
         }
-        
+
         // pointsLeaderBoardList.sort(function (a, b) { return b.total - a.total })
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const element = pointsLeaderBoardList[i];

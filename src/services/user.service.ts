@@ -5,7 +5,11 @@ import { Prisma, UserInfo } from "@prisma/client";
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
 import { Decimal } from "@prisma/client/runtime";
-type Follower = { followerAddress: string; followers: number; ranking: number };
+import { BigNumber, utils } from "ethers";
+type Follower = { followerAddress: string; followers: number; ranking: number; points: number; userAddress: string; };
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString()
+}
 @Service()
 export class UserService {
   constructor() { }
@@ -115,6 +119,65 @@ export class UserService {
     return null;
   }
 
+  async fetchUsersRank(users: string[]) {
+    let multiplierResult = await prisma.rankMultiplier.findMany();
+    let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
+    let isStartRank = currentSeason == null ? false : true
+    if (isStartRank) {
+      let usersStr = users.join("','")
+
+      let sql = `SELECT "userAddress", "isBan", "rank", "tradeCount", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
+      FROM (SELECT row_number() OVER (
+          ORDER BY total DESC
+      ) AS "rank",
+      "tradeCount", 
+      "userAddress", 
+      "convergePoints",
+      "convergeVol", 
+      "referralSelfRewardPoints",
+      "referringRewardPoints", 
+      "tradeVol", 
+      "tradePoints", 
+      "eligibleCount",
+      "ogPoints",
+      "isBan",
+      total
+      FROM api."PointsLeaderBoard" 
+      WHERE season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart}
+      ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`
+      let results: any[] = await prisma.$queryRawUnsafe(sql)
+      if (results.length > 0) {
+        let multiplier = 1
+        let list = JSON.parse(JSON.stringify(results))
+        for (let i = 0; i < list.length; i++) {
+          const element = list[i];
+          let tradeVol = element.tradeVol
+          let isBan = element.isBan
+          let tradeVolBigNumber = BigNumber.from((tradeVol.toString()))
+          // console.log(tradeVolBigNumber.toString())
+          if (tradeVolBigNumber.lt(utils.parseEther("5"))) {
+            element.rank = 0
+          }
+          if (isBan) {
+            element.rank = -1
+          }
+          for (let a = 0; a < multiplierResult.length; a++) {
+            const multiplierItem = multiplierResult[a];
+            let startRank = multiplierItem.start_rank;
+            let endRank = multiplierItem.end_rank;
+            if (startRank <= element.rank && element.rank >= endRank) {
+              multiplier = parseFloat(multiplierItem.multiplier.toString())
+              element.total = parseFloat((element.total * multiplier).toFixed(1))
+              break
+            }
+          }
+        }
+        return list
+      }
+    }
+    return []
+  }
+
   // 根据参数地址获取followers
   async followersList(userAddress: string, targetAddress: string, pageNo: number, pageSize: number) {
     if (pageNo > 0) {
@@ -152,6 +215,26 @@ export class UserService {
           ON uf."userAddress" = ${condition}
           AND uf."followerAddress" = t."userAddress";
     `;
+    let users = []
+    for (let i = 0; i < followers.length; i++) {
+      const element = followers[i];
+      users.push(element.userAddress.toLowerCase())
+    }
+    // ['0x1c6b2888c4268a9c8eaf7eb77a759492bbe10833','0x958d58fbb67666e5f693895edc65f46d051ee304','0x2d528026fef9be28b4c97b10979737b3f445eebd']
+    if (users.length > 0) {
+      let ranks = await this.fetchUsersRank(users)
+      for (let i = 0; i < followers.length; i++) {
+        const element = followers[i];
+        const userAddress = element.userAddress.toLowerCase()
+        for (let r = 0; r < ranks.length; r++) {
+          const rank = ranks[r];
+          if (userAddress == rank.userAddress) {
+            element.points = rank.total
+            element.ranking = parseInt(rank.rank)
+          }
+        }
+      }
+    }
     return followers;
   }
 
@@ -192,6 +275,26 @@ export class UserService {
       ON uf."userAddress" = ${condition}
       AND uf."followerAddress" = t."followerAddress";
     `;
+    let users = []
+    for (let i = 0; i < followList.length; i++) {
+      const element = followList[i];
+      users.push(element.followerAddress.toLowerCase())
+    }
+    // ['0x1c6b2888c4268a9c8eaf7eb77a759492bbe10833','0x958d58fbb67666e5f693895edc65f46d051ee304','0x2d528026fef9be28b4c97b10979737b3f445eebd']
+    if (users.length > 0) {
+      let ranks = await this.fetchUsersRank(users)
+      for (let i = 0; i < followList.length; i++) {
+        const element = followList[i];
+        const userAddress = element.followerAddress.toLowerCase()
+        for (let r = 0; r < ranks.length; r++) {
+          const rank = ranks[r];
+          if (userAddress == rank.userAddress) {
+            element.points = rank.total
+            element.ranking = parseInt(rank.rank)
+          }
+        }
+      }
+    }
     return followList;
   }
 
