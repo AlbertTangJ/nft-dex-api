@@ -363,7 +363,7 @@ export class PointsService {
             const multiplierItem = multiplierResult[a];
             let startRank = multiplierItem.start_rank;
             let endRank = multiplierItem.end_rank;
-            if (startRank <= rank && rank >= endRank) {
+            if (startRank <= rank && rank <= endRank) {
                 multiplier = parseFloat(multiplierItem.multiplier.toString())
                 total = parseFloat((total * multiplier).toFixed(1))
                 break
