@@ -5,3 +5,4 @@ node_modules
 .vscode
 dist
 users.json
+og.json
