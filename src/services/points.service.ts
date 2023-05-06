@@ -98,6 +98,7 @@ export class PointsService {
             let referralPoints = BigNumber(item.referringRewardPoints.toString()).plus(item.referralSelfRewardPoints.toString()).toString();
             let convergePoints = item.convergePoints;
             let total = item.total
+            let ogPoints = item.ogPoints
             let referralCode = item.referralCode
             // console.log(`${tradeVolPoints} + ${referralPoints} + ${convergePoints} = ${total}`)
             let data = { total: parseFloat(total), multiplier: 1, username: item.username, userAddress: userAddress, isBan: item.isBan, tradeVol: item.tradeVol, referralCode: referralCode }
@@ -113,6 +114,9 @@ export class PointsService {
 
                 if (showData.indexOf('converge') != -1) {
                     data['convergePoints'] = parseFloat(convergePoints)
+                }
+                if (showData.indexOf('og') != -1) {
+                    data['og'] = parseFloat(ogPoints)
                 }
             }
             pointsLeaderBoardList.push(data)
@@ -135,7 +139,7 @@ export class PointsService {
                     const multiplierItem = multiplierResult[a];
                     let startRank = multiplierItem.start_rank;
                     let endRank = multiplierItem.end_rank;
-                    if (startRank <= element.rank && element.rank >= endRank) {
+                    if (startRank <= element.rank && element.rank <= endRank) {
                         let multiplier = parseFloat(multiplierItem.multiplier.toString())
                         element.multiplier = multiplier
                         element.total = parseFloat((element.total * multiplier).toFixed(1))
@@ -359,7 +363,7 @@ export class PointsService {
             const multiplierItem = multiplierResult[a];
             let startRank = multiplierItem.start_rank;
             let endRank = multiplierItem.end_rank;
-            if (startRank <= rank && rank >= endRank) {
+            if (startRank <= rank && rank <= endRank) {
                 multiplier = parseFloat(multiplierItem.multiplier.toString())
                 total = parseFloat((total * multiplier).toFixed(1))
                 break
@@ -398,7 +402,7 @@ export class PointsService {
             }
         }
         if (showData.indexOf('og') != -1) {
-            result['og'] = 0
+            result['og'] = parseFloat(rankData.ogPoints)
         }
         if (showData.indexOf('converge') != -1) {
             result['converge'] = {
