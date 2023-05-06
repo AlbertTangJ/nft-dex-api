@@ -309,7 +309,7 @@ export class PointsService {
                     FROM api."UserInfo" uif 
                     LEFT JOIN api."PointsLeaderBoard" plb 
                     ON uif."userAddress" = plb."userAddress"
-                    WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} ${filterIsBan(isBan)}
+                    WHERE plb."tradeVol" >= ${utils.parseEther("5").toString()} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} ${filterIsBan(isBan)}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
