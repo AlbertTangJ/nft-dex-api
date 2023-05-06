@@ -286,8 +286,9 @@ export class PointsService {
         let enterReferralUser = await this.fetchReferringUser(user);
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
-        let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
-        var sql = (isBan: boolean) => {
+        // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
+        let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` plb."tradeVol" >= ${utils.parseEther("5").toString()}`  : ' 1=1' }
+        var sql = (isOver: boolean) => {
             return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
                     FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
                         ORDER BY total DESC
@@ -309,9 +310,10 @@ export class PointsService {
                     FROM api."UserInfo" uif 
                     LEFT JOIN api."PointsLeaderBoard" plb 
                     ON uif."userAddress" = plb."userAddress"
-                    WHERE plb."tradeVol" >= ${utils.parseEther("5").toString()} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} ${filterIsBan(isBan)}
+                    WHERE ${filterIsOver5ETH(isOver)} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
+
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
         let rankData = null
         if (results.length > 0) {
