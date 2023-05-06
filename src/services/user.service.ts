@@ -143,7 +143,7 @@ export class UserService {
       "isBan",
       total
       FROM api."PointsLeaderBoard" 
-      WHERE plb."tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart}
+      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart}
       ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`
       let results: any[] = await prisma.$queryRawUnsafe(sql)
       if (results.length > 0) {
