@@ -86,10 +86,9 @@ export class PointsService {
             FROM api."UserInfo" uif
             LEFT JOIN api."PointsLeaderBoard" plb
             ON uif."userAddress" = plb."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} 
+            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} AND plb."tradeVol" >= 5000000000000000000
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
-
         for (let index = 0; index < results.length; index++) {
             const item = results[index];
             // console.log(item)
@@ -313,7 +312,6 @@ export class PointsService {
                     WHERE ${filterIsOver5ETH(isOver)} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
-
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
         let rankData = null
         if (results.length > 0) {
