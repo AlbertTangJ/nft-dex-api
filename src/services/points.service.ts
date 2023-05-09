@@ -86,10 +86,9 @@ export class PointsService {
             FROM api."UserInfo" uif
             LEFT JOIN api."PointsLeaderBoard" plb
             ON uif."userAddress" = plb."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} 
+            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} AND plb."tradeVol" >= 5000000000000000000
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
-
         for (let index = 0; index < results.length; index++) {
             const item = results[index];
             // console.log(item)
@@ -281,9 +280,18 @@ export class PointsService {
         }
     }
 
+    async getReferredUserCount(user: string): Promise<number> {
+        const userInfo = await prisma.userInfo.findFirst({ where: { userAddress: user } })
+        if (!userInfo) { return 0 }
+        const userReferralCode = userInfo.referralCode
+        const referredUserCount = await prisma.referralEvents.count({ where: { referralCode: userReferralCode } })
+        return referredUserCount
+    }
+
     async userPoints(user: string, show: string) {
         let multiplierResult = await prisma.rankMultiplier.findMany();
         let enterReferralUser = await this.fetchReferringUser(user);
+        let referredUserCount = await this.getReferredUserCount(user);
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
@@ -313,7 +321,6 @@ export class PointsService {
                     WHERE ${filterIsOver5ETH(isOver)} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
-
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
         let rankData = null
         if (results.length > 0) {
@@ -343,6 +350,7 @@ export class PointsService {
                 },
                 referralUser: {},
                 eligibleCount: 0,
+                referredUserCount: 0,
                 referralCode: "",
                 isInputCode: false,
                 isTrade: false,
@@ -391,6 +399,7 @@ export class PointsService {
             isBan: rankData.isBan,
             isInputCode: rankData.isInputCode,
             isTrade: rankData.isTrade,
+            referredUserCount
         }
 
         let showData = show.split(",")
