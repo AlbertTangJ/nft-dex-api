@@ -280,9 +280,18 @@ export class PointsService {
         }
     }
 
+    async getReferredUserCount(user: string): Promise<number> {
+        const userInfo = await prisma.userInfo.findFirst({ where: { userAddress: user } })
+        if (!userInfo) { return 0 }
+        const userReferralCode = userInfo.referralCode
+        const referredUserCount = await prisma.referralEvents.count({ where: { referralCode: userReferralCode } })
+        return referredUserCount
+    }
+
     async userPoints(user: string, show: string) {
         let multiplierResult = await prisma.rankMultiplier.findMany();
         let enterReferralUser = await this.fetchReferringUser(user);
+        let referredUserCount = await this.getReferredUserCount(user);
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
@@ -341,6 +350,7 @@ export class PointsService {
                 },
                 referralUser: {},
                 eligibleCount: 0,
+                referredUserCount: 0,
                 referralCode: "",
                 isInputCode: false,
                 isTrade: false,
@@ -389,6 +399,7 @@ export class PointsService {
             isBan: rankData.isBan,
             isInputCode: rankData.isInputCode,
             isTrade: rankData.isTrade,
+            referredUserCount
         }
 
         let showData = show.split(",")
