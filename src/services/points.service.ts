@@ -319,7 +319,7 @@ export class PointsService {
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
         let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` plb."tradeVol" >= ${utils.parseEther("5").toString()}` : ' 1=1' }
         var sql = (isOver: boolean) => {
-            return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
+            return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total", "degenScore", "degenScoreMultiplier"  
                     FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
                         ORDER BY total DESC
                     ) AS "rank",
@@ -336,7 +336,9 @@ export class PointsService {
                     plb."tradePoints" AS "tradePoints", 
                     plb."eligibleCount" AS "eligibleCount",
                     plb."ogPoints" AS "ogPoints", 
-                    plb.total AS total
+                    plb.total AS total,
+                    uif."degenScore" AS "degenScore",
+					uif."degenScoreMultiplier" AS "degenScoreMultiplier"
                     FROM api."UserInfo" uif 
                     LEFT JOIN api."PointsLeaderBoard" plb 
                     ON uif."userAddress" = plb."userAddress"
@@ -376,7 +378,9 @@ export class PointsService {
                 referralCode: "",
                 isInputCode: false,
                 isTrade: false,
-                isBan: false
+                isBan: false,
+                degenScore: 0, 
+                degenScoreMultiplier: 1
             }
         }
         let rank = rankData.rank
@@ -421,6 +425,8 @@ export class PointsService {
             isBan: rankData.isBan,
             isInputCode: rankData.isInputCode,
             isTrade: rankData.isTrade,
+            degenScore: rankData.degenScore,
+            degenScoreMultiplier: rankData.degenScoreMultiplier,
             referredUserCount
         }
 
