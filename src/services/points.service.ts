@@ -364,7 +364,7 @@ export class PointsService {
                 total: 0,
                 userAddress: user,
                 username: "",
-                tradeVol: { vol: 0, points: 0 },
+                tradeVol: { vol: 0, points: 0, Multiplier: 1 },
                 referral: {
                     referralSelfRewardPoints: 0,
                     referringRewardPoints: 0
@@ -379,8 +379,7 @@ export class PointsService {
                 isInputCode: false,
                 isTrade: false,
                 isBan: false,
-                degenScore: 0, 
-                degenScoreMultiplier: 1
+                degenScore: 0
             }
         }
         let rank = rankData.rank
@@ -426,13 +425,12 @@ export class PointsService {
             isInputCode: rankData.isInputCode,
             isTrade: rankData.isTrade,
             degenScore: rankData.degenScore,
-            degenScoreMultiplier: rankData.degenScoreMultiplier,
             referredUserCount
         }
 
         let showData = show.split(",")
         if (showData.indexOf("tradeVol") != -1) {
-            result['tradeVol'] = { vol: rankData.tradeVol, points: parseFloat(rankData.tradePoints) }
+            result['tradeVol'] = { vol: rankData.tradeVol, points: parseFloat(rankData.tradePoints), multiplier: rankData.degenScoreMultiplier }
         }
         if (showData.indexOf('referral') != -1) {
             result['referral'] = {
