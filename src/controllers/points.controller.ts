@@ -104,4 +104,25 @@ export class PointsController {
         }
         return new ApiResponse(ResponseStatus.Failure);
     }
+
+    @Get("/points/:user/referral/reward/detail")
+    async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("show") show: string) {
+        try {
+            await this.userAddressValidator.validate({ user: user, show: show }, errors => {
+                if (errors) {
+                    for (let i = 0; i < errors.length; i++) {
+                        const error = errors[i];
+                        throw new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+                    }
+                }
+            });
+        } catch (error) {
+            return error;
+        }
+        let result = await this.pointService.fetchCurrentUserReferralRewardDetail(user.toLowerCase());
+        if (result != null) {
+            return new ApiResponse(ResponseStatus.Success).setData(result);
+        }
+        return new ApiResponse(ResponseStatus.Failure);
+    }
 }
