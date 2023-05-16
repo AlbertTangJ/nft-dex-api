@@ -362,6 +362,7 @@ export class PointsService {
                 rank: 0,
                 multiplier: 0,
                 total: 0,
+                originalTotal: 0,
                 userAddress: user,
                 username: "",
                 tradeVol: { vol: 0, points: 0, multiplier: 1 },
@@ -394,6 +395,7 @@ export class PointsService {
             }
         }
         let total = parseFloat(rankData.total)
+        let originalTotal = parseFloat(rankData.total)
         for (let a = 0; a < multiplierResult.length; a++) {
             const multiplierItem = multiplierResult[a];
             let startRank = multiplierItem.start_rank;
@@ -416,6 +418,7 @@ export class PointsService {
             rank: parseInt(rank),
             multiplier: multiplier,
             total: total,
+            originalTotal: originalTotal,
             userAddress: rankData.userAddress,
             username: rankData.username,
             referralUser: enterReferralUser,
