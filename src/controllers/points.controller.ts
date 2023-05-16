@@ -105,7 +105,7 @@ export class PointsController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
-    @Get("/points/:user/referral/reward/detail")
+    @Get("/points/referral/reward/detail/:user")
     async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("show") show: string) {
         try {
             await this.userAddressValidator.validate({ user: user, show: show }, errors => {
