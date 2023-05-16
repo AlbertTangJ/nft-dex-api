@@ -364,7 +364,7 @@ export class PointsService {
                 total: 0,
                 userAddress: user,
                 username: "",
-                tradeVol: { vol: 0, points: 0, Multiplier: 1 },
+                tradeVol: { vol: 0, points: 0, multiplier: 1 },
                 referral: {
                     referralSelfRewardPoints: 0,
                     referringRewardPoints: 0
