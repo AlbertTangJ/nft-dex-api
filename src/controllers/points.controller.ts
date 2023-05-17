@@ -106,9 +106,10 @@ export class PointsController {
     }
 
     @Get("/points/referral/reward/detail/:user")
-    async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("show") show: string) {
+    async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("pageNo") pageNo: number = 1,
+        @QueryParam("pageSize") pageSize: number = 250) {
         try {
-            await this.userAddressValidator.validate({ user: user, show: show }, errors => {
+            await this.userAddressValidator.validate({ user: user }, errors => {
                 if (errors) {
                     for (let i = 0; i < errors.length; i++) {
                         const error = errors[i];
@@ -119,7 +120,14 @@ export class PointsController {
         } catch (error) {
             return error;
         }
-        let result = await this.pointService.fetchCurrentUserReferralRewardDetail(user.toLowerCase());
+        if (pageSize > 250) {
+            pageSize = 250
+        }
+        if (pageNo > 0) {
+            pageNo = pageNo - 1;
+            pageNo = pageNo * pageSize;
+        }
+        let result = await this.pointService.fetchCurrentUserReferralRewardDetail(user.toLowerCase(), pageNo, pageSize);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }

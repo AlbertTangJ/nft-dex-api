@@ -46,7 +46,7 @@ export class PointsService {
     }
 
     // 获取当前用户referral points 详细得分
-    async fetchCurrentUserReferralRewardDetail(user: string) {
+    async fetchCurrentUserReferralRewardDetail(user: string, pageNo: number, pageSize: number) {
         let results: any[] = await this.prismaClient.$queryRaw`SELECT plb."userAddress" AS "userAddress", u2.username AS "username" ,u."userAddress" AS "codeOwner", r."referralCode" AS "referralCode", plb."tradeVol" AS "tradeVol", 
                 CASE WHEN plb."tradePoints" >= 50 
                 THEN true 
@@ -63,7 +63,8 @@ export class PointsService {
             ON u."referralCode" = r."referralCode"
             LEFT JOIN "UserInfo" AS u2
             ON u2."userAddress" = plb."userAddress"
-            WHERE plb.season = 6 AND u."userAddress" = ${user} ORDER BY "referralCode" DESC`;
+            WHERE plb.season = 6 AND u."userAddress" = ${user} ORDER BY "referralCode" DESC 
+            LIMIT ${pageSize} OFFSET ${pageNo}`;
         return results
     }
 
