@@ -106,9 +106,10 @@ export class PointsController {
     }
 
     @Get("/points/referral/reward/detail/:user")
-    async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("show") show: string) {
+    async fetchUserReferralRewardDetail(@Param("user") user: string, @QueryParam("pageNo") pageNo: number = 1,
+        @QueryParam("pageSize") pageSize: number = 250) {
         try {
-            await this.userAddressValidator.validate({ user: user, show: show }, errors => {
+            await this.userAddressValidator.validate({ user: user }, errors => {
                 if (errors) {
                     for (let i = 0; i < errors.length; i++) {
                         const error = errors[i];
@@ -119,10 +120,40 @@ export class PointsController {
         } catch (error) {
             return error;
         }
-        let result = await this.pointService.fetchCurrentUserReferralRewardDetail(user.toLowerCase());
+        if (pageSize > 250) {
+            pageSize = 250
+        }
+        if (pageNo > 0) {
+            pageNo = pageNo - 1;
+            pageNo = pageNo * pageSize;
+        }
+        let result = await this.pointService.fetchCurrentUserReferralRewardDetail(user.toLowerCase(), pageNo, pageSize);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }
         return new ApiResponse(ResponseStatus.Failure);
     }
+
+// @Get("/fetchDegenscore")
+//   async fetchDegenscore() {
+//     const allUsers = await this.userService.allUserInfos();
+//     let result;
+//     for (let user of allUsers) {
+//       try {
+//         result = await axios.get(`https://beacon.degenscore.com/v1/beacon/${user.userAddress}`);
+//         console.log("result.response", result.status);
+//         if (result.status == 200 && result.data) {
+//           let degenScore = result.data.traits?.degen_score?.value ?? 0;
+//           console.log("degenScore", degenScore);
+//           const multiplier = await this.pointService.getDegenScoreMultiplier(degenScore);
+//           await this.userService.updateDegenScore(user.userAddress, degenScore, multiplier);
+//         }
+//       } catch (error) {
+//         console.log("error", error.message);
+//       }
+//       await new Promise(resolve => setTimeout(resolve, 500));
+//     }
+//     return new ApiResponse(ResponseStatus.Success).setData("ok");
+//     //return new ApiResponse(ResponseStatus.Failure);
+//   }
 }

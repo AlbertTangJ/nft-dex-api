@@ -1,18 +1,20 @@
 import { Service } from "typedi";
 import prisma from "../helpers/client";
 import { Prisma, UserInfo } from "@prisma/client";
-
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
 import { Decimal } from "@prisma/client/runtime";
 import { BigNumber, utils } from "ethers";
-type Follower = { followerAddress: string; followers: number; ranking: number; points: number; userAddress: string; };
+import { PointsService } from "./points.service";
+import axios from "axios";
+
+type Follower = { followerAddress: string; followers: number; ranking: number; points: number; userAddress: string };
 (BigInt.prototype as any).toJSON = function () {
-  return this.toString()
-}
+  return this.toString();
+};
 @Service()
 export class UserService {
-  constructor() { }
+  constructor(private pointService: PointsService) {}
   async create(data: Prisma.UserCreateInput) {
     return prisma.user.create({
       data: data
@@ -75,8 +77,8 @@ export class UserService {
         userAddress: userAddress,
         createTimestamp: currentTimestamp,
         updateTime: currentDateTime,
-        updateTimestamp: currentTimestamp,
-      }
+        updateTimestamp: currentTimestamp
+      };
       let user = await prisma.connectHistory.create({ data: data });
       return user;
     }
@@ -96,7 +98,7 @@ export class UserService {
 
   // 将地址加入whitelist
   async saveWhitelist(list: string[]) {
-    let datalist = []
+    let datalist = [];
     let currentDateTime = new Date().toISOString();
     let currentTimestamp = Math.floor(Date.now() / 1000);
     for (let i = 0; i < list.length; i++) {
@@ -105,15 +107,15 @@ export class UserService {
         userAddress: address.toLowerCase(),
         createTimestamp: currentTimestamp,
         updateTime: currentDateTime,
-        updateTimestamp: currentTimestamp,
-      }
-      let haveOne = await prisma.whitelist.findUnique({ where: { userAddress: address.toLowerCase() } })
+        updateTimestamp: currentTimestamp
+      };
+      let haveOne = await prisma.whitelist.findUnique({ where: { userAddress: address.toLowerCase() } });
       if (haveOne == null || haveOne == undefined) {
-        datalist.push(data)
+        datalist.push(data);
       }
     }
     if (datalist.length > 0) {
-      let result = await prisma.whitelist.createMany({ data: datalist })
+      let result = await prisma.whitelist.createMany({ data: datalist });
       return result;
     }
     return null;
@@ -121,10 +123,10 @@ export class UserService {
 
   async fetchUsersRank(users: string[]) {
     let multiplierResult = await prisma.rankMultiplier.findMany();
-    let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
-    let isStartRank = currentSeason == null ? false : true
+    let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } });
+    let isStartRank = currentSeason == null ? false : true;
     if (isStartRank) {
-      let usersStr = users.join("','")
+      let usersStr = users.join("','");
 
       let sql = `SELECT "userAddress", "isBan", "rank", "tradeCount", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
       FROM (SELECT row_number() OVER (
@@ -143,39 +145,41 @@ export class UserService {
       "isBan",
       total
       FROM api."PointsLeaderBoard" 
-      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart}
-      ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`
-      let results: any[] = await prisma.$queryRawUnsafe(sql)
+      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${
+        currentSeason.seasonStart
+      }
+      ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`;
+      let results: any[] = await prisma.$queryRawUnsafe(sql);
       if (results.length > 0) {
-        let multiplier = 1
-        let list = JSON.parse(JSON.stringify(results))
+        let multiplier = 1;
+        let list = JSON.parse(JSON.stringify(results));
         for (let i = 0; i < list.length; i++) {
           const element = list[i];
-          let tradeVol = element.tradeVol
-          let isBan = element.isBan
-          let tradeVolBigNumber = BigNumber.from((tradeVol.toString()))
+          let tradeVol = element.tradeVol;
+          let isBan = element.isBan;
+          let tradeVolBigNumber = BigNumber.from(tradeVol.toString());
           // console.log(tradeVolBigNumber.toString())
           if (tradeVolBigNumber.lt(utils.parseEther("5"))) {
-            element.rank = 0
+            element.rank = 0;
           }
           if (isBan) {
-            element.rank = -1
+            element.rank = -1;
           }
           for (let a = 0; a < multiplierResult.length; a++) {
             const multiplierItem = multiplierResult[a];
             let startRank = multiplierItem.start_rank;
             let endRank = multiplierItem.end_rank;
             if (startRank <= element.rank && element.rank >= endRank) {
-              multiplier = parseFloat(multiplierItem.multiplier.toString())
-              element.total = parseFloat((element.total * multiplier).toFixed(1))
-              break
+              multiplier = parseFloat(multiplierItem.multiplier.toString());
+              element.total = parseFloat((element.total * multiplier).toFixed(1));
+              break;
             }
           }
         }
-        return list
+        return list;
       }
     }
-    return []
+    return [];
   }
 
   // 根据参数地址获取followers
@@ -215,22 +219,22 @@ export class UserService {
           ON uf."userAddress" = ${condition}
           AND uf."followerAddress" = t."userAddress";
     `;
-    let users = []
+    let users = [];
     for (let i = 0; i < followers.length; i++) {
       const element = followers[i];
-      users.push(element.userAddress.toLowerCase())
+      users.push(element.userAddress.toLowerCase());
     }
     // ['0x1c6b2888c4268a9c8eaf7eb77a759492bbe10833','0x958d58fbb67666e5f693895edc65f46d051ee304','0x2d528026fef9be28b4c97b10979737b3f445eebd']
     if (users.length > 0) {
-      let ranks = await this.fetchUsersRank(users)
+      let ranks = await this.fetchUsersRank(users);
       for (let i = 0; i < followers.length; i++) {
         const element = followers[i];
-        const userAddress = element.userAddress.toLowerCase()
+        const userAddress = element.userAddress.toLowerCase();
         for (let r = 0; r < ranks.length; r++) {
           const rank = ranks[r];
           if (userAddress == rank.userAddress) {
-            element.points = rank.total
-            element.ranking = parseInt(rank.rank)
+            element.points = rank.total;
+            element.ranking = parseInt(rank.rank);
           }
         }
       }
@@ -275,22 +279,22 @@ export class UserService {
       ON uf."userAddress" = ${condition}
       AND uf."followerAddress" = t."followerAddress";
     `;
-    let users = []
+    let users = [];
     for (let i = 0; i < followList.length; i++) {
       const element = followList[i];
-      users.push(element.followerAddress.toLowerCase())
+      users.push(element.followerAddress.toLowerCase());
     }
     // ['0x1c6b2888c4268a9c8eaf7eb77a759492bbe10833','0x958d58fbb67666e5f693895edc65f46d051ee304','0x2d528026fef9be28b4c97b10979737b3f445eebd']
     if (users.length > 0) {
-      let ranks = await this.fetchUsersRank(users)
+      let ranks = await this.fetchUsersRank(users);
       for (let i = 0; i < followList.length; i++) {
         const element = followList[i];
-        const userAddress = element.followerAddress.toLowerCase()
+        const userAddress = element.followerAddress.toLowerCase();
         for (let r = 0; r < ranks.length; r++) {
           const rank = ranks[r];
           if (userAddress == rank.userAddress) {
-            element.points = rank.total
-            element.ranking = parseInt(rank.rank)
+            element.points = rank.total;
+            element.ranking = parseInt(rank.rank);
           }
         }
       }
@@ -401,7 +405,7 @@ export class UserService {
     let currentDateTime = new Date().toISOString();
     let currentTimestamp = Math.floor(Date.now() / 1000);
     if (Array.isArray(params)) {
-      let datalist = []
+      let datalist = [];
       for (let i = 0; i < params.length; i++) {
         const element = params[i];
         let data = {
@@ -413,8 +417,8 @@ export class UserService {
           createTimestamp: currentTimestamp,
           updateTime: currentDateTime,
           updateTimestamp: currentTimestamp
-        }
-        datalist.push(data)
+        };
+        datalist.push(data);
       }
       await prisma.userEventsLog.createMany({
         data: datalist
@@ -433,7 +437,6 @@ export class UserService {
         }
       });
     }
-
   }
 
   async authUserService(signature: string, publicAddress: string) {
@@ -560,7 +563,7 @@ export class UserService {
             AND uf."followerAddress" = t."followerAddress") mf 
       ON mf."followerAddress" = uif."userAddress"
       WHERE LOWER(uif.username) LIKE ${searchKeyword.toLowerCase()} OR uif."userAddress" LIKE ${searchKeyword.toLowerCase()}
-      LIMIT ${pageSize} OFFSET ${pageNo}`
+      LIMIT ${pageSize} OFFSET ${pageNo}`;
       let result = await prisma.$queryRaw(sql);
       return result;
     } else {
@@ -591,8 +594,8 @@ export class UserService {
         createTime: currentDateTime,
         createTimestamp: currentTimestamp,
         updateTime: currentDateTime,
-        updateTimestamp: currentTimestamp,
-      }
+        updateTimestamp: currentTimestamp
+      };
       let result = await prisma.subscribeUsers.create({ data: data });
       return result;
     }
@@ -611,7 +614,6 @@ export class UserService {
   }
 
   async fetchUserInfo(user: string, targetUser: string) {
-
     let targetUserInfo: {
       id: string;
       userAddress: string;
@@ -627,7 +629,7 @@ export class UserService {
     } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
 
     if (targetUserInfo == null) {
-      return null
+      return null;
     }
 
     let haveFollowed = await prisma.userFollowing.findUnique({
@@ -700,5 +702,30 @@ export class UserService {
     const result: UserInfo = await prisma.userInfo.create({ data: userInfo });
     await prisma.$queryRaw`CALL GEN_UNIQUE_REFERRAL_CODE(7, ${regUserAddress.toLowerCase()}::TEXT);`;
     return result;
+  }
+
+  async allUserInfos() {
+    let userInfos = await prisma.userInfo.findMany();
+    return userInfos;
+  }
+
+  async updateDegenScore(userAddress: string) {
+    try {
+      const result = await axios.get(`https://beacon.degenscore.com/v1/beacon/${userAddress.toLowerCase()}`);
+      if (result.status == 200 && result.data) {
+        let degenScore = result.data.traits?.degen_score?.value ?? 0;
+        const multiplier = await this.pointService.getDegenScoreMultiplier(degenScore);
+
+        let userInfos = await prisma.userInfo.update({
+          where: { userAddress: userAddress.toLowerCase() },
+          data: { degenScore: degenScore, degenScoreMultiplier: multiplier }
+        });
+        return userInfos;
+      }
+    } catch (error) {
+      console.log("error", error.message);
+      return null;
+    }
+    return null;
   }
 }
