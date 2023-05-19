@@ -304,11 +304,7 @@ export class UserService {
   async fetchCodeOwner(code: string) {
     let result = await prisma.userInfo.findFirst({ where: { referralCode: code } })
     if (result != null) {
-      if (result.username != null && result.username != '') {
-        return { user: result.username }
-      } else {
-        return { user: result.userAddress }
-      }
+      return { userAddress: result.userAddress, username: result.username }
     }
     return null
   }
