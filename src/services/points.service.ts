@@ -174,7 +174,7 @@ export class PointsService {
                 element.rank = 0
             }
         }
-        // console.log(pointsLeaderBoardList)
+
         let finalRanks = []
         for (let i = 0; i < pointsLeaderBoardList.length; i++) {
             const point = pointsLeaderBoardList[i];
@@ -185,114 +185,6 @@ export class PointsService {
 
         return finalRanks
     }
-
-    // async calculateUserPoints(user: string) {
-    //     let userTradeResult = await this.userTradeVol(user);
-    //     let unitEth = BigNumber(utils.parseEther("1").toString())
-    //     let limitEth = BigNumber(utils.parseEther("5").toString())
-    //     let referredReward = 0.02
-    //     let referringReward = 0.03
-    //     let isInputCode = false
-    //     let isTrade = false
-    //     if (userTradeResult == null) {
-    //         return {
-    //             rank: 0,
-    //             multiplier: 0,
-    //             userAddress: null,
-    //             username: null,
-    //             referralCode: "",
-    //             enterReferralUser: [],
-    //             eligibleCount: 0,
-    //             isInputCode: isInputCode,
-    //             isTrade: isTrade,
-    //             tradeVol: { vol: 0, points: 0 },
-    //             referral: {
-    //                 referralSelfRewardPoints: 0,
-    //                 referringRewardPoints: 0
-    //             }, converge: {
-    //                 points: 0,
-    //                 vol: 0
-    //             }
-    //         }
-    //     }
-    //     let userCurrentConvergeBigNumber = BigNumber(userTradeResult.convergeVol.toString())
-    //     let userCurrentTradeVolBigNumber = BigNumber(userTradeResult.tradeVol.toString())
-    //     let userCurrentTradeVol = userCurrentTradeVolBigNumber.dividedBy(unitEth);
-    //     let userCurrentConvergeVol = userCurrentConvergeBigNumber.dividedBy(unitEth);
-    //     let tradeVolNumber = userCurrentTradeVol.multipliedBy(10).toFixed(1);
-    //     let convergeVolNumber = userCurrentConvergeVol.multipliedBy(10).toFixed(1);
-    //     isInputCode = userTradeResult.isInputCode
-    //     isTrade = userTradeResult.hasTraded
-    //     // 找到推荐当前用户的人
-
-    //     let userReferredResult = await this.userReferredPoints(user);
-    //     // 先看当前用户够不够5个eth
-    //     // null 当前用户没有推荐人 ，当前用户的2% 奖励 是需要看 当前用户的推荐人，有没有超过5个eth
-    //     if (userReferredResult == null || userCurrentTradeVolBigNumber.lte(limitEth)) {
-    //         referredReward = 0
-    //     } else {
-    //         let code = userReferredResult.referralCode
-    //         let userInfo = await prisma.userInfo.findFirst({ where: { referralCode: code } })
-    //         let codeOwner = userInfo.userAddress;
-    //         let referredUserTradeVol = await this.userTradeVol(codeOwner);
-    //         let referredUserTradeVolNumber = new BigNumber(referredUserTradeVol.tradeVol.toString());
-    //         if (referredUserTradeVolNumber.lt(limitEth)) {
-    //             referredReward = 0
-    //         }
-    //     }
-
-    //     // 当前用户的成交量 * referredReward = 当前用户的referred奖励 , 当前用户需要trade vol >= 5
-    //     let referralSelfRewardPoints = (referredReward * parseFloat(tradeVolNumber) * 10);
-    //     // 
-    //     let referringRewardPoints = 0
-    //     let eligibleCount = 0
-
-    //     if (userCurrentTradeVolBigNumber.gte(limitEth)) {
-    //         let userReferralPoints = await this.userReferringPoints(user);
-    //         for (let i = 0; i < userReferralPoints.length; i++) {
-    //             const points = userReferralPoints[i].tradeVol;
-    //             // let username = userReferralPoints[i].username
-    //             // let userAddress = userReferralPoints[i].reffedUser
-    //             if (points != null) {
-    //                 let pointsBig = BigNumber(points)
-    //                 if (pointsBig.gte(limitEth)) {
-    //                     let currentPoints = pointsBig.dividedBy(unitEth).toFixed(1);
-    //                     referringRewardPoints += (parseFloat(currentPoints) * referringReward * 10)
-    //                     eligibleCount += 1
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     let convergeVolNumberPoints = parseFloat(convergeVolNumber) > 0 ? parseFloat(convergeVolNumber) : 0
-
-    //     // console.log(leaderBoard)
-    //     let multiplierNumber = 1
-    //     // console.log(userReferralPoints)
-    //     let enterReferralUser = await this.fetchReferringUser(user);
-    //     let total = (parseFloat(tradeVolNumber) + referringRewardPoints + referralSelfRewardPoints + convergeVolNumberPoints) * multiplierNumber
-    //     let result = {
-    //         userAddress: userTradeResult.userAddress,
-    //         username: userTradeResult.username,
-    //         multiplier: multiplierNumber,
-    //         referralCode: userTradeResult.referralCode,
-    //         total: total,
-    //         isInputCode: isInputCode,
-    //         isTrade: isTrade,
-    //         enterReferralUser: enterReferralUser,
-    //         eligibleCount: eligibleCount,
-    //         tradeVol: { vol: userCurrentTradeVol.toString(), points: parseFloat(tradeVolNumber) },
-    //         referral: {
-    //             referralSelfRewardPoints: parseFloat(referralSelfRewardPoints.toFixed(1)),
-    //             referringRewardPoints: parseFloat(referringRewardPoints.toFixed(1))
-    //         },
-    //         converge: {
-    //             points: convergeVolNumberPoints,
-    //             val: userCurrentConvergeVol.toString()
-    //         }
-    //     }
-    //     return result
-    // }
 
     async checkIsSeason() {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
@@ -454,4 +346,16 @@ export class PointsService {
 
         return result
     }
+
+    async getDegenScoreMultiplier(score: number): Promise<number> {
+        let multiplierResult = await prisma.degenscoreMultiplier.findFirst({
+          where: { start_points: { lt: score }, end_points: { gte: score } }
+        });
+    
+        if (multiplierResult == null) {
+          return 1;
+        }else{
+            return multiplierResult.multiplier.toNumber()
+        }
+      }
 }

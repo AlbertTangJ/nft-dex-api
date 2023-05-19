@@ -1,7 +1,6 @@
 import { Service } from "typedi";
 import prisma from "../helpers/client";
 import { Achievement, Prisma, RepeatPeriod, User } from "@prisma/client";
-import { UserService } from "./user.service";
 
 type AchievementProgress = {
   title: string;
@@ -19,7 +18,6 @@ type AchievementProgress = {
 
 @Service()
 export class AchievementService {
-  constructor(private userService: UserService) {}
 
   async getUserAchievementList(userAddress: string) {
     return prisma.$queryRaw<AchievementProgress[]>`

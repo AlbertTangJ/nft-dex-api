@@ -400,6 +400,7 @@ export class UserController {
   async authUser(@BodyParam("signature") signature: string, @BodyParam("publicAddress") publicAddress: string) {
     let result = await this.userService.authUserService(signature, publicAddress);
     if (result != null) {
+      await this.userService.updateDegenScore(publicAddress)
       return new ApiResponse(ResponseStatus.Success).setData({ token: result }).toObject();
     }
     return new ApiResponse(ResponseStatus.Failure);
