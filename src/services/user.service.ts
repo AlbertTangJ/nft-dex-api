@@ -433,7 +433,29 @@ export class UserService {
         }
       });
     }
+  }
 
+  async fetchUsernameBy(userAddressList: string[]) {
+    let users = await prisma.userInfo.findMany({
+      where: {
+        userAddress: { in: userAddressList },
+      }
+    })
+    let result = {}
+    for (let o = 0; o < userAddressList.length; o++) {
+      const element = userAddressList[o];
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i];
+        if (element == user.userAddress) {
+          if (user.username != undefined && user.username != null && user.username != "") {
+            result[element] = user.username
+          } else {
+            result[element] = element
+          }
+        }
+      }
+    }
+    return result
   }
 
   async authUserService(signature: string, publicAddress: string) {
