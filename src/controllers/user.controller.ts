@@ -203,6 +203,16 @@ export class UserController {
     return result;
   }
 
+  @Get("/users/referral/code/userinfo")
+  async fetchUserByReferralCode(@QueryParam("code") code: string) {
+    if (code != null && code != undefined && code.length == 7) {
+      let result = await this.userService.fetchCodeOwner(code);
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Success).setData(null);
+  }
+
+
   @Post("/users/search")
   async search(
     @BodyParam("keyword") keyword: string,

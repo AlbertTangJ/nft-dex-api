@@ -301,6 +301,18 @@ export class UserService {
     return followList;
   }
 
+  async fetchCodeOwner(code: string) {
+    let result = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+    if (result != null) {
+      if (result.username != null && result.username != '') {
+        return { user: result.username }
+      } else {
+        return { user: result.userAddress }
+      }
+    }
+    return null
+  }
+
   // userAddress follow followerAddress
   // userAddress following + 1
   // followerAddress follower + 1
