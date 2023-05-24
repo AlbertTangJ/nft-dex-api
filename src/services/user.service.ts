@@ -14,7 +14,7 @@ type Follower = { followerAddress: string; followers: number; ranking: number; p
 };
 @Service()
 export class UserService {
-  constructor(private pointService: PointsService) {}
+  constructor(private pointService: PointsService) { }
   async create(data: Prisma.UserCreateInput) {
     return prisma.user.create({
       data: data
@@ -145,9 +145,8 @@ export class UserService {
       "isBan",
       total
       FROM api."PointsLeaderBoard" 
-      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${
-        currentSeason.seasonStart
-      }
+      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart
+        }
       ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`;
       let results: any[] = await prisma.$queryRawUnsafe(sql);
       if (results.length > 0) {
@@ -302,6 +301,14 @@ export class UserService {
     return followList;
   }
 
+  async fetchCodeOwner(code: string) {
+    let result = await prisma.userInfo.findFirst({ where: { referralCode: code } })
+    if (result != null) {
+      return { userAddress: result.userAddress, username: result.username }
+    }
+    return null
+  }
+
   // userAddress follow followerAddress
   // userAddress following + 1
   // followerAddress follower + 1
@@ -437,6 +444,29 @@ export class UserService {
         }
       });
     }
+  }
+
+  async fetchUsernameBy(userAddressList: string[]) {
+    let users = await prisma.userInfo.findMany({
+      where: {
+        userAddress: { in: userAddressList },
+      }
+    })
+    let result = {}
+    for (let o = 0; o < userAddressList.length; o++) {
+      const element = userAddressList[o];
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i];
+        if (element == user.userAddress) {
+          if (user.username != undefined && user.username != null && user.username != "") {
+            result[element] = user.username
+          } else {
+            result[element] = element
+          }
+        }
+      }
+    }
+    return result
   }
 
   async authUserService(signature: string, publicAddress: string) {

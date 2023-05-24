@@ -203,6 +203,16 @@ export class UserController {
     return result;
   }
 
+  @Get("/users/referral/code/userinfo")
+  async fetchUserByReferralCode(@QueryParam("code") code: string) {
+    if (code != null && code != undefined && code.length == 7) {
+      let result = await this.userService.fetchCodeOwner(code);
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Success).setData(null);
+  }
+
+
   @Post("/users/search")
   async search(
     @BodyParam("keyword") keyword: string,
@@ -454,7 +464,7 @@ export class UserController {
 
     if (
       (decodedData.name === "openPosition" || decodedData.name === "closePosition") &&
-      tx.from.toLowerCase() === userAddress.toLowerCase() 
+      tx.from.toLowerCase() === userAddress.toLowerCase()
       // && tx.to.toLowerCase() === "0x481AD75e7874c967e3E26eED23b61eE538b51042".toLowerCase() // Move to .env
     ) {
       await this.userService.updateUserInfos({
@@ -546,5 +556,24 @@ export class UserController {
   async hasPartialClosed(@QueryParam("userAddress", { required: true }) userAddress: string) {
     let result = await this.clearingHouseService.getLatestPartialCloseRecord(userAddress);
     return new ApiResponse(ResponseStatus.Success).setData({ hasPartialClosed: result != null }).toObject();
+  }
+
+
+  @Post("/users/username")
+  async fetchUsernameByAddressList(@BodyParam("userAddressList", { required: true }) userAddressList: string[]) {
+    if (userAddressList.length <= 500) {
+      let params = []
+      for (let i = 0; i < userAddressList.length; i++) {
+        const element = userAddressList[i];
+        let userAddress = element.toLowerCase()
+        if (isAddress(userAddress)) {
+          params.push(userAddress)
+        } else {
+          return new ApiResponse(ResponseStatus.Failure).setErrorMessage("address format not right")
+        }
+      }
+      let result = await this.userService.fetchUsernameBy(params);
+      return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+    }
   }
 }
