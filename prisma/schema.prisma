@@ -465,6 +465,8 @@ model PointsLeaderBoard {
   blockTimestamp           Int?      @default(0)
   logIndex                 Decimal?  @default(0) @db.Decimal
   isBan                    Boolean   @default(false)
+  multiplier               Decimal?  @default(1) @db.Decimal
+  finalRank                Decimal?  @default(0) @db.Decimal
 
   @@unique([userAddress, season, seasonStart], map: "pointsleaderborad_user_address_unique")
   @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
