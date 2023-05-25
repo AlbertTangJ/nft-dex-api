@@ -294,12 +294,60 @@ export class PointsService {
         if (season == 0) {
             return await this.userPoints(user, show)
         } else {
-            
+            return await this.userPointsHistorySeason(user, show, season)
         }
     }
 
     async userPointsHistorySeason(user: string, show: string, season: number) {
-        await prisma.pointsLeaderBoard.findMany({ where: { AND: [{ season: season }, { userAddress: user.toLowerCase() }] } })
+        let results = await prisma.pointsLeaderBoard.findMany({ where: { AND: [{ season: season }, { userAddress: user.toLowerCase() }] } })
+        let rankData = {
+            rank: 0,
+            multiplier: 0,
+            total: 0,
+            originalTotal: 0,
+            userAddress: user,
+            username: "",
+            tradeVol: { vol: "", points: 0, multiplier: 1 },
+            referral: {
+                referralSelfRewardPoints: 0,
+                referringRewardPoints: 0
+            }, converge: {
+                points: 0,
+                val: ""
+            },
+            referralUser: {},
+            eligibleCount: 0,
+            referredUserCount: 0,
+            referralCode: "",
+            isInputCode: false,
+            isTrade: false,
+            isBan: false,
+            degenScore: 0
+        }
+        if (results.length == 0) {
+            return rankData
+        } else {
+            let item = results.shift()
+            let userInfo = await prisma.userInfo.findFirst({ where: { userAddress: user.toLowerCase() } })
+            let enterReferralUser = await this.fetchReferringUser(user.toLowerCase())
+            rankData.rank = parseInt(item.finalRank.toString())
+            rankData.multiplier = parseFloat(item.multiplier.toString())
+            rankData.total = parseFloat(item.total.toString()) * parseFloat(item.multiplier.toString())
+            rankData.originalTotal = parseFloat(item.total.toString())
+            rankData.userAddress = user.toLowerCase()
+            rankData.username = userInfo.username
+            rankData.tradeVol = { vol: item.tradeVol.toString(), points: parseFloat(item.tradePoints.toString()), multiplier: parseFloat(userInfo.degenScoreMultiplier.toString()) }
+            rankData.referral = { referralSelfRewardPoints: parseFloat(item.referralSelfRewardPoints.toString()), referringRewardPoints: parseFloat(item.referringRewardPoints.toString()) }
+            rankData.converge = { points: parseFloat(item.convergePoints.toString()), val: item.convergeVol.toString() }
+            rankData.referralUser = enterReferralUser
+            rankData.eligibleCount = parseInt(item.eligibleCount.toString())
+            rankData.referralCode = userInfo.referralCode
+            rankData.isBan = item.isBan
+            rankData.isInputCode = userInfo.isInputCode
+            rankData.isTrade = userInfo.hasTraded
+            rankData.degenScore = parseFloat(userInfo.degenScore.toString())
+        }
+        return rankData
     }
 
     async userPoints(user: string, show: string) {
