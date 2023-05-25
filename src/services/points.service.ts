@@ -47,24 +47,25 @@ export class PointsService {
 
     // 获取当前用户referral points 详细得分
     async fetchCurrentUserReferralRewardDetail(user: string, pageNo: number, pageSize: number) {
+        let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let results: any[] = await this.prismaClient.$queryRaw`SELECT plb."userAddress" AS "userAddress", u2.username AS "username" ,u."userAddress" AS "codeOwner", r."referralCode" AS "referralCode", plb."tradeVol" AS "tradeVol", 
-                CASE WHEN plb."tradePoints" >= 50 
-                THEN true 
-                ELSE false 
-                END AS eligiable,
-                CASE WHEN plb."tradePoints" >= 50
-                THEN (plb."tradeVol" / 10^18) * 0.03 *10
-                ELSE 0
-                END AS "referringRewardPoints"
-            FROM "ReferralEvents" AS r
-            LEFT JOIN "PointsLeaderBoard" AS plb
-            ON plb."userAddress" = r."userAddress"
-            LEFT JOIN "UserInfo" AS u
-            ON u."referralCode" = r."referralCode"
-            LEFT JOIN "UserInfo" AS u2
-            ON u2."userAddress" = plb."userAddress"
-            WHERE plb.season = 6 AND u."userAddress" = ${user} ORDER BY "referralCode" DESC 
-            LIMIT ${pageSize} OFFSET ${pageNo}`;
+                        CASE WHEN elig.eligible THEN true ELSE false END AS eligiable,
+                        CASE WHEN plb."tradePoints" >= 50
+                        THEN (plb."tradeVol" / 10^18) * 0.03 *10
+                        ELSE 0
+                        END AS "referringRewardPoints"
+                    FROM "ReferralEvents" AS r
+                    LEFT JOIN "PointsLeaderBoard" AS plb
+                    ON plb."userAddress" = r."userAddress"
+                    LEFT JOIN "UserInfo" AS u
+                    ON u."referralCode" = r."referralCode"
+                    LEFT JOIN "UserInfo" AS u2
+                    ON u2."userAddress" = plb."userAddress"
+                    LEFT JOIN (SELECT "userAddress", eligible FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
+                    FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
+                    ON r."userAddress" = elig."userAddress"
+                    WHERE plb.season = ${currentSeason.round} AND u."userAddress" = ${user} ORDER BY "referralCode" DESC 
+                    LIMIT ${pageSize} OFFSET ${pageNo}`;
         return results
     }
 
@@ -82,6 +83,88 @@ export class PointsService {
     async userReferredPoints(user: string) {
         let result = await prisma.referralEvents.findFirst({ where: { userAddress: user.toLowerCase() } });
         return result;
+    }
+
+    async pointsLeaderBoardBySeason(show: string, pageNo: number, pageSize: number, season: number) {
+        if (season == 0) {
+            return await this.pointsLeaderBoard(show, pageNo, pageSize);
+        } else {
+            return await this.fetchFinishPointsLeaderBoard(season, pageNo, pageSize, show)
+        }
+    }
+
+    async fetchFinishPointsLeaderBoard(season: number, pageNo: number, pageSize: number, show: string) {
+        let pointsLeaderBoardList = []
+        let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, plb."isBan" AS "isBan", 
+                                        uif."hasTraded" AS "hasTraded", 
+                                        uif."isInputCode" AS "isInputCode",
+                                        uif."referralCode" AS "referralCode",
+                                        plb."tradeCount" AS "tradeCount", 
+                                        plb."userAddress" AS "userAddress", 
+                                        plb."convergePoints" AS "convergePoints",
+                                        plb."convergeVol" AS "convergeVol", 
+                                        plb."referralSelfRewardPoints" AS "referralSelfRewardPoints",
+                                        plb."referringRewardPoints" AS "referringRewardPoints", 
+                                        plb."isBan" AS "isBan", 
+                                        plb."tradeVol" AS "tradeVol", 
+                                        plb."tradePoints" AS "tradePoints", 
+                                        plb."eligibleCount" AS "eligibleCount",
+                                        plb."ogPoints" AS "ogPoints", 
+                                        plb."finalRank" AS "rank",
+                                        plb.multiplier AS multiplier,
+                                        (plb.total * plb.multiplier) AS total,
+                                        plb.total AS "originalTotal"
+                                        FROM api."UserInfo" uif
+                                        LEFT JOIN api."PointsLeaderBoard" plb
+                                        ON uif."userAddress" = plb."userAddress"
+                                        WHERE plb.season = ${season} AND "finalRank" != 0
+                                        ORDER BY "finalRank" ASC
+                                        LIMIT ${pageSize} OFFSET ${pageNo}`
+        for (let index = 0; index < results.length; index++) {
+            const item = results[index];
+            // console.log(item)
+            let userAddress = item.userAddress;
+            let tradeVolPoints = item.tradePoints;
+            let referralPoints = BigNumber(item.referringRewardPoints.toString()).plus(item.referralSelfRewardPoints.toString()).toString();
+            let convergePoints = item.convergePoints;
+            let total = item.total
+            let multiplier = item.multiplier
+            let originalTotal = item.originalTotal
+            let ogPoints = item.ogPoints
+            let referralCode = item.referralCode
+            let rank = item.rank
+            // console.log(`${tradeVolPoints} + ${referralPoints} + ${convergePoints} = ${total}`)
+            let data = {
+                total: parseFloat(total),
+                originalTotal: parseFloat(parseFloat(originalTotal).toFixed(2)),
+                multiplier: parseFloat(multiplier),
+                username: item.username,
+                userAddress: userAddress,
+                isBan: item.isBan,
+                tradeVol: item.tradeVol,
+                referralCode: referralCode,
+                rank: parseInt(rank)
+            }
+            if (show != null) {
+                let showData = show.split(",")
+                if (showData.indexOf("tradeVol") != -1) {
+                    data['tradeVolPoints'] = parseFloat(tradeVolPoints)
+                }
+
+                if (showData.indexOf('referral') != -1) {
+                    data['referralPoints'] = parseFloat(referralPoints)
+                }
+
+                if (showData.indexOf('converge') != -1) {
+                    data['convergePoints'] = parseFloat(convergePoints)
+                }
+                if (showData.indexOf('og') != -1) {
+                    data['og'] = parseFloat(ogPoints)
+                }
+            }
+            pointsLeaderBoardList.push(data)
+        }
+        return pointsLeaderBoardList;
     }
 
     async pointsLeaderBoard(show: string, pageNo: number, pageSize: number) {
@@ -349,13 +432,13 @@ export class PointsService {
 
     async getDegenScoreMultiplier(score: number): Promise<number> {
         let multiplierResult = await prisma.degenscoreMultiplier.findFirst({
-          where: { start_points: { lt: score }, end_points: { gte: score } }
+            where: { start_points: { lt: score }, end_points: { gte: score } }
         });
-    
+
         if (multiplierResult == null) {
-          return 1;
-        }else{
+            return 1;
+        } else {
             return multiplierResult.multiplier.toNumber()
         }
-      }
+    }
 }

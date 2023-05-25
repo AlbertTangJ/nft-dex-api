@@ -55,7 +55,8 @@ export class PointsController {
     }
 
     @Get("/points/rank")
-    async fetchPointsLeaderBoard(@QueryParam("show") show: string,
+    async fetchPointsLeaderBoard(@QueryParam("show") show: string, 
+        @QueryParam("season") season: number = 0,
         @QueryParam("pageNo") pageNo: number = 1,
         @QueryParam("pageSize") pageSize: number = 250) {
         try {
@@ -77,7 +78,7 @@ export class PointsController {
             pageNo = pageNo - 1;
             pageNo = pageNo * pageSize;
         }
-        let result = await this.pointService.pointsLeaderBoard(show, pageNo, pageSize);
+        let result = await this.pointService.pointsLeaderBoardBySeason(show, pageNo, pageSize, season);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }
@@ -134,26 +135,26 @@ export class PointsController {
         return new ApiResponse(ResponseStatus.Failure);
     }
 
-// @Get("/fetchDegenscore")
-//   async fetchDegenscore() {
-//     const allUsers = await this.userService.allUserInfos();
-//     let result;
-//     for (let user of allUsers) {
-//       try {
-//         result = await axios.get(`https://beacon.degenscore.com/v1/beacon/${user.userAddress}`);
-//         console.log("result.response", result.status);
-//         if (result.status == 200 && result.data) {
-//           let degenScore = result.data.traits?.degen_score?.value ?? 0;
-//           console.log("degenScore", degenScore);
-//           const multiplier = await this.pointService.getDegenScoreMultiplier(degenScore);
-//           await this.userService.updateDegenScore(user.userAddress, degenScore, multiplier);
-//         }
-//       } catch (error) {
-//         console.log("error", error.message);
-//       }
-//       await new Promise(resolve => setTimeout(resolve, 500));
-//     }
-//     return new ApiResponse(ResponseStatus.Success).setData("ok");
-//     //return new ApiResponse(ResponseStatus.Failure);
-//   }
+    // @Get("/fetchDegenscore")
+    //   async fetchDegenscore() {
+    //     const allUsers = await this.userService.allUserInfos();
+    //     let result;
+    //     for (let user of allUsers) {
+    //       try {
+    //         result = await axios.get(`https://beacon.degenscore.com/v1/beacon/${user.userAddress}`);
+    //         console.log("result.response", result.status);
+    //         if (result.status == 200 && result.data) {
+    //           let degenScore = result.data.traits?.degen_score?.value ?? 0;
+    //           console.log("degenScore", degenScore);
+    //           const multiplier = await this.pointService.getDegenScoreMultiplier(degenScore);
+    //           await this.userService.updateDegenScore(user.userAddress, degenScore, multiplier);
+    //         }
+    //       } catch (error) {
+    //         console.log("error", error.message);
+    //       }
+    //       await new Promise(resolve => setTimeout(resolve, 500));
+    //     }
+    //     return new ApiResponse(ResponseStatus.Success).setData("ok");
+    //     //return new ApiResponse(ResponseStatus.Failure);
+    //   }
 }
