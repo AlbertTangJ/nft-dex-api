@@ -196,7 +196,7 @@ export class PointsService {
             ON uif."userAddress" = plb."userAddress"
             LEFT JOIN (SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" FROM api."PointsLeaderBoard" AS plb WHERE season > 0 AND "tradeVol" > 0 GROUP BY "userAddress") t) elig
             ON plb."userAddress" = elig."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND elig."tradeVolTotal" >= 5000000000000000000
+            WHERE plb.season = ${currentSeason.round} AND elig."tradeVolTotal" >= 5000000000000000000 AND plb."tradeVol" > 0
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
         for (let index = 0; index < results.length; index++) {
@@ -436,7 +436,7 @@ export class PointsService {
         if (rankData.isBan) {
             rank = "-1"
         } else {
-            if (!rankData.eligible) {
+            if (!rankData.eligible || rankData.tradeVol == "0" ) {
                 rank = 0
             }
         }
