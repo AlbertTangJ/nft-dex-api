@@ -1,6 +1,6 @@
 import prisma from "../helpers/client";
 import { Service } from "typedi";
-import { Position } from "@prisma/client";
+import { CompetitionSeason1, Position } from "@prisma/client";
 
 const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
 
@@ -87,6 +87,17 @@ export class CompetitionService {
     ORDER BY "absolutePnl" ASC
     LIMIT 100
     OFFSET ${(page - 1) * 100}
+    `;
+  }
+
+  async getPersonalLeaderboardRecord(userAddress: string) {
+    return prisma.$queryRaw<any[]>`
+    SELECT *
+    FROM api."CompetitionSeason1" cs 
+    LEFT JOIN api."UserInfo" u 
+    ON u."userAddress" = cs."userAddress"
+    WHERE cs."updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason1" ORDER BY "updatedIndex" DESC LIMIT 1)
+    AND cs."userAddress" = ${userAddress.toLowerCase()}
     `;
   }
 }
