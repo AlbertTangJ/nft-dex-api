@@ -105,7 +105,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData(result);
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -127,26 +127,24 @@ export class CompetitionController {
 
     let result = await this.competitionService.getRealisedPnlLeaderboard(pageNo);
     if (result != null) {
+      let userRecord = null;
+      let userRank = 0;
+      let userObj = null;
       if (user.length > 0) {
-        let userRecord = null;
-        let userRank = 0;
-        let userObj = null;
-        if (user.length > 0) {
-          userRecord = (await this.competitionService.getPersonalLeaderboardRecord(user))[0] ?? null;
-          if (userRecord) {
-            userRank = result.find(record => record.userAddress == userRecord?.userAddress)?.rank ?? 0;
-          }
-          userObj = {
-            userAddress: user.toLowerCase(),
-            username: userRecord?.username ?? "",
-            rank: userRank.toString(),
-            pnl: userRecord?.roi ?? "0",
-            tradeVol: userRecord?.tradedVolume ?? "0",
-            eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
-          };
+        userRecord = (await this.competitionService.getPersonalLeaderboardRecord(user))[0] ?? null;
+        if (userRecord) {
+          userRank = result.find(record => record.userAddress == userRecord?.userAddress)?.rank ?? 0;
         }
+        userObj = {
+          userAddress: user.toLowerCase(),
+          username: userRecord?.username ?? "",
+          rank: userRank.toString(),
+          pnl: userRecord?.roi ?? "0",
+          tradeVol: userRecord?.tradedVolume ?? "0",
+          eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
+        };
       }
-      return new ApiResponse(ResponseStatus.Success).setData(result);
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -185,7 +183,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData(result);
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
