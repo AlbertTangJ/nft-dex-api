@@ -92,7 +92,7 @@ export class CompetitionService {
 
   async getPersonalLeaderboardRecord(userAddress: string) {
     return prisma.$queryRaw<any[]>`
-    SELECT *
+    SELECT u."username", cs."userAddress", cs."absolutePnl", cs."netConvergenceVolume", cs."roi" * 100 as "roi", cs."tradedVolume"
     FROM api."CompetitionSeason1" cs 
     LEFT JOIN api."UserInfo" u 
     ON u."userAddress" = cs."userAddress"
