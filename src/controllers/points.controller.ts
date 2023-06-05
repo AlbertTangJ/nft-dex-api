@@ -14,7 +14,7 @@ export class PointsController {
             user: {
                 type: "string",
                 required: false,
-                message: "need to right user address",
+                message: "Invalid user address",
                 validator: (rule: any, value: any) => {
                     if (value == "" || value == undefined) {
                         return true;
