@@ -50,7 +50,7 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let results: any[] = await this.prismaClient.$queryRaw`SELECT plb."userAddress" AS "userAddress", u2.username AS "username" ,u."userAddress" AS "codeOwner", r."referralCode" AS "referralCode", plb."tradeVol" AS "tradeVol", 
                         CASE WHEN elig.eligible THEN true ELSE false END AS eligiable,
-                        CASE WHEN plb."tradePoints" >= 50
+                        CASE WHEN elig.eligible
                         THEN (plb."tradeVol" / 10^18) * 0.03 *10
                         ELSE 0
                         END AS "referringRewardPoints"
