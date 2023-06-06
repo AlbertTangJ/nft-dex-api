@@ -66,7 +66,7 @@ export class PointsService {
                     ON r."userAddress" = elig."userAddress"
                     WHERE plb.season = ${currentSeason.round} AND u."userAddress" = ${user} ORDER BY "referralCode" DESC 
                     LIMIT ${pageSize} OFFSET ${pageNo}`;
-                        
+
         return results
     }
 
@@ -200,7 +200,7 @@ export class PointsService {
             WHERE plb.season = ${currentSeason.round} AND elig.eligible = true AND plb."tradeVol" > 0
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
-            
+
         for (let index = 0; index < results.length; index++) {
             const item = results[index];
             // console.log(item)
@@ -360,7 +360,7 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
-        let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` elig.eligible = true ` : ' 1=1' }
+        let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` elig.eligible = true AND plb."tradeVol" > 0` : ' 1=1' }
         var sql = (isOver: boolean) => {
             return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", eligible, "eligibleCount", "ogPoints", "total", "degenScore", "degenScoreMultiplier", "tradeVolTotal"  
                     FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
@@ -391,7 +391,7 @@ export class PointsService {
                     FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
                     ON plb."userAddress" = elig."userAddress"
                     WHERE plb.season = ${currentSeason.round} AND ${filterIsOver5ETH(isOver)}
-                    ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'` 
+                    ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
 
@@ -439,10 +439,11 @@ export class PointsService {
         if (rankData.isBan) {
             rank = "-1"
         } else {
-            if (!rankData.eligible || rankData.tradeVol == "0" ) {
+            if (!rankData.eligible || rankData.tradeVol == "0") {
                 rank = 0
             }
         }
+        
         let total = parseFloat(rankData.total)
         let originalTotal = parseFloat(rankData.total)
         for (let a = 0; a < multiplierResult.length; a++) {
@@ -461,7 +462,12 @@ export class PointsService {
             rank = 0
             multiplier = 1
         }
-        let tradeVolTotal = rankData.tradeVolTotal == null ? "0" : rankData.tradeVolTotal
+        let userTradeVolTotal:any[] = await this.prismaClient.$queryRaw` SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal"
+        FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE t."userAddress" = ${rankData.userAddress}`
+        let tradeVolTotal = '0'
+        if (userTradeVolTotal.length > 0) {
+            tradeVolTotal = userTradeVolTotal[0].tradeVolTotal == null ? "0" : userTradeVolTotal[0].tradeVolTotal
+        } 
 
         // let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
         let result = {
