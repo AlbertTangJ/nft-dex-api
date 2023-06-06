@@ -66,6 +66,7 @@ export class PointsService {
                     ON r."userAddress" = elig."userAddress"
                     WHERE plb.season = ${currentSeason.round} AND u."userAddress" = ${user} ORDER BY "referralCode" DESC 
                     LIMIT ${pageSize} OFFSET ${pageNo}`;
+                        
         return results
     }
 
@@ -174,7 +175,7 @@ export class PointsService {
         let rankNo = 0
         let pointsLeaderBoardList = []
         let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, plb."isBan" AS "isBan", 
-            CASE WHEN elig."tradeVolTotal" >= 5000000000000000000 THEN true ELSE false END AS eligible,
+            CASE WHEN elig.eligible THEN true ELSE false END AS eligible,
             uif."hasTraded" AS "hasTraded", 
             uif."isInputCode" AS "isInputCode",
             uif."referralCode" AS "referralCode",
@@ -194,11 +195,13 @@ export class PointsService {
             FROM api."UserInfo" uif
             LEFT JOIN api."PointsLeaderBoard" plb
             ON uif."userAddress" = plb."userAddress"
-            LEFT JOIN (SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" FROM api."PointsLeaderBoard" AS plb WHERE season > 0 AND "tradeVol" > 0 GROUP BY "userAddress") t) elig
+            LEFT JOIN (SELECT "userAddress", eligible, "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
+                     FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
             ON plb."userAddress" = elig."userAddress"
             WHERE plb.season = ${currentSeason.round} AND elig."tradeVolTotal" >= 5000000000000000000 AND plb."tradeVol" > 0
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
+            
         for (let index = 0; index < results.length; index++) {
             const item = results[index];
             // console.log(item)
@@ -377,7 +380,7 @@ export class PointsService {
                     plb."tradePoints" AS "tradePoints", 
                     plb."eligibleCount" AS "eligibleCount",
                     plb."ogPoints" AS "ogPoints", 
-                    CASE WHEN elig."tradeVolTotal" >= 5000000000000000000 THEN true ELSE false END AS eligible,
+                    CASE WHEN elig.eligible THEN true ELSE false END AS eligible,
                     elig."tradeVolTotal" AS "tradeVolTotal",
                     plb.total AS total,
                     uif."degenScore" AS "degenScore",
@@ -385,11 +388,13 @@ export class PointsService {
                     FROM api."UserInfo" uif 
                     LEFT JOIN api."PointsLeaderBoard" plb 
                     ON uif."userAddress" = plb."userAddress"
-                    LEFT JOIN (SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" FROM api."PointsLeaderBoard" AS plb WHERE season > 0 AND "tradeVol" > 0 GROUP BY "userAddress") t) elig
+                    LEFT JOIN (SELECT "userAddress", eligible, "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
+                    FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
                     ON plb."userAddress" = elig."userAddress"
                     WHERE plb.season = ${currentSeason.round}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
+    
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
 
         let rankData = null
