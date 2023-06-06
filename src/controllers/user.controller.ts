@@ -28,7 +28,7 @@ export class UserController {
       user: {
         type: "string",
         required: true,
-        message: "need to right user address",
+        message: "Invalid user address",
         validator: (rule: any, value: any) => {
           if (value == "") {
             return true;

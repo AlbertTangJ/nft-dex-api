@@ -50,7 +50,7 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let results: any[] = await this.prismaClient.$queryRaw`SELECT plb."userAddress" AS "userAddress", u2.username AS "username" ,u."userAddress" AS "codeOwner", r."referralCode" AS "referralCode", plb."tradeVol" AS "tradeVol", 
                         CASE WHEN elig.eligible THEN true ELSE false END AS eligiable,
-                        CASE WHEN plb."tradePoints" >= 50
+                        CASE WHEN elig.eligible
                         THEN (plb."tradeVol" / 10^18) * 0.03 *10
                         ELSE 0
                         END AS "referringRewardPoints"
@@ -174,6 +174,7 @@ export class PointsService {
         let rankNo = 0
         let pointsLeaderBoardList = []
         let results: any[] = await this.prismaClient.$queryRaw`SELECT uif.username AS username, plb."isBan" AS "isBan", 
+            CASE WHEN elig."tradeVolTotal" >= 5000000000000000000 THEN true ELSE false END AS eligible,
             uif."hasTraded" AS "hasTraded", 
             uif."isInputCode" AS "isInputCode",
             uif."referralCode" AS "referralCode",
@@ -185,6 +186,7 @@ export class PointsService {
             plb."referringRewardPoints" AS "referringRewardPoints", 
             plb."isBan" AS "isBan", 
             plb."tradeVol" AS "tradeVol", 
+            elig."tradeVolTotal" AS "tradeVolTotal",
             plb."tradePoints" AS "tradePoints", 
             plb."eligibleCount" AS "eligibleCount",
             plb."ogPoints" AS "ogPoints", 
@@ -192,7 +194,9 @@ export class PointsService {
             FROM api."UserInfo" uif
             LEFT JOIN api."PointsLeaderBoard" plb
             ON uif."userAddress" = plb."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart} AND plb."tradeVol" >= 5000000000000000000
+            LEFT JOIN (SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" FROM api."PointsLeaderBoard" AS plb WHERE season > 0 AND "tradeVol" > 0 GROUP BY "userAddress") t) elig
+            ON plb."userAddress" = elig."userAddress"
+            WHERE plb.season = ${currentSeason.round} AND elig."tradeVolTotal" >= 5000000000000000000 AND plb."tradeVol" > 0
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
         for (let index = 0; index < results.length; index++) {
@@ -205,8 +209,10 @@ export class PointsService {
             let total = item.total
             let ogPoints = item.ogPoints
             let referralCode = item.referralCode
+            let eligible = item.eligible
+            let tradeVolTotal = item.tradeVolTotal == null ? "0" : item.tradeVolTotal
             // console.log(`${tradeVolPoints} + ${referralPoints} + ${convergePoints} = ${total}`)
-            let data = { total: parseFloat(total), originalTotal: parseFloat(parseFloat(total).toFixed(2)), multiplier: 1, username: item.username, userAddress: userAddress, isBan: item.isBan, tradeVol: item.tradeVol, referralCode: referralCode }
+            let data = { total: parseFloat(total), originalTotal: parseFloat(parseFloat(total).toFixed(2)), multiplier: 1, username: item.username, userAddress: userAddress, isBan: item.isBan, tradeVol: item.tradeVol, referralCode: referralCode, eligible: eligible, tradeVolTotal: tradeVolTotal }
             if (show != null) {
                 let showData = show.split(",")
                 if (showData.indexOf("tradeVol") != -1) {
@@ -233,8 +239,7 @@ export class PointsService {
             if (isStartRank) {
                 let isNext = element.isBan ? 0 : 1
                 let rank = rankNo
-                let tradeVolBigNumber = BigNumber(element.tradeVol)
-                if (tradeVolBigNumber.gte(BigNumber(utils.parseEther("5").toString()))) {
+                if (element.eligible) {
                     rank = rank + isNext
                     element.rank = element.isBan ? -1 : rank + pageNo
                 } else {
@@ -286,6 +291,66 @@ export class PointsService {
         return referredUserCount
     }
 
+    async userPointsBySeason(user: string, show: string, season: number) {
+        if (season == 0) {
+            return await this.userPoints(user, show)
+        } else {
+            return await this.userPointsHistorySeason(user, show, season)
+        }
+    }
+
+    async userPointsHistorySeason(user: string, show: string, season: number) {
+        let results = await prisma.pointsLeaderBoard.findMany({ where: { AND: [{ season: season }, { userAddress: user.toLowerCase() }] } })
+        let rankData = {
+            rank: 0,
+            multiplier: 0,
+            total: 0,
+            originalTotal: 0,
+            userAddress: user,
+            username: "",
+            tradeVol: { vol: "", points: 0, multiplier: 1 },
+            referral: {
+                referralSelfRewardPoints: 0,
+                referringRewardPoints: 0
+            }, converge: {
+                points: 0,
+                val: ""
+            },
+            referralUser: {},
+            eligibleCount: 0,
+            referredUserCount: 0,
+            referralCode: "",
+            isInputCode: false,
+            isTrade: false,
+            isBan: false,
+            degenScore: 0
+        }
+        if (results.length == 0) {
+            return rankData
+        } else {
+            let item = results.shift()
+            let userInfo = await prisma.userInfo.findFirst({ where: { userAddress: user.toLowerCase() } })
+            let enterReferralUser = await this.fetchReferringUser(user.toLowerCase())
+            rankData.rank = parseInt(item.finalRank.toString())
+            rankData.multiplier = parseFloat(item.multiplier.toString())
+            rankData.total = parseFloat(item.total.toString()) * parseFloat(item.multiplier.toString())
+            rankData.originalTotal = parseFloat(item.total.toString())
+            rankData.userAddress = user.toLowerCase()
+            rankData.username = userInfo.username
+            rankData.tradeVol = { vol: item.tradeVol.toString(), points: parseFloat(item.tradePoints.toString()), multiplier: parseFloat(userInfo.degenScoreMultiplier.toString()) }
+            rankData.referral = { referralSelfRewardPoints: parseFloat(item.referralSelfRewardPoints.toString()), referringRewardPoints: parseFloat(item.referringRewardPoints.toString()) }
+            rankData.converge = { points: parseFloat(item.convergePoints.toString()), val: item.convergeVol.toString() }
+            rankData.referralUser = enterReferralUser
+            rankData.eligibleCount = parseInt(item.eligibleCount.toString())
+            rankData.referralCode = userInfo.referralCode
+            rankData.isBan = item.isBan
+            rankData.isInputCode = userInfo.isInputCode
+            rankData.isTrade = userInfo.hasTraded
+            rankData.degenScore = parseFloat(userInfo.degenScore.toString())
+        }
+        return rankData
+    }
+
     async userPoints(user: string, show: string) {
         let multiplierResult = await prisma.rankMultiplier.findMany();
         let enterReferralUser = await this.fetchReferringUser(user);
@@ -293,9 +358,9 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
-        let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` plb."tradeVol" >= ${utils.parseEther("5").toString()}` : ' 1=1' }
+        // let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` plb."tradeVol" >= ${utils.parseEther("5").toString()}` : ' 1=1' }
         var sql = (isOver: boolean) => {
-            return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total", "degenScore", "degenScoreMultiplier"  
+            return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", eligible, "eligibleCount", "ogPoints", "total", "degenScore", "degenScoreMultiplier", "tradeVolTotal"  
                     FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
                         ORDER BY total DESC
                     ) AS "rank",
@@ -312,16 +377,21 @@ export class PointsService {
                     plb."tradePoints" AS "tradePoints", 
                     plb."eligibleCount" AS "eligibleCount",
                     plb."ogPoints" AS "ogPoints", 
+                    CASE WHEN elig."tradeVolTotal" >= 5000000000000000000 THEN true ELSE false END AS eligible,
+                    elig."tradeVolTotal" AS "tradeVolTotal",
                     plb.total AS total,
                     uif."degenScore" AS "degenScore",
 					uif."degenScoreMultiplier" AS "degenScoreMultiplier"
                     FROM api."UserInfo" uif 
                     LEFT JOIN api."PointsLeaderBoard" plb 
                     ON uif."userAddress" = plb."userAddress"
-                    WHERE ${filterIsOver5ETH(isOver)} AND plb.season = ${currentSeason.round} AND plb."seasonStart" = ${currentSeason.seasonStart}
+                    LEFT JOIN (SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" FROM api."PointsLeaderBoard" AS plb WHERE season > 0 AND "tradeVol" > 0 GROUP BY "userAddress") t) elig
+                    ON plb."userAddress" = elig."userAddress"
+                    WHERE plb.season = ${currentSeason.round}
                     ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
         }
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
+
         let rankData = null
         if (results.length > 0) {
             rankData = results.shift()
@@ -356,6 +426,8 @@ export class PointsService {
                 isInputCode: false,
                 isTrade: false,
                 isBan: false,
+                eligible: false,
+                tradeVolTotal: 0,
                 degenScore: 0
             }
         }
@@ -364,9 +436,7 @@ export class PointsService {
         if (rankData.isBan) {
             rank = "-1"
         } else {
-            let tradeVolBigNumber = BigNumber(rankData.tradeVol.toString())
-            // console.log(tradeVolBigNumber.toString())
-            if (tradeVolBigNumber.lt(BigNumber(utils.parseEther("5").toString()))) {
+            if (!rankData.eligible || rankData.tradeVol == "0" ) {
                 rank = 0
             }
         }
@@ -388,6 +458,7 @@ export class PointsService {
             rank = 0
             multiplier = 1
         }
+        let tradeVolTotal = rankData.tradeVolTotal == null ? "0" : rankData.tradeVolTotal
 
         // let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
         let result = {
@@ -404,6 +475,8 @@ export class PointsService {
             isInputCode: rankData.isInputCode,
             isTrade: rankData.isTrade,
             degenScore: rankData.degenScore,
+            eligible: rankData.eligible,
+            tradeVolTotal: tradeVolTotal,
             referredUserCount
         }
 

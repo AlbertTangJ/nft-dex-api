@@ -128,12 +128,13 @@ export class UserService {
     if (isStartRank) {
       let usersStr = users.join("','");
 
-      let sql = `SELECT "userAddress", "isBan", "rank", "tradeCount", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", "eligibleCount", "ogPoints", "total"  
+      let sql = `SELECT "userAddress", "isBan", "rank", "tradeCount", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", eligible, "eligibleCount", "ogPoints", "total"  
       FROM (SELECT row_number() OVER (
           ORDER BY total DESC
       ) AS "rank",
       "tradeCount", 
-      "userAddress", 
+      CASE WHEN elig.eligible THEN true ELSE false END AS eligible,
+      plb."userAddress" AS "userAddress", 
       "convergePoints",
       "convergeVol", 
       "referralSelfRewardPoints",
@@ -144,9 +145,11 @@ export class UserService {
       "ogPoints",
       "isBan",
       total
-      FROM api."PointsLeaderBoard" 
-      WHERE "tradeVol" >= ${utils.parseEther("5").toString()} AND season = ${currentSeason.round} AND "seasonStart" = ${currentSeason.seasonStart
-        }
+      FROM api."PointsLeaderBoard" AS plb
+      LEFT JOIN (SELECT "userAddress", eligible FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
+      FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
+      ON plb."userAddress" = elig."userAddress"
+      WHERE season = ${currentSeason.round}
       ORDER BY "total" DESC) nt WHERE nt."userAddress" in (\'${usersStr}\')`;
       let results: any[] = await prisma.$queryRawUnsafe(sql);
       if (results.length > 0) {
@@ -154,11 +157,12 @@ export class UserService {
         let list = JSON.parse(JSON.stringify(results));
         for (let i = 0; i < list.length; i++) {
           const element = list[i];
-          let tradeVol = element.tradeVol;
+          // let tradeVol = element.tradeVol;
           let isBan = element.isBan;
-          let tradeVolBigNumber = BigNumber.from(tradeVol.toString());
+          let eligible = element.eligible;
+          // let tradeVolBigNumber = BigNumber.from(tradeVol.toString());
           // console.log(tradeVolBigNumber.toString())
-          if (tradeVolBigNumber.lt(utils.parseEther("5"))) {
+          if (!eligible) {
             element.rank = 0;
           }
           if (isBan) {
