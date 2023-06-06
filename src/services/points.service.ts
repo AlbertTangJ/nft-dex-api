@@ -184,8 +184,7 @@ export class PointsService {
             plb."convergePoints" AS "convergePoints",
             plb."convergeVol" AS "convergeVol", 
             plb."referralSelfRewardPoints" AS "referralSelfRewardPoints",
-            plb."referringRewardPoints" AS "referringRewardPoints", 
-            plb."isBan" AS "isBan", 
+            plb."referringRewardPoints" AS "referringRewardPoints",  
             plb."tradeVol" AS "tradeVol", 
             elig."tradeVolTotal" AS "tradeVolTotal",
             plb."tradePoints" AS "tradePoints", 
@@ -198,7 +197,7 @@ export class PointsService {
             LEFT JOIN (SELECT "userAddress", eligible, "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
                      FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
             ON plb."userAddress" = elig."userAddress"
-            WHERE plb.season = ${currentSeason.round} AND elig."tradeVolTotal" >= 5000000000000000000 AND plb."tradeVol" > 0
+            WHERE plb.season = ${currentSeason.round} AND elig.eligible = true AND plb."tradeVol" > 0
             ORDER BY plb."total" DESC
             LIMIT ${pageSize} OFFSET ${pageNo}`
             
@@ -361,7 +360,7 @@ export class PointsService {
         let currentSeason = await prisma.season.findFirst({ where: { seasonEnd: 0 } })
         let isStartRank = await this.checkIsSeason()
         // let filterIsBan = (isBan: boolean) => { return isBan ? ' AND uif."isBan"=false' : ' AND 1=1' }
-        // let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` plb."tradeVol" >= ${utils.parseEther("5").toString()}` : ' 1=1' }
+        let filterIsOver5ETH = (isOver: boolean) => { return isOver ? ` elig.eligible = true ` : ' 1=1' }
         var sql = (isOver: boolean) => {
             return `SELECT "username", "isBan", "rank", "hasTraded", "referralCode", "isInputCode", "tradeCount", "userAddress", "convergePoints", "convergeVol", "referralSelfRewardPoints", "referringRewardPoints", "tradeVol", "tradePoints", eligible, "eligibleCount", "ogPoints", "total", "degenScore", "degenScoreMultiplier", "tradeVolTotal"  
                     FROM (SELECT uif.username AS username, uif."isBan" AS "isBan",  row_number() OVER (
@@ -391,10 +390,9 @@ export class PointsService {
                     LEFT JOIN (SELECT "userAddress", eligible, "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
                     FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE eligible = true) elig
                     ON plb."userAddress" = elig."userAddress"
-                    WHERE plb.season = ${currentSeason.round}
-                    ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'`
+                    WHERE plb.season = ${currentSeason.round} AND ${filterIsOver5ETH(isOver)}
+                    ORDER BY plb."total" DESC) nt WHERE nt."userAddress" = '${user.toLowerCase()}'` 
         }
-    
         let results: any[] = await this.prismaClient.$queryRawUnsafe(sql(true))
 
         let rankData = null
