@@ -462,7 +462,7 @@ export class PointsService {
             rank = 0
             multiplier = 1
         }
-        let userTradeVolTotal:any[] = await this.prismaClient.$queryRaw` SELECT "userAddress", eligible, "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal" ,CASE WHEN SUM("tradeVol") >= 5000000000000000000 THEN true ELSE false END AS eligible
+        let userTradeVolTotal:any[] = await this.prismaClient.$queryRaw` SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal"
         FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE t."userAddress" = ${rankData.userAddress}`
         let tradeVolTotal = '0'
         if (userTradeVolTotal.length > 0) {
