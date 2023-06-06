@@ -325,6 +325,7 @@ export class PointsService {
             isInputCode: false,
             isTrade: false,
             isBan: false,
+            eligible: false,
             degenScore: 0
         }
         if (results.length == 0) {
@@ -346,6 +347,13 @@ export class PointsService {
             rankData.eligibleCount = parseInt(item.eligibleCount.toString())
             rankData.referralCode = userInfo.referralCode
             rankData.isBan = item.isBan
+            let tradeBigNumberVol = BigNumber(item.tradeVol.toString())
+            let limit = BigNumber(utils.parseEther("5").toString())
+            if (tradeBigNumberVol.gte(limit)) {
+                rankData.eligible = true
+            } else {
+                rankData.eligible = false
+            }
             rankData.isInputCode = userInfo.isInputCode
             rankData.isTrade = userInfo.hasTraded
             rankData.degenScore = parseFloat(userInfo.degenScore.toString())
@@ -443,7 +451,7 @@ export class PointsService {
                 rank = 0
             }
         }
-        
+
         let total = parseFloat(rankData.total)
         let originalTotal = parseFloat(rankData.total)
         for (let a = 0; a < multiplierResult.length; a++) {
@@ -462,12 +470,12 @@ export class PointsService {
             rank = 0
             multiplier = 1
         }
-        let userTradeVolTotal:any[] = await this.prismaClient.$queryRaw` SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal"
+        let userTradeVolTotal: any[] = await this.prismaClient.$queryRaw` SELECT "userAddress", "tradeVolTotal" FROM (SELECT "userAddress", SUM("tradeVol") AS "tradeVolTotal"
         FROM api."PointsLeaderBoard" AS plb WHERE season > 0 GROUP BY "userAddress") t WHERE t."userAddress" = ${rankData.userAddress}`
         let tradeVolTotal = '0'
         if (userTradeVolTotal.length > 0) {
             tradeVolTotal = userTradeVolTotal[0].tradeVolTotal == null ? "0" : userTradeVolTotal[0].tradeVolTotal
-        } 
+        }
 
         // let multiplierResult = await prisma.rankMultiplier.findFirst({ where: { start_rank: { lte: rank }, end_rank: { gte: rank } } })
         let result = {
