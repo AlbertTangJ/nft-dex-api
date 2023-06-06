@@ -14,7 +14,7 @@ export class PointsController {
             user: {
                 type: "string",
                 required: false,
-                message: "need to right user address",
+                message: "Invalid user address",
                 validator: (rule: any, value: any) => {
                     if (value == "" || value == undefined) {
                         return true;
@@ -86,7 +86,7 @@ export class PointsController {
     }
 
     @Get("/points/:user")
-    async fetchPoints(@Param("user") user: string, @QueryParam("show") show: string) {
+    async fetchPoints(@Param("user") user: string, @QueryParam("season") season: number = 0, @QueryParam("show") show: string) {
         try {
             await this.userAddressValidator.validate({ user: user, show: show }, errors => {
                 if (errors) {
@@ -99,7 +99,7 @@ export class PointsController {
         } catch (error) {
             return error;
         }
-        let result = await this.pointService.userPoints(user.toLowerCase(), show);
+        let result = await this.pointService.userPointsBySeason(user.toLowerCase(), show, season);
         if (result != null) {
             return new ApiResponse(ResponseStatus.Success).setData(result);
         }

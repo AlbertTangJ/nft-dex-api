@@ -510,21 +510,21 @@ export class ClearingHouseController {
 
       let fundingPaymentPnl = (
         position.size.gt(0)
-          ? position.size.mul(fundingPayment.premiumFractionLong).div(1e18).round()
-          : position.size.mul(fundingPayment.premiumFractionShort).div(1e18).round()
+          ? position.size.mul(fundingPayment.premiumFractionLong).div(1e18)
+          : position.size.mul(fundingPayment.premiumFractionShort).div(1e18)
       ).mul(-1);
 
       total = total.add(fundingPaymentPnl);
       fundingPaymentPnlHistory.push({
         timestamp: fundingPayment.timestamp,
-        fundingPaymentPnl
+        fundingPaymentPnl: fundingPaymentPnl.round()
       });
     }
 
     return new ApiResponse(ResponseStatus.Success)
       .setData({
         fundingPaymentPnlHistory: fundingPaymentPnlHistory.reverse(),
-        total
+        total: total.round()
       })
       .toObject();
   }

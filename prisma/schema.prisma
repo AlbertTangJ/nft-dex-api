@@ -351,6 +351,9 @@ model Position {
   syncId                                  Int       @default(0)
   netConvergenceVolume                    Decimal   @default(0) @db.Decimal
   oraclePrice                             Decimal   @default(0) @db.Decimal
+  convergenceVolume                       Decimal   @default(0) @db.Decimal
+  divergenceVolume                        Decimal   @default(0) @db.Decimal
+  positionLiquidationPenalty              Decimal   @default(0) @db.Decimal
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([syncId, ammAddress, timestampIndex(sort: Desc)])
@@ -465,6 +468,8 @@ model PointsLeaderBoard {
   blockTimestamp           Int?      @default(0)
   logIndex                 Decimal?  @default(0) @db.Decimal
   isBan                    Boolean   @default(false)
+  multiplier               Decimal?  @default(1) @db.Decimal
+  finalRank                Decimal?  @default(0) @db.Decimal
 
   @@unique([userAddress, season, seasonStart], map: "pointsleaderborad_user_address_unique")
   @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
@@ -488,6 +493,35 @@ model DegenscoreMultiplier {
   end_points   Decimal? @db.Decimal
   multiplier   Decimal? @db.Decimal
 
+  @@schema("api")
+}
+
+model CompetitionSeason1 {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress          String   @db.VarChar
+  absolutePnl          Decimal  @default(0) @db.Decimal
+  fundingPayment       Decimal  @default(0) @db.Decimal
+  realizedPnl          Decimal  @default(0) @db.Decimal
+  tradedVolume         Decimal  @default(0) @db.Decimal
+  netConvergenceVolume Decimal  @default(0) @db.Decimal
+  roi                  Decimal  @default(0) @db.Decimal
+  createTime           DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp      Int      @default(0)
+  updateTime           DateTime @default(now()) @db.Timestamp(6)
+  updateTimestamp      Int      @default(0)
+  updatedIndex         Decimal  @default(0) @db.Decimal
+  maxCollateral        Decimal  @default(0) @db.Decimal
+
+  @@unique([userAddress, updatedIndex])
+  @@index([absolutePnl])
+  @@index([roi])
+  @@index([netConvergenceVolume])
+  @@index([tradedVolume])
+  @@index([updatedIndex, absolutePnl])
+  @@index([updatedIndex])
+  @@index([updatedIndex, netConvergenceVolume])
+  @@index([updatedIndex, roi])
+  @@index([updatedIndex, tradedVolume])
   @@schema("api")
 }
 
