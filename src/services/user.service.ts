@@ -157,12 +157,11 @@ export class UserService {
         let list = JSON.parse(JSON.stringify(results));
         for (let i = 0; i < list.length; i++) {
           const element = list[i];
-          // let tradeVol = element.tradeVol;
+          let tradeVol = element.tradeVol;
           let isBan = element.isBan;
           let eligible = element.eligible;
-          // let tradeVolBigNumber = BigNumber.from(tradeVol.toString());
-          // console.log(tradeVolBigNumber.toString())
-          if (!eligible) {
+          let tradeVolBigNumber = BigNumber.from(tradeVol.toString());
+          if (!eligible || tradeVolBigNumber.isZero()) {
             element.rank = 0;
           }
           if (isBan) {
