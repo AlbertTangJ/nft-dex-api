@@ -13,7 +13,7 @@ type CreateUserInfoBody = {
   nonce: number;
 };
 const CLEARING_HOUSE_ABI = require("src/abi/clearingHouse_abi.json");
-// const fakeUsers = require("/src/users.json")
+
 @JsonController()
 @Service()
 export class UserController {
@@ -545,6 +545,7 @@ export class UserController {
 
   // @Get("/users/add/news")
   // async addNewsUser() {
+  // const fakeUsers = require("/src/users.json")
   //   for (let i = 0; i < fakeUsers.length; i++) {
   //     const userinfo = fakeUsers[i];
   //     console.log(userinfo.userAddress.toLowerCase())
