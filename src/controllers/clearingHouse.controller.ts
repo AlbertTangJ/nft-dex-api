@@ -610,7 +610,6 @@ export class ClearingHouseController {
       throw new BadRequestError("Invalid resolution");
     }
 
-    const COMPETITION_START_TIME = 1681186897
     let dateArray = [];
     switch (resolutionLc) {
       case "1w":
