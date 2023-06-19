@@ -18,6 +18,8 @@ import { GraphData } from "src/helpers/graphData";
 import { TradeData, Position, AmmFundingPayment } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime";
 
+const COMPETITION_START_TIME: number = isNaN(Number(process.env.COMPETITION_START_TIME)) ? 1686042000 : Number(process.env.COMPETITION_START_TIME);
+
 @JsonController()
 @Service()
 export class ClearingHouseController {
@@ -599,5 +601,127 @@ export class ClearingHouseController {
         lastUpdatedBlock
       })
       .toObject();
+  }
+
+  @Get("/getPnlGraphData")
+  async getPnlGraphData(@QueryParam("userAddress") userAddress: string, @QueryParam("resolution") resolution: string) {
+    const resolutionLc = resolution.toLowerCase();
+    if (resolutionLc != "1w" && resolutionLc != "1m" && resolutionLc != "2m" && resolutionLc != "competition") {
+      throw new BadRequestError("Invalid resolution");
+    }
+
+    const COMPETITION_START_TIME = 1681186897
+    let dateArray = [];
+    switch (resolutionLc) {
+      case "1w":
+        dateArray = this.getPastDaysStartTimes(7, 0);
+        break;
+      case "1m":
+        dateArray = this.getPastDaysStartTimes(30, 0);
+        break;
+      case "2m":
+        dateArray = this.getPastDaysStartTimes(60, 0);
+        break;
+      case "competition":
+        dateArray = this.getPastDaysStartTimes(this.getDayDifference(COMPETITION_START_TIME * 1000), 0);
+        break;
+      default:
+        dateArray = this.getPastDaysStartTimes(7, 0);
+        break;
+    }
+
+    if (dateArray.length == 0) {
+      throw new BadRequestError("Invalid resolution");
+    }
+    const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
+
+    const positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
+    const fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(
+      userAddress,
+      startTime
+    );
+
+    let positionIndex = 0;
+    let fundingPaymentIndex = 0;
+
+    let accumulatedPnl = new Decimal(0);
+
+    let accumulatedFP = new Decimal(0);
+    let accumulatedRP = new Decimal(0);
+
+    let graphData = [];
+
+    for (let date of dateArray) {
+      let dailyPnl = new Decimal(0);
+      let dailyRealizedPnl = new Decimal(0);
+      let dailyFundingPayment = new Decimal(0);
+      while (positionIndex < positionHistory.length && positionHistory[positionIndex].timestamp < date.startTime + 86400) {
+        accumulatedRP = accumulatedRP.plus(positionHistory[positionIndex].realizedPnl);
+        dailyRealizedPnl = dailyRealizedPnl.plus(positionHistory[positionIndex].realizedPnl);
+        positionIndex++;
+      }
+
+      while (
+        fundingPaymentIndex < fundingPaymentHistory.length &&
+        fundingPaymentHistory[fundingPaymentIndex].timestamp < date.startTime + 86400
+      ) {
+        accumulatedFP = accumulatedFP.plus(fundingPaymentHistory[fundingPaymentIndex].fundingPayment);
+        dailyFundingPayment = dailyFundingPayment.plus(fundingPaymentHistory[fundingPaymentIndex].fundingPayment);
+        fundingPaymentIndex++;
+      }
+
+      // console.log("positionHistory.length", positionHistory.length)
+      // console.log("positionIndex", positionIndex)
+      // console.log("fundingPaymentHistory.length", fundingPaymentHistory.length)
+      // console.log("fundingPaymentIndex", fundingPaymentIndex)
+
+      dailyPnl = dailyRealizedPnl.plus(dailyFundingPayment);
+      accumulatedPnl = accumulatedPnl.plus(dailyRealizedPnl).plus(dailyFundingPayment);
+
+      graphData.push({
+        time: date.startTime,
+        dailyPnl: dailyPnl.round(),
+        accumulatedPnl: accumulatedPnl.round(),
+        // dailyRealizedPnl,
+        // dailyFundingPayment,
+        // accumulatedFP,
+        // accumulatedRP
+      });
+    }
+
+    return new ApiResponse(ResponseStatus.Success).setData(graphData).toObject();
+  }
+
+  getPastDaysStartTimes(numDays: number, utcOffset: number): Array<{ day: number; startTime: number }> {
+    const startTimes: Array<{ day: number; startTime: number }> = [];
+
+    for (let i = numDays - 1; i >= 0; i--) {
+      const startTime = new Date();
+      startTime.setDate(startTime.getDate() - i);
+      startTime.setHours(0, 0, 0, 0);
+
+      const tzOffset = utcOffset * 60 * 60 * 1000;
+      startTime.setTime(startTime.getTime() + tzOffset);
+
+      startTimes.push({ day: i + 1, startTime: Math.floor(startTime.getTime() / 1000) });
+    }
+
+    return startTimes
+  }
+
+  getDayDifference(startTimestamp: number): number {
+    // Convert timestamps to milliseconds
+    const start = new Date(startTimestamp);
+    const end = new Date();
+
+    // Set both dates to the same time of day to compare only the date portion
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    // Calculate the difference in days
+    const timeDifference = Math.abs(end.getTime() - start.getTime());
+    const dayDifference = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+
+    return dayDifference;
   }
 }
