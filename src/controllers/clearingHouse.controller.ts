@@ -484,13 +484,17 @@ export class ClearingHouseController {
     }
 
     const currentPositionHistory = await this.clearingHouseService.getCurrentPositionHistory(trader, amm);
+
     if (
       currentPositionHistory.length == 0 ||
-      currentPositionHistory.find(position => {
-        position.size.eq(0);
-      })
+      currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)
     ) {
-      return new ApiResponse(ResponseStatus.Failure).toObject();
+      return new ApiResponse(ResponseStatus.Success)
+      .setData({
+        fundingPaymentPnlHistory: "0",
+        total: "0"
+      })
+      .toObject();
     }
 
     let fundingPaymentPnlHistory = [];
