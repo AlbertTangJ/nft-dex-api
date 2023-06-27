@@ -18,7 +18,9 @@ import { GraphData } from "src/helpers/graphData";
 import { TradeData, Position, AmmFundingPayment } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime";
 
-const COMPETITION_START_TIME: number = isNaN(Number(process.env.COMPETITION_START_TIME)) ? 1686042000 : Number(process.env.COMPETITION_START_TIME);
+const COMPETITION_START_TIME: number = isNaN(Number(process.env.COMPETITION_START_TIME))
+  ? 1686042000
+  : Number(process.env.COMPETITION_START_TIME);
 
 @JsonController()
 @Service()
@@ -485,16 +487,13 @@ export class ClearingHouseController {
 
     const currentPositionHistory = await this.clearingHouseService.getCurrentPositionHistory(trader, amm);
 
-    if (
-      currentPositionHistory.length == 0 ||
-      currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)
-    ) {
+    if (currentPositionHistory.length == 0 || currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)) {
       return new ApiResponse(ResponseStatus.Success)
-      .setData({
-        fundingPaymentPnlHistory: "0",
-        total: "0"
-      })
-      .toObject();
+        .setData({
+          fundingPaymentPnlHistory: "0",
+          total: "0"
+        })
+        .toObject();
     }
 
     let fundingPaymentPnlHistory = [];
@@ -626,7 +625,7 @@ export class ClearingHouseController {
         dateArray = this.getPastDaysStartTimes(60, 0);
         break;
       case "competition":
-        dateArray = this.getPastDaysStartTimes(this.getDayDifference(COMPETITION_START_TIME * 1000), 0);
+        dateArray = this.getPastDaysStartTimes(this.getDayDifference(COMPETITION_START_TIME * 1000) + 1, 0);
         break;
       default:
         dateArray = this.getPastDaysStartTimes(7, 0);
@@ -639,10 +638,7 @@ export class ClearingHouseController {
     const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
 
     const positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
-    const fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(
-      userAddress,
-      startTime
-    );
+    const fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
 
     let positionIndex = 0;
     let fundingPaymentIndex = 0;
@@ -684,7 +680,7 @@ export class ClearingHouseController {
       graphData.push({
         time: date.startTime,
         dailyPnl: dailyPnl.round(),
-        accumulatedPnl: accumulatedPnl.round(),
+        accumulatedPnl: accumulatedPnl.round()
         // dailyRealizedPnl,
         // dailyFundingPayment,
         // accumulatedFP,
@@ -700,8 +696,8 @@ export class ClearingHouseController {
 
     for (let i = numDays - 1; i >= 0; i--) {
       const startTime = new Date();
-      startTime.setDate(startTime.getDate() - i);
-      startTime.setHours(0, 0, 0, 0);
+      startTime.setUTCDate(startTime.getUTCDate() - i);
+      startTime.setUTCHours(0, 0, 0, 0);
 
       const tzOffset = utcOffset * 60 * 60 * 1000;
       startTime.setTime(startTime.getTime() + tzOffset);
@@ -709,7 +705,7 @@ export class ClearingHouseController {
       startTimes.push({ day: i + 1, startTime: Math.floor(startTime.getTime() / 1000) });
     }
 
-    return startTimes
+    return startTimes;
   }
 
   getDayDifference(startTimestamp: number): number {
@@ -717,9 +713,9 @@ export class ClearingHouseController {
     const start = new Date(startTimestamp);
     const end = new Date();
 
-    // Set both dates to the same time of day to compare only the date portion
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
+    // Set both dates to the same time of day in UTC
+    start.setUTCHours(0, 0, 0, 0);
+    end.setUTCHours(0, 0, 0, 0);
 
     // Calculate the difference in days
     const timeDifference = Math.abs(end.getTime() - start.getTime());
