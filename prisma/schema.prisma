@@ -354,6 +354,9 @@ model Position {
   convergenceVolume                       Decimal   @default(0) @db.Decimal
   divergenceVolume                        Decimal   @default(0) @db.Decimal
   positionLiquidationPenalty              Decimal   @default(0) @db.Decimal
+  positionMaxOpenMargin                   Decimal   @default(0) @db.Decimal
+  previousCumulativePremiumFraction       Decimal?  @db.Decimal
+  previousFundingPaymentTimestamp         Int?
   Amm                                     Amm       @relation(fields: [ammAddress], references: [address])
 
   @@index([syncId, ammAddress, timestampIndex(sort: Desc)])
@@ -522,6 +525,30 @@ model CompetitionSeason1 {
   @@index([updatedIndex, netConvergenceVolume])
   @@index([updatedIndex, roi])
   @@index([updatedIndex, tradedVolume])
+  @@schema("api")
+}
+
+model PositionFundingPaymentHistory {
+  id                   Int      @id @default(autoincrement())
+  ammAddress           String   @db.VarChar(255)
+  userAddress          String   @db.VarChar(255)
+  timestamp            Int
+  fundingPayment       Decimal  @db.Decimal
+  premiumFractionLong  Decimal  @db.Decimal
+  premiumFractionShort Decimal  @db.Decimal
+  underlyingPrice      Decimal  @db.Decimal
+  size                 Decimal  @db.Decimal
+  batchId              String   @db.Uuid
+  syncId               Int      @default(0)
+  createTime           DateTime @default(now()) @db.Timestamp(6)
+  updateTime           DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([ammAddress])
+  @@index([batchId])
+  @@index([syncId])
+  @@index([syncId, userAddress, ammAddress, batchId, timestamp(sort: Desc)])
+  @@index([timestamp])
+  @@index([userAddress])
   @@schema("api")
 }
 
