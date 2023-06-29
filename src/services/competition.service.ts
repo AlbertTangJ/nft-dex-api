@@ -22,8 +22,8 @@ export class CompetitionService {
     WHERE cs."updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason1" ORDER BY "updatedIndex" DESC LIMIT 1)
     AND cs."tradedVolume" >= 5000000000000000000
     ORDER BY "absolutePnl" DESC
-    LIMIT 100
-    OFFSET ${(page - 1) * 100}
+    LIMIT 500
+    OFFSET ${(page - 1) * 500}
     `;
   }
 
@@ -43,8 +43,8 @@ export class CompetitionService {
     WHERE cs."updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason1" ORDER BY "updatedIndex" DESC LIMIT 1)
     AND cs."tradedVolume" >= 5000000000000000000
     ORDER BY cs."netConvergenceVolume" DESC
-    LIMIT 100
-    OFFSET ${(page - 1) * 100}
+    LIMIT 500
+    OFFSET ${(page - 1) * 500}
     `;
   }
 
@@ -64,8 +64,8 @@ export class CompetitionService {
     WHERE cs."updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason1" ORDER BY "updatedIndex" DESC LIMIT 1)
     AND cs."tradedVolume" >= 5000000000000000000
     ORDER BY cs."roi" DESC
-    LIMIT 100
-    OFFSET ${(page - 1) * 100}
+    LIMIT 500
+    OFFSET ${(page - 1) * 500}
     `;
   }
 
@@ -85,8 +85,8 @@ export class CompetitionService {
     WHERE cs."updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason1" ORDER BY "updatedIndex" DESC LIMIT 1)
     AND cs."tradedVolume" >= 5000000000000000000
     ORDER BY "absolutePnl" ASC
-    LIMIT 100
-    OFFSET ${(page - 1) * 100}
+    LIMIT 500
+    OFFSET ${(page - 1) * 500}
     `;
   }
 
