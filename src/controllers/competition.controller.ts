@@ -66,7 +66,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -105,7 +105,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -144,7 +144,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
@@ -183,7 +183,7 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
-      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result });
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
