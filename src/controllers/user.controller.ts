@@ -291,6 +291,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
     return new ApiResponse(ResponseStatus.Failure);
+    
   }
 
   @Post("/following/list")
