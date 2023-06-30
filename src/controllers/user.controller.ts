@@ -6,6 +6,7 @@ import { isAddress } from "ethers/lib/utils";
 import Schema, { Rules } from "async-validator";
 import { ethers } from "ethers";
 import infuraClient from "src/helpers/infuraClient";
+import { Logging } from '@google-cloud/logging';
 
 type CreateUserInfoBody = {
   userAddress: string;
@@ -273,9 +274,19 @@ export class UserController {
 
   @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
-    console.log(userAddress)
+   let logging = new Logging({ projectId: "enduring-brace-351509" })
+    const log = logging.log("apis-users");
+    
+    const metadata = {
+      resource: {type: 'global'},
+      // See: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#logseverity
+      severity: 'INFO',
+    };
+    const entry = log.entry(metadata, "user--------->"+userAddress);
+    await log.write(entry);
     let result = await this.userService.createUserInfoService(userAddress);
-    console.log(result)
+    const resultEntry = log.entry(metadata, JSON.stringify(result));
+    await log.write(resultEntry);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
