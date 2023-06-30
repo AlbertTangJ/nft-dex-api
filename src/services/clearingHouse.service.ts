@@ -348,6 +348,32 @@ export class ClearingHouseService {
     });
   }
 
+  async getTradeHistoryAfter(trader: string, timestamp: number) {
+    return prisma.position.findMany({
+      where: {
+        userAddress: trader.toLowerCase(),
+        timestamp: {gte: timestamp},
+        syncId
+      },
+      orderBy: {
+        timestampIndex: "asc"
+      },
+    });
+  }
+
+  async getPositionFundingPaymentHistoryAfter(trader: string, timestamp: number) {
+    return prisma.positionFundingPaymentHistory.findMany({
+      where: {
+        userAddress: trader.toLowerCase(),
+        timestamp: {gte: timestamp},
+        syncId
+      },
+      orderBy: {
+        timestamp: "asc"
+      },
+    });
+  }
+
   async getLatestUpdatedPositionBlockNumber() {
     let record = await prisma.aggregateJob.findFirst({
       where: {
