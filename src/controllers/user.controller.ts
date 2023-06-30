@@ -273,7 +273,9 @@ export class UserController {
 
   @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
+    console.log(userAddress)
     let result = await this.userService.createUserInfoService(userAddress);
+    console.log(result)
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
