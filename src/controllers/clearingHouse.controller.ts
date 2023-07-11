@@ -493,7 +493,7 @@ export class ClearingHouseController {
     ) {
       return new ApiResponse(ResponseStatus.Success)
       .setData({
-        fundingPaymentPnlHistory: "0",
+        fundingPaymentPnlHistory: [],
         total: "0"
       })
       .toObject();
