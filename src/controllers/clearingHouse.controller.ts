@@ -637,8 +637,10 @@ export class ClearingHouseController {
     }
     const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
 
-    const positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
-    const fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
+    const competitionEndTime = 1689489000// 1689498000
+
+    let positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
+    let fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
 
     let positionIndex = 0;
     let fundingPaymentIndex = 0;
@@ -649,6 +651,12 @@ export class ClearingHouseController {
     let accumulatedRP = new Decimal(0);
 
     let graphData = [];
+
+    if (resolutionLc == "competition"){
+      dateArray = dateArray.filter(date => date.startTime <= competitionEndTime)
+      positionHistory = positionHistory.filter(position => position.timestamp <= competitionEndTime)
+      fundingPaymentHistory = fundingPaymentHistory.filter(fundingPayment => fundingPayment.timestamp <= competitionEndTime)
+    }
 
     for (let date of dateArray) {
       let dailyPnl = new Decimal(0);
