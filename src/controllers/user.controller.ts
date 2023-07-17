@@ -274,19 +274,7 @@ export class UserController {
 
   @Post("/users")
   async createUser(@BodyParam("userAddress", { required: true }) userAddress: string) {
-  //  let logging = new Logging({ projectId: "enduring-brace-351509" })
-  //   const log = logging.log("apis-users");
-    
-  //   const metadata = {
-  //     resource: {type: 'global'},
-  //     // See: https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#logseverity
-  //     severity: 'INFO',
-  //   };
-  //   const entry = log.entry(metadata, "user--------->"+userAddress);
-  //   await log.write(entry);
     let result = await this.userService.createUserInfoService(userAddress);
-    // const resultEntry = log.entry(metadata, JSON.stringify(result));
-    // await log.write(resultEntry);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
