@@ -492,11 +492,11 @@ export class ClearingHouseController {
       currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)
     ) {
       return new ApiResponse(ResponseStatus.Success)
-      .setData({
-        fundingPaymentPnlHistory: [],
-        total: "0"
-      })
-      .toObject();
+        .setData({
+          fundingPaymentPnlHistory: [],
+          total: "0"
+        })
+        .toObject();
     }
 
     let fundingPaymentPnlHistory = [];
@@ -612,7 +612,7 @@ export class ClearingHouseController {
   @Get("/getPnlGraphData")
   async getPnlGraphData(@QueryParam("userAddress") userAddress: string, @QueryParam("resolution") resolution: string) {
     const resolutionLc = resolution.toLowerCase();
-    if (resolutionLc != "1w" && resolutionLc != "1m" && resolutionLc != "2m" && resolutionLc != "competition") {
+    if (resolutionLc != "1w" && resolutionLc != "1m" && resolutionLc != "2m" && resolutionLc != "6m" && resolutionLc != "competition") {
       throw new BadRequestError("Invalid resolution");
     }
 
@@ -627,6 +627,9 @@ export class ClearingHouseController {
       case "2m":
         dateArray = this.getPastDaysStartTimes(60, 0);
         break;
+      case "6m":
+        dateArray = this.getPastDaysStartTimes(180, 0);
+        break;
       case "competition":
         dateArray = this.getPastDaysStartTimes(this.getDayDifference(COMPETITION_START_TIME * 1000) + 1, 0);
         break;
@@ -640,7 +643,7 @@ export class ClearingHouseController {
     }
     const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
 
-    const competitionEndTime = 1689498000
+    const competitionEndTime = 1689498000;
 
     let positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
     let fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
@@ -655,10 +658,10 @@ export class ClearingHouseController {
 
     let graphData = [];
 
-    if (resolutionLc == "competition"){
-      dateArray = dateArray.filter(date => date.startTime <= competitionEndTime)
-      positionHistory = positionHistory.filter(position => position.timestamp <= competitionEndTime)
-      fundingPaymentHistory = fundingPaymentHistory.filter(fundingPayment => fundingPayment.timestamp <= competitionEndTime)
+    if (resolutionLc == "competition") {
+      dateArray = dateArray.filter(date => date.startTime <= competitionEndTime);
+      positionHistory = positionHistory.filter(position => position.timestamp <= competitionEndTime);
+      fundingPaymentHistory = fundingPaymentHistory.filter(fundingPayment => fundingPayment.timestamp <= competitionEndTime);
     }
 
     for (let date of dateArray) {
