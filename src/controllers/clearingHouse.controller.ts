@@ -535,12 +535,15 @@ export class ClearingHouseController {
   }
 
   @Get("/tradeHistory")
-  async tradeHistory(@QueryParam("trader") trader: string) {
+  async tradeHistory(@QueryParam("trader") trader: string, @QueryParam("pageSize") pageSize: number = 500) {
     if (!trader) {
       throw new BadRequestError("trader is required");
     }
 
-    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500, 0);
+    if (pageSize <= 0) pageSize = 500
+    if (pageSize > 5000) pageSize = 5000
+
+    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, pageSize, 0);
     const processedTradeHistory = [];
 
     for (let history of tradeHistory) {
