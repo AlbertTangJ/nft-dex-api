@@ -490,7 +490,7 @@ export class ClearingHouseController {
     if (currentPositionHistory.length == 0 || currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)) {
       return new ApiResponse(ResponseStatus.Success)
         .setData({
-          fundingPaymentPnlHistory: "0",
+          fundingPaymentPnlHistory: [],
           total: "0"
         })
         .toObject();
@@ -535,12 +535,15 @@ export class ClearingHouseController {
   }
 
   @Get("/tradeHistory")
-  async tradeHistory(@QueryParam("trader") trader: string) {
+  async tradeHistory(@QueryParam("trader") trader: string, @QueryParam("pageSize") pageSize: number = 500) {
     if (!trader) {
       throw new BadRequestError("trader is required");
     }
 
-    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, 500, 0);
+    if (pageSize <= 0) pageSize = 500
+    if (pageSize > 5000) pageSize = 5000
+
+    const tradeHistory = await this.clearingHouseService.getTradeHistory(trader, pageSize, 0);
     const processedTradeHistory = [];
 
     for (let history of tradeHistory) {
@@ -609,7 +612,7 @@ export class ClearingHouseController {
   @Get("/getPnlGraphData")
   async getPnlGraphData(@QueryParam("userAddress") userAddress: string, @QueryParam("resolution") resolution: string) {
     const resolutionLc = resolution.toLowerCase();
-    if (resolutionLc != "1w" && resolutionLc != "1m" && resolutionLc != "2m" && resolutionLc != "competition") {
+    if (resolutionLc != "1w" && resolutionLc != "1m" && resolutionLc != "2m" && resolutionLc != "6m" && resolutionLc != "competition") {
       throw new BadRequestError("Invalid resolution");
     }
 
@@ -624,6 +627,9 @@ export class ClearingHouseController {
       case "2m":
         dateArray = this.getPastDaysStartTimes(60, 0);
         break;
+      case "6m":
+        dateArray = this.getPastDaysStartTimes(180, 0);
+        break;
       case "competition":
         dateArray = this.getPastDaysStartTimes(this.getDayDifference(COMPETITION_START_TIME * 1000) + 1, 0);
         break;
@@ -637,8 +643,10 @@ export class ClearingHouseController {
     }
     const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
 
-    const positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
-    const fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
+    const competitionEndTime = 1689498000;
+
+    let positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
+    let fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
 
     let positionIndex = 0;
     let fundingPaymentIndex = 0;
@@ -649,6 +657,12 @@ export class ClearingHouseController {
     let accumulatedRP = new Decimal(0);
 
     let graphData = [];
+
+    if (resolutionLc == "competition") {
+      dateArray = dateArray.filter(date => date.startTime <= competitionEndTime);
+      positionHistory = positionHistory.filter(position => position.timestamp <= competitionEndTime);
+      fundingPaymentHistory = fundingPaymentHistory.filter(fundingPayment => fundingPayment.timestamp <= competitionEndTime);
+    }
 
     for (let date of dateArray) {
       let dailyPnl = new Decimal(0);
