@@ -2,11 +2,9 @@ import { ethers } from "ethers";
 
 let infuraProvider: ethers.providers.JsonRpcProvider;
 if (process.env.NODE_ENV === "production") {
-  infuraProvider = new ethers.providers.JsonRpcProvider(
-    "https://arb-goerli.g.alchemy.com/v2/I8yTFUYDb_bso5E9di3Kn_pu4UGzywGr");
+  infuraProvider = new ethers.providers.JsonRpcProvider("https://arbitrum-mainnet.infura.io/v3/2f7efd3a292149809ca5c503ee56d6f2");
 } else {
-  infuraProvider = new ethers.providers.JsonRpcProvider(
-    "https://arb-goerli.g.alchemy.com/v2/I8yTFUYDb_bso5E9di3Kn_pu4UGzywGr");
+  infuraProvider = new ethers.providers.JsonRpcProvider("https://arbitrum-mainnet.infura.io/v3/2f7efd3a292149809ca5c503ee56d6f2");
 }
 
 export default infuraProvider;

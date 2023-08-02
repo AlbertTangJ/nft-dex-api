@@ -487,7 +487,10 @@ export class ClearingHouseController {
 
     const currentPositionHistory = await this.clearingHouseService.getCurrentPositionHistory(trader, amm);
 
-    if (currentPositionHistory.length == 0 || currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)) {
+    if (
+      currentPositionHistory.length == 0 ||
+      currentPositionHistory[currentPositionHistory.length - 1].size.eq(0)
+    ) {
       return new ApiResponse(ResponseStatus.Success)
         .setData({
           fundingPaymentPnlHistory: [],

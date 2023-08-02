@@ -17,6 +17,8 @@ export const routingConfigs: RoutingControllersOptions = {
 
   validation: true,
 
+  defaultErrorHandler: false,
+
   authorizationChecker: async (action: Action, roles: string[]) => {
     for (let i = 0; i < roles.length; i++) {
       const role = roles[i];

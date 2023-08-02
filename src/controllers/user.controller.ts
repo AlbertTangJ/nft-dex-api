@@ -279,7 +279,6 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
     return new ApiResponse(ResponseStatus.Failure);
-
   }
 
   @Post("/following/list")
@@ -577,6 +576,16 @@ export class UserController {
       }
       let result = await this.userService.fetchUsernameBy(params);
       return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+    }
+  }
+
+  @Get("/users/profile/:address")
+  async socialProfile(@Param("address") userAddress: string) {
+    if (isAddress(userAddress)) {
+      let result = await this.userService.fetchUserSocialProfile(userAddress);
+      return new ApiResponse(ResponseStatus.Success).setData(result).toObject();
+    } else {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage("address format not right")
     }
   }
 }
