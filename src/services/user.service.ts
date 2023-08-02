@@ -14,7 +14,19 @@ type Follower = { followerAddress: string; followers: number; ranking: number; p
 };
 @Service()
 export class UserService {
-  constructor(private pointService: PointsService) { }
+  private amms;
+  constructor(private pointService: PointsService) {
+    this.amms = {
+      "wcryptopunks": '0x2396cc2b3c814609daeb7413b7680f569bbc16e0',
+      "bayc": '0xd490246758b4dfed5fb8576cb9ac20073bb111dd',
+      "azuki": '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085',
+      "mayc": '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715',
+      "degods": '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0',
+      "thecaptiainz": '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737',
+      "pudgypenguins": '0x0e9148000cc4368a5c091d85e5aa91596408594d',
+      "milady": '0x64244464a3e15990299d4106deca4f4839f3dd99'
+    }
+  }
   async create(data: Prisma.UserCreateInput) {
     return prisma.user.create({
       data: data
@@ -125,21 +137,21 @@ export class UserService {
           SUM(milady_total) 		     AS milady_total
         FROM (SELECT "userAddress", 
                 CASE 
-                  WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_total,
+                  WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_total,
                 CASE
-                  WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN COUNT("ammAddress") ELSE 0 END AS bayc_total,
+                  WHEN "ammAddress" = ${this.amms.bayc} THEN COUNT("ammAddress") ELSE 0 END AS bayc_total,
                 CASE	
-                  WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN COUNT("ammAddress") ELSE 0 END AS azuki_total,
+                  WHEN "ammAddress" = ${this.amms.azuki} THEN COUNT("ammAddress") ELSE 0 END AS azuki_total,
                 CASE
-                  WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN COUNT("ammAddress") ELSE 0 END AS mayc_total,
+                  WHEN "ammAddress" = ${this.amms.mayc} THEN COUNT("ammAddress") ELSE 0 END AS mayc_total,
                 CASE
-                  WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN COUNT("ammAddress") ELSE 0 END AS degods_total,
+                  WHEN "ammAddress" = ${this.amms.degods} THEN COUNT("ammAddress") ELSE 0 END AS degods_total,
                 CASE
-                  WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_total,
+                  WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_total,
                 CASE
-                  WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_total,
+                  WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_total,
                 CASE
-                  WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN COUNT("ammAddress") ELSE 0 END AS milady_total
+                  WHEN "ammAddress" = ${this.amms.milady} THEN COUNT("ammAddress") ELSE 0 END AS milady_total
                 FROM "Position"
         WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress","ammAddress","batchId") t GROUP BY t."userAddress") c
      LEFT JOIN (
@@ -155,21 +167,21 @@ export class UserService {
           FROM (
               SELECT "userAddress" AS "userAddress",
                 CASE 
-                  WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_gt,
+                  WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_gt,
                 CASE
-                  WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN COUNT("ammAddress") ELSE 0 END AS bayc_gt,
+                  WHEN "ammAddress" = ${this.amms.bayc} THEN COUNT("ammAddress") ELSE 0 END AS bayc_gt,
                 CASE	
-                  WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN COUNT("ammAddress") ELSE 0 END AS azuki_gt,
+                  WHEN "ammAddress" = ${this.amms.azuki} THEN COUNT("ammAddress") ELSE 0 END AS azuki_gt,
                 CASE
-                  WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN COUNT("ammAddress") ELSE 0 END AS mayc_gt,
+                  WHEN "ammAddress" = ${this.amms.mayc} THEN COUNT("ammAddress") ELSE 0 END AS mayc_gt,
                 CASE
-                  WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN COUNT("ammAddress") ELSE 0 END AS degods_gt,
+                  WHEN "ammAddress" = ${this.amms.degods} THEN COUNT("ammAddress") ELSE 0 END AS degods_gt,
                 CASE
-                  WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_gt,
+                  WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_gt,
                 CASE
-                  WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_gt,
+                  WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_gt,
                 CASE
-                  WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN COUNT("ammAddress") ELSE 0 END AS milady_gt 
+                  WHEN "ammAddress" = ${this.amms.milady} THEN COUNT("ammAddress") ELSE 0 END AS milady_gt 
             FROM "Position" 
             WHERE "userAddress" = ${userAddress} 
             AND 
@@ -205,21 +217,21 @@ export class UserService {
         SUM(milady_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
     FROM (SELECT "userAddress",  
           CASE 
-            WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN SUM("openNotional") ELSE 0 END AS wcryptopunks_pnl,
+            WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("openNotional") ELSE 0 END AS wcryptopunks_pnl,
           CASE
-            WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN SUM("openNotional") ELSE 0 END AS bayc_pnl,
+            WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("openNotional") ELSE 0 END AS bayc_pnl,
           CASE	
-            WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN SUM("openNotional") ELSE 0 END AS azuki_pnl,
+            WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("openNotional") ELSE 0 END AS azuki_pnl,
           CASE
-            WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN SUM("openNotional") ELSE 0 END AS mayc_pnl,
+            WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("openNotional") ELSE 0 END AS mayc_pnl,
           CASE
-            WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN SUM("openNotional") ELSE 0 END AS degods_pnl,
+            WHEN "ammAddress" = ${this.amms.degods} THEN SUM("openNotional") ELSE 0 END AS degods_pnl,
           CASE
-            WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN SUM("openNotional") ELSE 0 END AS thecaptiainz_pnl,
+            WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("openNotional") ELSE 0 END AS thecaptiainz_pnl,
           CASE
-            WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN SUM("openNotional") ELSE 0 END AS pudgypenguins_pnl,
+            WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("openNotional") ELSE 0 END AS pudgypenguins_pnl,
           CASE
-            WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN SUM("openNotional") ELSE 0 END AS milady_pnl
+            WHEN "ammAddress" = ${this.amms.milady} THEN SUM("openNotional") ELSE 0 END AS milady_pnl
         FROM api."Position"
         WHERE "userAddress" = '0xc32c97d0dc2f7deafe9973327a77c6df1470466c' GROUP BY "userAddress", "ammAddress", "batchId"
        ) t
@@ -236,21 +248,21 @@ export class UserService {
                                                                     (SUM(milady_pnl)       / (10^18))::varchar		   AS milady_pnl
                                                               FROM (SELECT "userAddress", 
                                                                       CASE 
-                                                                        WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN SUM("realizedPnl") ELSE 0 END AS wcryptopunks_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("realizedPnl") ELSE 0 END AS wcryptopunks_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN SUM("realizedPnl") ELSE 0 END AS bayc_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("realizedPnl") ELSE 0 END AS bayc_pnl,
                                                                       CASE	
-                                                                        WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN SUM("realizedPnl") ELSE 0 END AS azuki_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("realizedPnl") ELSE 0 END AS azuki_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN SUM("realizedPnl") ELSE 0 END AS mayc_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("realizedPnl") ELSE 0 END AS mayc_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN SUM("realizedPnl") ELSE 0 END AS degods_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.degods} THEN SUM("realizedPnl") ELSE 0 END AS degods_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN SUM("realizedPnl") ELSE 0 END AS thecaptiainz_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("realizedPnl") ELSE 0 END AS thecaptiainz_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN SUM("realizedPnl") ELSE 0 END AS pudgypenguins_pnl,
+                                                                        WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("realizedPnl") ELSE 0 END AS pudgypenguins_pnl,
                                                                       CASE
-                                                                        WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
+                                                                        WHEN "ammAddress" = ${this.amms.milady} THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
                                                                     FROM api."Position"
                                                                     WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress", "ammAddress", "batchId"
                                                                   ) t
