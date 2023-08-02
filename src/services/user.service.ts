@@ -948,8 +948,9 @@ export class UserService {
       referralCode: string;
       isFollowing?: boolean;
       referralUsersCount?: number;
+      analysis?: any;
     } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
-
+    targetUserInfo.analysis = await this.fetchUserSocialProfile(targetUser.toLowerCase());
     if (targetUserInfo == null) {
       return null;
     }
