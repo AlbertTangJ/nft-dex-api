@@ -4,7 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
 import { Decimal } from "@prisma/client/runtime";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, ethers, utils } from "ethers";
 import { PointsService } from "./points.service";
 import axios from "axios";
 
@@ -19,6 +19,263 @@ export class UserService {
     return prisma.user.create({
       data: data
     });
+  }
+
+  async fetchUserSocialProfile(userAddress: string) {
+
+    let totalTradesResult = await prisma.position.count({
+      where: {
+        AND: [
+          { userAddress: userAddress },
+          { action: 'Trade' }
+        ]
+      }
+    })
+
+    let totalCloseTradeResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(totaltrades.trades) isnull THEN 0 ELSE SUM(totaltrades.trades) END AS "totalTrades" FROM (SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress","batchId") totaltrades`
+    let highTrades = await prisma.$queryRaw<any[]>`SELECT p."positionCumulativeRealizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" FROM 
+                                                    (
+                                                      SELECT MAX(id) AS id,
+                                                        "userAddress" AS "userAddress",
+                                                        MIN("timestamp") AS "openTime", 
+                                                        MAX("timestamp") - MIN("timestamp") AS "period",
+                                                        "ammAddress" AS "ammAddress",
+                                                        "batchId" AS "batchId"
+                                                      FROM "Position"
+                                                      WHERE "userAddress" = ${userAddress} GROUP BY "userAddress","ammAddress","batchId"
+                                                    ) t
+                                                    LEFT JOIN "Position" p
+                                                    ON p.id = t.id
+                                                    WHERE p."positionCumulativeRealizedPnl" > 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" DESC LIMIT 3`;
+    let lowestTrades = await prisma.$queryRaw<any[]>`SELECT p."positionCumulativeRealizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
+                                                     FROM 
+                                                      (
+                                                        SELECT MAX(id) AS id,
+                                                          "userAddress" AS "userAddress",
+                                                          MIN("timestamp") AS "openTime", 
+                                                          MAX("timestamp") - MIN("timestamp") AS "period",
+                                                          "ammAddress" AS "ammAddress",
+                                                          "batchId" AS "batchId"
+                                                        FROM "Position"
+                                                        WHERE "userAddress" = ${userAddress} GROUP BY "userAddress","ammAddress","batchId"
+                                                     ) t
+                                                    LEFT JOIN "Position" p
+                                                    ON p.id = t.id
+                                                    WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
+    let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") isnull THEN 0 ELSE SUM("positionNotional") END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress}`
+    let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") AS "avgLeverage"
+                                                          FROM
+                                                          (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
+                                                            CASE 
+                                                              WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
+                                                              THEN true 
+                                                              ELSE false 
+                                                              END AS "isOpen",
+                                                            CASE
+                                                              WHEN SIGN("exchangedPositionSize") = SIGN("size")
+                                                              THEN true
+                                                              ELSE false
+                                                              END AS "isAdd"
+                                                            FROM api."Position" WHERE "userAddress" = ${userAddress}
+                                                          ) t WHERE t."isOpen" = true OR t."isAdd" = true`
+    let pnlResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("realizedPnl") isnull THEN 0 ELSE SUM("realizedPnl") END AS pnl FROM api."Position" WHERE "userAddress" = ${userAddress}`
+    let collectionsWinRateResult = await prisma.$queryRaw<any[]>`
+    SELECT
+      CASE
+        WHEN p.wcryptopunks_gt = 0 OR c.wcryptopunks_total = 0 THEN '0' ELSE p.wcryptopunks_gt::varchar || '/' || c.wcryptopunks_total::varchar END AS "wcryptopunksWinRate",
+      CASE
+        WHEN p.wcryptopunks_gt = 0 OR c.wcryptopunks_total = 0 THEN 0 ELSE p.wcryptopunks_gt / c.wcryptopunks_total END AS "wcryptopunksWinRateNum",
+      CASE
+        WHEN p.bayc_gt = 0 OR c.bayc_total = 0 THEN '0' ELSE p.bayc_gt::varchar || '/' || c.bayc_total::varchar END AS "baycWinRate",
+      CASE
+        WHEN p.bayc_gt = 0 OR c.bayc_total = 0 THEN 0 ELSE p.bayc_gt / c.bayc_total END AS "baycWinRateNum",
+      CASE
+        WHEN p.azuki_gt = 0 OR c.azuki_total = 0 THEN '0' ELSE p.azuki_gt::varchar || '/' || c.azuki_total::varchar END AS "azukiWinRate",
+      CASE
+        WHEN p.azuki_gt = 0 OR c.azuki_total = 0 THEN 0 ELSE p.azuki_gt / c.azuki_total END AS "azukiWinRateNum",
+      CASE
+        WHEN p.mayc_gt = 0 OR c.mayc_total = 0 THEN '0' ELSE p.mayc_gt::varchar || '/' || c.mayc_total::varchar END AS "maycWinRate",
+      CASE
+        WHEN p.mayc_gt = 0 OR c.mayc_total = 0 THEN 0 ELSE p.mayc_gt / c.mayc_total END AS "maycWinRateNum",
+      CASE	
+        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN '0' ELSE p.degods_gt::varchar || '/' || c.degods_total::varchar END AS "maycWinRate",
+      CASE	
+        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN 0 ELSE p.degods_gt / c.degods_total END AS "maycWinRateNum",
+      CASE	
+        WHEN p.thecaptiainz_gt = 0 OR c.thecaptiainz_total = 0 THEN '0' ELSE p.thecaptiainz_gt::varchar || '/' || c.thecaptiainz_total::varchar END AS "thecaptiainzWinRate",
+      CASE	
+        WHEN p.thecaptiainz_gt = 0 OR c.thecaptiainz_total = 0 THEN 0 ELSE p.thecaptiainz_gt / c.thecaptiainz_total END AS "thecaptiainzWinRateNum",
+      CASE	
+        WHEN p.pudgypenguins_gt = 0 OR c.pudgypenguins_total = 0 THEN '0' ELSE p.pudgypenguins_gt::varchar || '/' || c.pudgypenguins_total::varchar END AS "pudgypenguinsWinRate",
+      CASE	
+        WHEN p.pudgypenguins_gt = 0 OR c.pudgypenguins_total = 0 THEN 0 ELSE p.pudgypenguins_gt / c.pudgypenguins_total END AS "pudgypenguinsWinRateNum",
+      CASE		
+        WHEN p.milady_gt = 0 OR c.milady_total = 0 THEN '0' ELSE p.milady_gt::varchar || '/' || c.milady_total::varchar END AS "miladyWinRate",
+      CASE		
+        WHEN p.milady_gt = 0 OR c.milady_total = 0 THEN 0 ELSE p.milady_gt / c.milady_total END AS "miladyWinRateNum"			     
+    FROM (
+        SELECT t."userAddress" 			 AS "userAddress",
+          SUM(wcryptopunks_total)    AS wcryptopunks_total,
+          SUM(bayc_total) 		       AS bayc_total,
+          SUM(azuki_total) 		       AS azuki_total,
+          SUM(mayc_total) 		       AS mayc_total,
+          SUM(degods_total) 		     AS degods_total,
+          SUM(thecaptiainz_total)    AS thecaptiainz_total, 
+          SUM(pudgypenguins_total)   AS pudgypenguins_total, 
+          SUM(milady_total) 		     AS milady_total
+        FROM (SELECT "userAddress", 
+                CASE 
+                  WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_total,
+                CASE
+                  WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN COUNT("ammAddress") ELSE 0 END AS bayc_total,
+                CASE	
+                  WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN COUNT("ammAddress") ELSE 0 END AS azuki_total,
+                CASE
+                  WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN COUNT("ammAddress") ELSE 0 END AS mayc_total,
+                CASE
+                  WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN COUNT("ammAddress") ELSE 0 END AS degods_total,
+                CASE
+                  WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_total,
+                CASE
+                  WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_total,
+                CASE
+                  WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN COUNT("ammAddress") ELSE 0 END AS milady_total
+                FROM "Position"
+        WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress","ammAddress","batchId") t GROUP BY t."userAddress") c
+     LEFT JOIN (
+        SELECT  g."userAddress" 		  AS "userAddress",
+            SUM(wcryptopunks_gt)      AS wcryptopunks_gt,
+            SUM(bayc_gt) 		          AS bayc_gt,
+            SUM(azuki_gt) 		        AS azuki_gt,
+            SUM(mayc_gt) 		  	      AS mayc_gt,
+            SUM(degods_gt) 		        AS degods_gt,
+            SUM(thecaptiainz_gt)      AS thecaptiainz_gt, 
+            SUM(pudgypenguins_gt)     AS pudgypenguins_gt, 
+            SUM(milady_gt) 		        AS milady_gt 
+          FROM (
+              SELECT "userAddress" AS "userAddress",
+                CASE 
+                  WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN COUNT("ammAddress") ELSE 0 END AS wcryptopunks_gt,
+                CASE
+                  WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN COUNT("ammAddress") ELSE 0 END AS bayc_gt,
+                CASE	
+                  WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN COUNT("ammAddress") ELSE 0 END AS azuki_gt,
+                CASE
+                  WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN COUNT("ammAddress") ELSE 0 END AS mayc_gt,
+                CASE
+                  WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN COUNT("ammAddress") ELSE 0 END AS degods_gt,
+                CASE
+                  WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN COUNT("ammAddress") ELSE 0 END AS thecaptiainz_gt,
+                CASE
+                  WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN COUNT("ammAddress") ELSE 0 END AS pudgypenguins_gt,
+                CASE
+                  WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN COUNT("ammAddress") ELSE 0 END AS milady_gt 
+            FROM "Position" 
+            WHERE "userAddress" = ${userAddress} 
+            AND 
+            size = 0 
+            AND 
+            "realizedPnl" > 0 
+            GROUP BY "userAddress", "ammAddress", "batchId") g GROUP BY g."userAddress"
+        ) p
+    ON c."userAddress" = p."userAddress"`
+    let collectionsOpenNotionalAllocationResult = await prisma.$queryRaw<any[]>`WITH "totalOpenNotionalResult" AS (SELECT SUM(t."openNotional") AS "totalOpenNotional"
+    FROM 
+    (SELECT id, "openNotional",
+      CASE 
+      WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
+      THEN true 
+      ELSE false 
+      END AS "isOpen",
+      CASE
+      WHEN SIGN("exchangedPositionSize") = SIGN("size")
+      THEN true
+      ELSE false
+      END AS "isAdd"
+      FROM api."Position" WHERE "userAddress" = '0xc32c97d0dc2f7deafe9973327a77c6df1470466c'
+    ) t WHERE t."isOpen" = true OR t."isAdd" = true)
+    SELECT t."userAddress" 			 AS "userAddress",
+        SUM(wcryptopunks_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS wcryptopunks_pnl,
+        SUM(bayc_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS bayc_pnl,
+        SUM(azuki_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS azuki_pnl,
+        SUM(mayc_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS mayc_pnl,
+        SUM(degods_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS degods_pnl,
+        SUM(thecaptiainz_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS thecaptiainz_pnl, 
+        SUM(pudgypenguins_pnl) / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS pudgypenguins_pnl, 
+        SUM(milady_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
+    FROM (SELECT "userAddress",  
+          CASE 
+            WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN SUM("openNotional") ELSE 0 END AS wcryptopunks_pnl,
+          CASE
+            WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN SUM("openNotional") ELSE 0 END AS bayc_pnl,
+          CASE	
+            WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN SUM("openNotional") ELSE 0 END AS azuki_pnl,
+          CASE
+            WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN SUM("openNotional") ELSE 0 END AS mayc_pnl,
+          CASE
+            WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN SUM("openNotional") ELSE 0 END AS degods_pnl,
+          CASE
+            WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN SUM("openNotional") ELSE 0 END AS thecaptiainz_pnl,
+          CASE
+            WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN SUM("openNotional") ELSE 0 END AS pudgypenguins_pnl,
+          CASE
+            WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN SUM("openNotional") ELSE 0 END AS milady_pnl
+        FROM api."Position"
+        WHERE "userAddress" = '0xc32c97d0dc2f7deafe9973327a77c6df1470466c' GROUP BY "userAddress", "ammAddress", "batchId"
+       ) t
+    GROUP BY t."userAddress"`
+    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND size = 0 AND "realizedPnl" > 0 GROUP BY "userAddress", "batchId"`
+    let collectionsPnlResult = await prisma.$queryRaw<any[]>`SELECT 
+                                                                    (SUM(wcryptopunks_pnl) / (10^18))::varchar   	   AS wcryptopunks_pnl,
+                                                                    (SUM(bayc_pnl)         / (10^18))::varchar		   AS bayc_pnl,
+                                                                    (SUM(azuki_pnl)        / (10^18))::varchar		   AS azuki_pnl,
+                                                                    (SUM(mayc_pnl)         / (10^18))::varchar		   AS mayc_pnl,
+                                                                    (SUM(degods_pnl)       / (10^18))::varchar		   AS degods_pnl,
+                                                                    (SUM(thecaptiainz_pnl) / (10^18))::varchar       AS thecaptiainz_pnl, 
+                                                                    (SUM(pudgypenguins_pnl)/ (10^18))::varchar       AS pudgypenguins_pnl, 
+                                                                    (SUM(milady_pnl)       / (10^18))::varchar		   AS milady_pnl
+                                                              FROM (SELECT "userAddress", 
+                                                                      CASE 
+                                                                        WHEN "ammAddress" = '0x2396cc2b3c814609daeb7413b7680f569bbc16e0' THEN SUM("realizedPnl") ELSE 0 END AS wcryptopunks_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0xd490246758b4dfed5fb8576cb9ac20073bb111dd' THEN SUM("realizedPnl") ELSE 0 END AS bayc_pnl,
+                                                                      CASE	
+                                                                        WHEN "ammAddress" = '0xf33c2f463d5ad0e5983181b49a2d9b7b29032085' THEN SUM("realizedPnl") ELSE 0 END AS azuki_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0x75416ee73fd8c99c1aa33e1e1180e8ed77d4c715' THEN SUM("realizedPnl") ELSE 0 END AS mayc_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0x1bbc1f49497f4f1a08a93df26adfc7b0cecd95e0' THEN SUM("realizedPnl") ELSE 0 END AS degods_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0xcba1f8cdd6c9d6ea71b3d88dcfb777be9bc7c737' THEN SUM("realizedPnl") ELSE 0 END AS thecaptiainz_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0x0e9148000cc4368a5c091d85e5aa91596408594d' THEN SUM("realizedPnl") ELSE 0 END AS pudgypenguins_pnl,
+                                                                      CASE
+                                                                        WHEN "ammAddress" = '0x64244464a3e15990299d4106deca4f4839f3dd99' THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
+                                                                    FROM api."Position"
+                                                                    WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress", "ammAddress", "batchId"
+                                                                  ) t
+                                                              GROUP BY t."userAddress"`
+    let goodTradeCount = goodTradeCountResult.length;
+    let totalCloseTrades = totalCloseTradeResult.length == 0 ? 0 : totalCloseTradeResult[0].totalTrades
+    let totalTradeVol = tradeVolResult.length == 0 ? 0 : tradeVolResult[0].tradeVolTotal
+    let avgLeverage = avgLeverageResult.length == 0 ? 0 : avgLeverageResult[0].avgLeverage
+    let winRate = goodTradeCount == 0 || totalCloseTrades == 0 ? 0 : goodTradeCount / totalCloseTrades
+    let totalPnl = pnlResult.length == 0 ? 0 : pnlResult[0].pnl
+
+    let infoResult = {
+      "totalTrades": totalTradesResult.toString(),
+      "totalTradingVol": utils.formatEther(totalTradeVol.toString()).toString(),
+      "avgLeverage": avgLeverage,
+      "winRate": winRate.toString(),
+      "totalRealizedPnL": utils.formatEther(totalPnl.toString()).toString()
+    }
+    let collectionsOpenNotionalAllocation = collectionsOpenNotionalAllocationResult.length == 0 ? {} : collectionsOpenNotionalAllocationResult[0]
+    let collectionsWinRate = collectionsWinRateResult.length == 0 ? {} : collectionsWinRateResult[0]
+    let collectionsPnl = collectionsPnlResult.length == 0 ? {} : collectionsPnlResult[0]
+    let analysis = { "collectionAnalysis": collectionsWinRate, "collectionsPnl": collectionsPnl, "collectionsOpenNotionalAllocation": collectionsOpenNotionalAllocation }
+    let trades = { "highest": highTrades, "lowest": lowestTrades }
+    let result = { "info": infoResult, "analysis": analysis, "trades": trades }
+    return result;
   }
 
   async fetchFollowAndUpdateUserInfo(userAddress: string) {
