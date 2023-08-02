@@ -256,7 +256,7 @@ export class UserService {
         WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress", "ammAddress", "batchId"
        ) t
     GROUP BY t."userAddress"`
-    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND size = 0 AND "realizedPnl" > 0 GROUP BY "userAddress", "batchId"`
+    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "realizedPnl" > 0 GROUP BY "userAddress", "batchId"`
     let collectionsPnlResult = await prisma.$queryRaw<any[]>`SELECT 
                                                                     (SUM(wcryptopunks_pnl) / (10^18))::varchar   	   AS wcryptopunks_pnl,
                                                                     (SUM(bayc_pnl)         / (10^18))::varchar		   AS bayc_pnl,
@@ -284,7 +284,7 @@ export class UserService {
                                                                       CASE
                                                                         WHEN "ammAddress" = ${this.amms.milady} THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
                                                                     FROM api."Position"
-                                                                    WHERE "userAddress" = ${userAddress} AND size = 0 GROUP BY "userAddress", "ammAddress", "batchId"
+                                                                    WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 GROUP BY "userAddress", "ammAddress", "batchId"
                                                                   ) t
                                                               GROUP BY t."userAddress"`
     let goodTradeCount = goodTradeCountResult.length;
