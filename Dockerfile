@@ -12,5 +12,6 @@ RUN npx prisma generate
 
 ENV NODE_ENV production
 ENV ENV production
+ENV AMM_ENV production
 EXPOSE 3001
 CMD ["npm", "run", "start"]
