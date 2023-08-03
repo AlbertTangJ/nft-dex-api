@@ -1,11 +1,9 @@
-import { JsonController, Get, QueryParam, Param } from "routing-controllers";
-import { PointsService } from "../services";
+import { JsonController, Get, QueryParam } from "routing-controllers";
 import { Service } from "typedi";
 import { ApiResponse, ResponseStatus } from "src/helpers/apiResponse";
 import { CompetitionService } from "src/services/competition.service";
 import Schema, { Rules } from "async-validator";
 import { isAddress } from "ethers/lib/utils";
-import { CompetitionSeason1 } from "@prisma/client";
 import BigNumber from "bignumber.js";
 
 @JsonController()

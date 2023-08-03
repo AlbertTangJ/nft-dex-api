@@ -7,6 +7,8 @@ import { Decimal } from "@prisma/client/runtime";
 import { BigNumber, utils } from "ethers";
 import { PointsService } from "./points.service";
 import axios from "axios";
+import { CompetitionService } from "./competition.service";
+import { BigNumber as BigNumber1 } from "bignumber.js";
 
 type Follower = { followerAddress: string; followers: number; ranking: number; points: number; userAddress: string };
 (BigInt.prototype as any).toJSON = function () {
@@ -15,9 +17,11 @@ type Follower = { followerAddress: string; followers: number; ranking: number; p
 @Service()
 export class UserService {
   private amms;
+  private competitionService;
   constructor(private pointService: PointsService) {
     let ammEnv = process.env.AMM_ENV;
     console.log(`ammEnv:${ammEnv}`)
+    this.competitionService = new CompetitionService()
     if (ammEnv == 'production') {
       // prod
       this.amms = {
@@ -95,7 +99,7 @@ export class UserService {
                                                     ON p.id = t.id
                                                     WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
     let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") isnull THEN 0 ELSE SUM("positionNotional") END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})`
-    let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") AS "avgLeverage"
+    let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") isnull THEN 0 ELSE SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") END AS "avgLeverage"
                                                           FROM
                                                           (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
                                                             CASE 
@@ -226,15 +230,15 @@ export class UserService {
       END AS "isAdd"
       FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})
     ) t WHERE t."isOpen" = true OR t."isAdd" = true)
-    SELECT t."userAddress" 			 AS "userAddress",
+    SELECT
         SUM(wcryptopunks_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS wcryptopunks_pnl,
-        SUM(bayc_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS bayc_pnl,
-        SUM(azuki_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS azuki_pnl,
-        SUM(mayc_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS mayc_pnl,
-        SUM(degods_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS degods_pnl,
+        SUM(bayc_pnl) 		     / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS bayc_pnl,
+        SUM(azuki_pnl) 		     / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS azuki_pnl,
+        SUM(mayc_pnl) 		     / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS mayc_pnl,
+        SUM(degods_pnl) 		   / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")	  AS degods_pnl,
         SUM(thecaptiainz_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS thecaptiainz_pnl, 
         SUM(pudgypenguins_pnl) / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS pudgypenguins_pnl, 
-        SUM(milady_pnl) 		 / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
+        SUM(milady_pnl) 		   / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
     FROM (SELECT "userAddress",  
           CASE 
             WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("openNotional") ELSE 0 END AS wcryptopunks_pnl,
@@ -949,8 +953,35 @@ export class UserService {
       isFollowing?: boolean;
       referralUsersCount?: number;
       analysis?: any;
+      competition?: any;
     } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
-    targetUserInfo.analysis = await this.fetchUserSocialProfile(targetUser.toLowerCase());
+    let analysis = await this.fetchUserSocialProfile(targetUser.toLowerCase());
+    if (analysis != null) {
+      targetUserInfo.analysis = analysis
+    }
+    let result = await this.competitionService.getAbsPnlLeaderboard(1);
+
+    if (result != null) {
+      let userRecord = null;
+      let userRank = 0;
+      let userObj = null;
+      if (user.length > 0) {
+        userRecord = (await this.competitionService.getPersonalLeaderboardRecord(user))[0] ?? null;
+        if (userRecord) {
+          userRank = result.find(record => record.userAddress == userRecord?.userAddress)?.rank ?? 0;
+        }
+        userObj = {
+          userAddress: user.toLowerCase(),
+          username: userRecord?.username ?? "",
+          rank: userRank.toString(),
+          pnl: userRecord?.absolutePnl ?? "0",
+          tradeVol: userRecord?.tradedVolume ?? "0",
+          eligible: new BigNumber1(userRecord?.tradedVolume ?? "0").gte(new BigNumber1("5e18"))
+        };
+      }
+      targetUserInfo.competition = userObj;
+    }
+
     if (targetUserInfo == null) {
       return null;
     }
