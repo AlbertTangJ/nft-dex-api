@@ -106,6 +106,7 @@ model UserEventsLog {
   ip              String?   @db.VarChar
   userAgent       String?   @db.VarChar
 
+  @@index([createTime], map: "UserEventsLog_createtime_index_brin", type: Brin)
   @@schema("api")
 }
 
@@ -471,8 +472,8 @@ model PointsLeaderBoard {
   blockTimestamp           Int?      @default(0)
   logIndex                 Decimal?  @default(0) @db.Decimal
   isBan                    Boolean   @default(false)
-  multiplier               Decimal?  @default(1) @db.Decimal
   finalRank                Decimal?  @default(0) @db.Decimal
+  multiplier               Decimal?  @default(1) @db.Decimal
 
   @@unique([userAddress, season, seasonStart], map: "pointsleaderborad_user_address_unique")
   @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
@@ -507,13 +508,13 @@ model CompetitionSeason1 {
   realizedPnl          Decimal  @default(0) @db.Decimal
   tradedVolume         Decimal  @default(0) @db.Decimal
   netConvergenceVolume Decimal  @default(0) @db.Decimal
+  maxCollateral        Decimal  @default(0) @db.Decimal
   roi                  Decimal  @default(0) @db.Decimal
+  updatedIndex         Decimal  @default(0) @db.Decimal
   createTime           DateTime @default(now()) @db.Timestamp(6)
   createTimestamp      Int      @default(0)
   updateTime           DateTime @default(now()) @db.Timestamp(6)
   updateTimestamp      Int      @default(0)
-  updatedIndex         Decimal  @default(0) @db.Decimal
-  maxCollateral        Decimal  @default(0) @db.Decimal
 
   @@unique([userAddress, updatedIndex])
   @@index([absolutePnl])
@@ -543,12 +544,27 @@ model PositionFundingPaymentHistory {
   createTime           DateTime @default(now()) @db.Timestamp(6)
   updateTime           DateTime @default(now()) @db.Timestamp(6)
 
+  @@unique([syncId, userAddress, ammAddress, timestamp])
   @@index([ammAddress])
   @@index([batchId])
   @@index([syncId])
   @@index([syncId, userAddress, ammAddress, batchId, timestamp(sort: Desc)])
   @@index([timestamp])
   @@index([userAddress])
+  @@schema("api")
+}
+
+model UserTradeAnalysis {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress     String    @unique(map: "usertradeanalysis_useraddress_unique") @db.VarChar
+  tradeCount      Decimal   @default(0) @db.Decimal
+  analysis        Json?
+  updateTimestamp Int       @default(0)
+  createTimestamp Int       @default(0)
+  updateTime      DateTime? @db.Timestamp(6)
+  createTime      DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([updateTimestamp], map: "usertradeanalysis_update_timestamp_index", type: Brin)
   @@schema("api")
 }
 
