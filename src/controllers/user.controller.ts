@@ -254,6 +254,31 @@ export class UserController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
+  @Post("/users/info/v1")
+  async fetchUserInfov1(
+    @BodyParam("user", { required: true }) user: string,
+    @BodyParam("targetUser", { required: true }) targetUser: string
+  ) {
+    try {
+      await this.twoAddressValidator.validate({ user: user, viewer: targetUser }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            throw { result: ResponseStatus.Failure, message: error.message };
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+    }
+
+    let result = await this.userService.fetchUserInfoV1(user, targetUser);
+    if (result != null) {
+      return new ApiResponse(ResponseStatus.Success).setData(result);
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
   @Get("/users")
   async findUser(@QueryParam("publicAddress", { required: true }) userAddress: string) {
     if (isAddress(userAddress)) {

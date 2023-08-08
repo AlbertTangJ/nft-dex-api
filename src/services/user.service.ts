@@ -939,7 +939,7 @@ export class UserService {
     return haveFollowed;
   }
 
-  async fetchUserInfo(user: string, targetUser: string) {
+  async fetchUserInfoV1(user: string, targetUser: string) {
     let targetUserInfo: {
       id: string;
       userAddress: string;
@@ -981,6 +981,43 @@ export class UserService {
       }
       targetUserInfo.competition = userObj;
     }
+
+    if (targetUserInfo == null) {
+      return null;
+    }
+
+    let haveFollowed = await prisma.userFollowing.findUnique({
+      where: {
+        userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
+      }
+    });
+    let isFollowing = false;
+    if (haveFollowed != null) {
+      isFollowing = true;
+    }
+
+    let referralUsersCount = await prisma.referralEvents.count({
+      where: { referralCode: targetUserInfo.referralCode }
+    });
+    targetUserInfo.referralUsersCount = referralUsersCount;
+    targetUserInfo.isFollowing = isFollowing;
+    return targetUserInfo;
+  }
+
+  async fetchUserInfo(user: string, targetUser: string) {
+    let targetUserInfo: {
+      id: string;
+      userAddress: string;
+      username: string;
+      about: string;
+      followers: number;
+      following: number;
+      points: Decimal;
+      referralPoints: number;
+      referralCode: string;
+      isFollowing?: boolean;
+      referralUsersCount?: number;
+    } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
 
     if (targetUserInfo == null) {
       return null;
