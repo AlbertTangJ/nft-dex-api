@@ -5,6 +5,7 @@ import { CompetitionService } from "src/services/competition.service";
 import Schema, { Rules } from "async-validator";
 import { isAddress } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
+import Prize from "src/helpers/competitionS2Prize";
 
 @JsonController()
 @Service()
@@ -181,6 +182,194 @@ export class CompetitionController {
           eligible: new BigNumber(userRecord?.tradedVolume ?? "0").gte(new BigNumber("5e18"))
         };
       }
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  // Season 2
+  @Get("/competition/leaderboard/s2/absPnl")
+  async getS2AbsPnlLeaderboard(@QueryParam("userAddress") user: string = "", @QueryParam("pageNo") pageNo: number = 1) {
+    try {
+      await this.userAddressValidator.validate({ user }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    let result = await this.competitionService.getS2AbsPnlLeaderboard(pageNo);
+
+    if (result != null) {
+      let userRecord = null;
+      let userObj = null;
+      if (user.length > 0) {
+        userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
+        const rank = userRecord?.rank ?? 0;
+        const prize = Prize.topGainerPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        userObj = {
+          userAddress: userRecord?.userAddress,
+          username: userRecord?.username ?? "",
+          rank: userRecord?.rank?.toString() ?? "0",
+          pnl: userRecord?.pnl ?? "0",
+          pointPrize: prize?.points ?? 0,
+          usdtPrize: prize?.usdt ?? 0
+        };
+      }
+      for (let ranking of result) {
+        const rank = ranking.rank;
+        const prize = Prize.topGainerPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        ranking.pointPrize = prize?.points ?? 0;
+        ranking.usdtPrize = prize?.usdt ?? 0;
+      }
+
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/competition/leaderboard/s2/topFundingPayment")
+  async getS2TopFundingPaymentLeaderboard(@QueryParam("userAddress") user: string = "", @QueryParam("pageNo") pageNo: number = 1) {
+    try {
+      await this.userAddressValidator.validate({ user }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    let result = await this.competitionService.getS2FundingPaymentLeaderboard(pageNo);
+
+    if (result != null) {
+      let userRecord = null;
+      let userObj = null;
+      if (user.length > 0) {
+        userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
+        const rank = userRecord?.rank ?? 0;
+        const prize = Prize.topFundingPaymentPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        userObj = {
+          userAddress: userRecord?.userAddress,
+          username: userRecord?.username ?? "",
+          rank: userRecord?.rank?.toString() ?? "0",
+          fundingPayment: userRecord?.fundingPayment ?? "0",
+          pointPrize: prize?.points ?? 0,
+          usdtPrize: prize?.usdt ?? 0
+        };
+      }
+      for (let ranking of result) {
+        const rank = ranking.rank;
+        const prize = Prize.topFundingPaymentPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        ranking.pointPrize = prize?.points ?? 0;
+        ranking.usdtPrize = prize?.usdt ?? 0;
+      }
+
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/competition/leaderboard/s2/topWeeklyVolume")
+  async getS2TopWeeklyVolumeLeaderboard(
+    @QueryParam("userAddress") user: string = "",
+    @QueryParam("pageNo") pageNo: number = 1,
+    @QueryParam("week") week: number = -1
+  ) {
+    try {
+      await this.userAddressValidator.validate({ user }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    let result =
+      week < 0
+        ? await this.competitionService.getS2TradedVolumeLeaderboard(pageNo)
+        : await this.competitionService.getS2TradedVolumeLeaderboardByWeek(pageNo, week);
+
+    if (result != null) {
+      let userRecord = null;
+      let userObj = null;
+      if (user.length > 0) {
+        userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
+        const rank = userRecord?.rank ?? 0;
+        const prize = Prize.tradedVolumePrize.find(prize => prize.start <= rank && prize.end >= rank);
+        userObj = {
+          userAddress: userRecord?.userAddress,
+          username: userRecord?.username ?? "",
+          rank: userRecord?.rank?.toString() ?? "0",
+          weeklyTradedVolume: userRecord?.weeklyTradedVolume ?? "0",
+          pointPrize: prize?.points ?? 0,
+          usdtPrize: prize?.usdt ?? 0
+        };
+      }
+      for (let ranking of result) {
+        const rank = ranking.rank;
+        const prize = Prize.tradedVolumePrize.find(prize => prize.start <= rank && prize.end >= rank);
+        ranking.pointPrize = prize?.points ?? 0;
+        ranking.usdtPrize = prize?.usdt ?? 0;
+      }
+
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/competition/leaderboard/s2/topRefereeVolume")
+  async getS2TopRefereeVolumeLeaderboard(@QueryParam("userAddress") user: string = "", @QueryParam("pageNo") pageNo: number = 1) {
+    try {
+      await this.userAddressValidator.validate({ user }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    let result = await this.competitionService.getS2RefereeTradedVolumeLeaderboard(pageNo);
+
+    if (result != null) {
+      let userRecord = null;
+      let userObj = null;
+      if (user.length > 0) {
+        userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
+        const rank = userRecord?.rank ?? 0;
+        const prize = Prize.topReferralPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        userObj = {
+          userAddress: userRecord?.userAddress,
+          username: userRecord?.username ?? "",
+          rank: userRecord?.rank?.toString() ?? "0",
+          totalVolume: userRecord?.totalVolume ?? "0",
+          pointPrize: prize?.points ?? 0,
+          usdtPrize: prize?.usdt ?? 0
+        };
+      }
+      for (let ranking of result) {
+        const rank = ranking.rank;
+        const prize = Prize.topReferralPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        ranking.pointPrize = prize?.points ?? 0;
+        ranking.usdtPrize = prize?.usdt ?? 0;
+      }
+
       return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, leaderboard: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);

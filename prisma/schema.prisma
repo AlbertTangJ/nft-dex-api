@@ -106,7 +106,6 @@ model UserEventsLog {
   ip              String?   @db.VarChar
   userAgent       String?   @db.VarChar
 
-  @@index([createTime], map: "UserEventsLog_createtime_index_brin", type: Brin)
   @@schema("api")
 }
 
@@ -472,8 +471,8 @@ model PointsLeaderBoard {
   blockTimestamp           Int?      @default(0)
   logIndex                 Decimal?  @default(0) @db.Decimal
   isBan                    Boolean   @default(false)
-  finalRank                Decimal?  @default(0) @db.Decimal
   multiplier               Decimal?  @default(1) @db.Decimal
+  finalRank                Decimal?  @default(0) @db.Decimal
 
   @@unique([userAddress, season, seasonStart], map: "pointsleaderborad_user_address_unique")
   @@index([userAddress], map: "pointsleaderboard_user_address_index_hash", type: Hash)
@@ -508,13 +507,13 @@ model CompetitionSeason1 {
   realizedPnl          Decimal  @default(0) @db.Decimal
   tradedVolume         Decimal  @default(0) @db.Decimal
   netConvergenceVolume Decimal  @default(0) @db.Decimal
-  maxCollateral        Decimal  @default(0) @db.Decimal
   roi                  Decimal  @default(0) @db.Decimal
-  updatedIndex         Decimal  @default(0) @db.Decimal
   createTime           DateTime @default(now()) @db.Timestamp(6)
   createTimestamp      Int      @default(0)
   updateTime           DateTime @default(now()) @db.Timestamp(6)
   updateTimestamp      Int      @default(0)
+  updatedIndex         Decimal  @default(0) @db.Decimal
+  maxCollateral        Decimal  @default(0) @db.Decimal
 
   @@unique([userAddress, updatedIndex])
   @@index([absolutePnl])
@@ -544,7 +543,6 @@ model PositionFundingPaymentHistory {
   createTime           DateTime @default(now()) @db.Timestamp(6)
   updateTime           DateTime @default(now()) @db.Timestamp(6)
 
-  @@unique([syncId, userAddress, ammAddress, timestamp])
   @@index([ammAddress])
   @@index([batchId])
   @@index([syncId])
@@ -565,6 +563,41 @@ model UserTradeAnalysis {
   createTime      DateTime? @default(now()) @db.Timestamp(6)
 
   @@index([updateTimestamp], map: "usertradeanalysis_update_timestamp_index", type: Brin)
+  @@schema("api")
+}
+
+model CompetitionSeason2 {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userAddress          String   @db.VarChar
+  absolutePnl          Decimal  @default(0) @db.Decimal
+  fundingPayment       Decimal  @default(0) @db.Decimal
+  realizedPnl          Decimal  @default(0) @db.Decimal
+  tradedVolume         Decimal  @default(0) @db.Decimal
+  weeklyTradedVolume   Decimal  @default(0) @db.Decimal
+  week                 Decimal  @default(0) @db.Decimal
+  netConvergenceVolume Decimal  @default(0) @db.Decimal
+  roi                  Decimal  @default(0) @db.Decimal
+  createTime           DateTime @default(now()) @db.Timestamp(6)
+  createTimestamp      Int      @default(0)
+  updateTime           DateTime @default(now()) @db.Timestamp(6)
+  updateTimestamp      Int      @default(0)
+  updatedIndex         Decimal  @default(0) @db.Decimal
+  maxCollateral        Decimal  @default(0) @db.Decimal
+
+  @@unique([userAddress, updatedIndex])
+  @@index([absolutePnl])
+  @@index([netConvergenceVolume])
+  @@index([roi])
+  @@index([tradedVolume])
+  @@index([updatedIndex, absolutePnl])
+  @@index([updatedIndex])
+  @@index([updatedIndex, netConvergenceVolume])
+  @@index([updatedIndex, roi])
+  @@index([updatedIndex, tradedVolume])
+  @@index([updatedIndex, week])
+  @@index([updatedIndex, weeklyTradedVolume])
+  @@index([week])
+  @@index([weeklyTradedVolume])
   @@schema("api")
 }
 
