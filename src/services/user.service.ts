@@ -417,8 +417,8 @@ export class UserService {
       let result = await prisma.referralEvents.create({ data: { referralCode: code, userAddress: userAddress.toLowerCase() } });
       let countReferralCode = await prisma.referralEvents.count({ where: { referralCode: userInfo.referralCode } });
       await prisma.userInfo.update({
-        where: { userAddress: userAddress.toLowerCase() },
-        data: { isInputCode: true, countReferralCode: countReferralCode }
+        where: { userAddress: userInfo.userAddress.toLowerCase() },
+        data: { countReferralCode: countReferralCode }
       });
       return result;
     } else {
