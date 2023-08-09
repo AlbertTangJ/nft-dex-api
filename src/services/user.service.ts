@@ -661,7 +661,7 @@ export class UserService {
     return haveFollowed;
   }
 
-  async fetchUserInfoV1(user: string, targetUser: string) {
+  async fetchUserInfo(user: string, targetUser: string) {
     let targetUserInfo: {
       id: string;
       userAddress: string;
@@ -726,42 +726,42 @@ export class UserService {
     return targetUserInfo;
   }
 
-  async fetchUserInfo(user: string, targetUser: string) {
-    let targetUserInfo: {
-      id: string;
-      userAddress: string;
-      username: string;
-      about: string;
-      followers: number;
-      following: number;
-      points: Decimal;
-      referralPoints: number;
-      referralCode: string;
-      isFollowing?: boolean;
-      referralUsersCount?: number;
-    } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
+  // async fetchUserInfo(user: string, targetUser: string) {
+  //   let targetUserInfo: {
+  //     id: string;
+  //     userAddress: string;
+  //     username: string;
+  //     about: string;
+  //     followers: number;
+  //     following: number;
+  //     points: Decimal;
+  //     referralPoints: number;
+  //     referralCode: string;
+  //     isFollowing?: boolean;
+  //     referralUsersCount?: number;
+  //   } = await this.findUsersInfoByAddress(targetUser.toLowerCase());
 
-    if (targetUserInfo == null) {
-      return null;
-    }
+  //   if (targetUserInfo == null) {
+  //     return null;
+  //   }
 
-    let haveFollowed = await prisma.userFollowing.findUnique({
-      where: {
-        userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
-      }
-    });
-    let isFollowing = false;
-    if (haveFollowed != null) {
-      isFollowing = true;
-    }
+  //   let haveFollowed = await prisma.userFollowing.findUnique({
+  //     where: {
+  //       userAddress_followerAddress: { userAddress: user.toLowerCase(), followerAddress: targetUser.toLowerCase() }
+  //     }
+  //   });
+  //   let isFollowing = false;
+  //   if (haveFollowed != null) {
+  //     isFollowing = true;
+  //   }
 
-    let referralUsersCount = await prisma.referralEvents.count({
-      where: { referralCode: targetUserInfo.referralCode }
-    });
-    targetUserInfo.referralUsersCount = referralUsersCount;
-    targetUserInfo.isFollowing = isFollowing;
-    return targetUserInfo;
-  }
+  //   let referralUsersCount = await prisma.referralEvents.count({
+  //     where: { referralCode: targetUserInfo.referralCode }
+  //   });
+  //   targetUserInfo.referralUsersCount = referralUsersCount;
+  //   targetUserInfo.isFollowing = isFollowing;
+  //   return targetUserInfo;
+  // }
 
   async updateUserService(userAddress: string, data: any) {
     const result = await prisma.userInfo.update({
