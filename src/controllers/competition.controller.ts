@@ -330,7 +330,7 @@ export class CompetitionController {
     return new ApiResponse(ResponseStatus.Failure);
   }
 
-  @Get("/competition/leaderboard/s2/topRefereeVolume")
+  @Get("/competition/leaderboard/s2/topReferer")
   async getS2TopRefereeVolumeLeaderboard(@QueryParam("userAddress") user: string = "", @QueryParam("pageNo") pageNo: number = 1) {
     try {
       await this.userAddressValidator.validate({ user }, errors => {
