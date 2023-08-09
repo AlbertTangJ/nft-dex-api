@@ -134,9 +134,9 @@ export class UserService {
       CASE
         WHEN p.mayc_gt = 0 OR c.mayc_total = 0 THEN 0 ELSE p.mayc_gt / c.mayc_total END AS "maycWinRateNum",
       CASE	
-        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN '0' ELSE p.degods_gt::varchar || '/' || c.degods_total::varchar END AS "maycWinRate",
+        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN '0' ELSE p.degods_gt::varchar || '/' || c.degods_total::varchar END AS "degodsWinRate",
       CASE	
-        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN 0 ELSE p.degods_gt / c.degods_total END AS "maycWinRateNum",
+        WHEN p.degods_gt = 0 OR c.degods_total = 0 THEN 0 ELSE p.degods_gt / c.degods_total END AS "degodsWinRateNum",
       CASE	
         WHEN p.thecaptiainz_gt = 0 OR c.thecaptiainz_total = 0 THEN '0' ELSE p.thecaptiainz_gt::varchar || '/' || c.thecaptiainz_total::varchar END AS "thecaptiainzWinRate",
       CASE	
