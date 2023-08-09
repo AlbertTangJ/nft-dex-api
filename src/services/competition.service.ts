@@ -201,4 +201,17 @@ export class CompetitionService {
     OFFSET ${(page - 1) * 2000}
     `;
   }
+
+  async getS2RefererTeamList(userAddress: string) {
+    return prisma.$queryRaw<any[]>`
+    SELECT referee as "userAddress", ui2."username" as "username", COALESCE("tradedVolume",0) as "tradedVolume" FROM
+    (SELECT re."userAddress" as "referee", ui."userAddress" as "referer", ui."username" as "refererName", ui."countReferralCode" FROM api."ReferralEvents" re LEFT JOIN api."UserInfo" ui
+    ON re."referralCode" = ui."referralCode") q1
+    LEFT OUTER JOIN api."CompetitionSeason2" cs2 ON cs2."userAddress" = q1."referee"
+    LEFT JOIN api."UserInfo" ui2 ON "referee" = ui2."userAddress"
+    WHERE ("updatedIndex" = (SELECT "updatedIndex" FROM api."CompetitionSeason2" ORDER BY "updatedIndex" DESC LIMIT 1) OR "updatedIndex" IS NULL)
+    AND "referer" = ${userAddress.toLowerCase()}
+    ORDER BY COALESCE("tradedVolume",0) DESC
+    `;
+  }
 }

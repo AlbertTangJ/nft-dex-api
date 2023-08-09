@@ -374,4 +374,69 @@ export class CompetitionController {
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
+
+  @Get("/competition/leaderboard/s2/refererTeamList")
+  async getS2RefererTeamList(@QueryParam("userAddress") user: string = "") {
+    try {
+      await this.userAddressValidator.validate({ user }, errors => {
+        if (errors) {
+          for (let i = 0; i < errors.length; i++) {
+            const error = errors[i];
+            return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
+          }
+        }
+      });
+    } catch (error) {
+      return new ApiResponse(ResponseStatus.Failure);
+    }
+
+    if (!user || user.length == 0) return new ApiResponse(ResponseStatus.Failure);
+
+    let result = await this.competitionService.getS2RefererTeamList(user);
+    let rankingResult = await this.competitionService.getS2RefereeTradedVolumeLeaderboard(1);
+    let rank = 0;
+    let totalPointPrize = 0;
+    let totalUsdtPrize = 0;
+
+    let userRecord = null;
+    let userObj = null;
+
+    if (rankingResult != null) {
+      userRecord = rankingResult.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
+      rank = userRecord?.rank ?? 0;
+      const prize = Prize.topReferralPrize.find(prize => prize.start <= rank && prize.end >= rank);
+      totalPointPrize = prize?.points ?? 0;
+      totalUsdtPrize = prize?.usdt ?? 0;
+    }
+
+    if (result != null) {
+      userObj = {
+        userAddress: userRecord?.userAddress,
+        username: userRecord?.username ?? "",
+        rank: userRecord?.rank?.toString() ?? "0",
+        totalVolume: userRecord?.totalVolume ?? "0",
+        pointPrize: (totalPointPrize ?? 0) * 0.4,
+        usdtPrize: (totalUsdtPrize ?? 0) * 0.4
+      };
+
+      const totalVolume = new BigNumber(userRecord?.totalVolume ?? "0");
+      for (let [index, referee] of result.entries()) {
+        let multiplier = 0;
+        if (index == 0) multiplier = 0.16;
+        if (index == 1) multiplier = 0.14;
+        if (index == 2) multiplier = 0.12;
+        if (index == 3) multiplier = 0.1;
+        if (index == 4) multiplier = 0.08;
+
+        if (referee.tradedVolume == "0") multiplier = 0;
+
+        referee.distribution = new BigNumber(referee.tradedVolume ?? "0").div(totalVolume).multipliedBy(100).toNumber();
+        referee.pointPrize = Number((totalPointPrize * multiplier).toFixed(2));
+        referee.usdtPrize = Number((totalUsdtPrize * multiplier).toFixed(2));
+      }
+
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, referees: result.slice(0, 100) });
+    }
+    return new ApiResponse(ResponseStatus.Failure);
+  }
 }
