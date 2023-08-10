@@ -93,7 +93,7 @@ export class UserService {
                                                           "ammAddress" AS "ammAddress",
                                                           "batchId" AS "batchId"
                                                         FROM "Position"
-                                                        WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress","ammAddress","batchId"
+                                                        WHERE "userAddress" = ${userAddress} GROUP BY "userAddress","ammAddress","batchId"
                                                      ) t
                                                     LEFT JOIN "Position" p
                                                     ON p.id = t.id
@@ -114,7 +114,9 @@ export class UserService {
                                                               END AS "isAdd"
                                                             FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})
                                                           ) t WHERE t."isOpen" = true OR t."isAdd" = true`
-    let pnlResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("realizedPnl") isnull THEN 0 ELSE SUM("realizedPnl") END AS pnl FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})`
+    let pnlResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("realizedPnl") + SUM(pfp."fundingPayment") isnull THEN 0 ELSE SUM("realizedPnl") + SUM(pfp."fundingPayment") END AS pnl
+                                                  FROM api."Position" ps LEFT JOIN api."PositionFundingPaymentHistory" pfp 
+                                                  ON ps."userAddress" = pfp."userAddress" WHERE pfp."userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})`
     let collectionsWinRateResult = await prisma.$queryRaw<any[]>`
     SELECT
       CASE
