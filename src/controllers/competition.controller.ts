@@ -438,18 +438,17 @@ export class CompetitionController {
         referee.usdtPrize = Number((totalUsdtPrize * multiplier).toFixed(2));
       }
 
-      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, referees: result.slice(0, 100) });
+      return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, referees: result });
     }
     return new ApiResponse(ResponseStatus.Failure);
   }
 
   @Get("/competition/leaderboard/s2/myRefererTeamList")
   async getS2MyRefererTeamList(@QueryParam("userAddress") user: string = "") {
-
     if (!user || user.length == 0) return new ApiResponse(ResponseStatus.Failure);
     const myReferer = await this.userService.getRefererUserInfo(user);
-    if (!myReferer) return new ApiResponse(ResponseStatus.Failure);
+    if (!myReferer) return new ApiResponse(ResponseStatus.Success).setData({ user: null, referees: [] });
 
-    return this.getS2RefererTeamList(myReferer.userAddress)
+    return this.getS2RefererTeamList(myReferer.userAddress);
   }
 }
