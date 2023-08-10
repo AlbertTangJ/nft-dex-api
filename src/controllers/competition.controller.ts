@@ -6,12 +6,13 @@ import Schema, { Rules } from "async-validator";
 import { isAddress } from "ethers/lib/utils";
 import BigNumber from "bignumber.js";
 import Prize from "src/helpers/competitionS2Prize";
+import { UserService } from "src/services";
 
 @JsonController()
 @Service()
 export class CompetitionController {
   private userAddressValidator: Schema;
-  constructor(private competitionService: CompetitionService) {
+  constructor(private competitionService: CompetitionService, private userService: UserService) {
     const pointsParamsCheck: Rules = {
       user: {
         type: "string",
@@ -415,6 +416,8 @@ export class CompetitionController {
         username: userRecord?.username ?? "",
         rank: userRecord?.rank?.toString() ?? "0",
         totalVolume: userRecord?.totalVolume ?? "0",
+        teamPointPrize: totalPointPrize,
+        teamUsdtPrize: totalUsdtPrize,
         pointPrize: (totalPointPrize ?? 0) * 0.4,
         usdtPrize: (totalUsdtPrize ?? 0) * 0.4
       };
@@ -438,5 +441,15 @@ export class CompetitionController {
       return new ApiResponse(ResponseStatus.Success).setData({ user: userObj, referees: result.slice(0, 100) });
     }
     return new ApiResponse(ResponseStatus.Failure);
+  }
+
+  @Get("/competition/leaderboard/s2/myRefererTeamList")
+  async getS2MyRefererTeamList(@QueryParam("userAddress") user: string = "") {
+
+    if (!user || user.length == 0) return new ApiResponse(ResponseStatus.Failure);
+    const myReferer = await this.userService.getRefererUserInfo(user);
+    if (!myReferer) return new ApiResponse(ResponseStatus.Failure);
+
+    return this.getS2RefererTeamList(myReferer.userAddress)
   }
 }
