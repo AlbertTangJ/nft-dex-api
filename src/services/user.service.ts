@@ -60,7 +60,7 @@ export class UserService {
       where: {
         AND: [
           { userAddress: userAddress },
-          { action: 'Trade' },
+          { size: { equals: 0 } },
           {
             ammAddress: { in: ammAddressList },
           }
@@ -98,7 +98,7 @@ export class UserService {
                                                     LEFT JOIN "Position" p
                                                     ON p.id = t.id
                                                     WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
-    let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") isnull THEN 0 ELSE SUM("positionNotional") END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})`
+    let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") isnull THEN 0 ELSE SUM("positionNotional") END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade'`
     let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") isnull THEN 0 ELSE SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") END AS "avgLeverage"
                                                           FROM
                                                           (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
@@ -261,36 +261,74 @@ export class UserService {
        ) t
     GROUP BY t."userAddress"`
     let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "realizedPnl" > 0 GROUP BY "userAddress", "batchId"`
-    let collectionsPnlResult = await prisma.$queryRaw<any[]>`SELECT 
-                                                                    (SUM(wcryptopunks_pnl) / (10^18))::varchar   	   AS wcryptopunks_pnl,
-                                                                    (SUM(bayc_pnl)         / (10^18))::varchar		   AS bayc_pnl,
-                                                                    (SUM(azuki_pnl)        / (10^18))::varchar		   AS azuki_pnl,
-                                                                    (SUM(mayc_pnl)         / (10^18))::varchar		   AS mayc_pnl,
-                                                                    (SUM(degods_pnl)       / (10^18))::varchar		   AS degods_pnl,
-                                                                    (SUM(thecaptiainz_pnl) / (10^18))::varchar       AS thecaptiainz_pnl, 
-                                                                    (SUM(pudgypenguins_pnl)/ (10^18))::varchar       AS pudgypenguins_pnl, 
-                                                                    (SUM(milady_pnl)       / (10^18))::varchar		   AS milady_pnl
-                                                              FROM (SELECT "userAddress", 
-                                                                      CASE 
-                                                                        WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("realizedPnl") ELSE 0 END AS wcryptopunks_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("realizedPnl") ELSE 0 END AS bayc_pnl,
-                                                                      CASE	
-                                                                        WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("realizedPnl") ELSE 0 END AS azuki_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("realizedPnl") ELSE 0 END AS mayc_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.degods} THEN SUM("realizedPnl") ELSE 0 END AS degods_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("realizedPnl") ELSE 0 END AS thecaptiainz_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("realizedPnl") ELSE 0 END AS pudgypenguins_pnl,
-                                                                      CASE
-                                                                        WHEN "ammAddress" = ${this.amms.milady} THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
-                                                                    FROM api."Position"
-                                                                    WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 GROUP BY "userAddress", "ammAddress", "batchId"
-                                                                  ) t
-                                                              GROUP BY t."userAddress"`
+    let collectionsPnlResult = await prisma.$queryRaw<any[]>`
+    SELECT (pnl.wcryptopunks_pnl + fp.wcryptopunks_fp)::varchar AS wcryptopunks_pnl,
+                      (pnl.bayc_pnl + fp.bayc_fp)::varchar AS bayc_pnl,
+                      (pnl.azuki_pnl + fp.azuki_fp)::varchar AS azuki_pnl,
+                      (pnl.mayc_pnl + fp.mayc_fp)::varchar AS mayc_pnl,
+                      (pnl.degods_pnl + fp.degods_fp)::varchar AS degods_pnl,
+                      (pnl.thecaptiainz_pnl + fp.thecaptiainz_fp)::varchar AS thecaptiainz_pnl,
+                      (pnl.pudgypenguins_pnl + fp.pudgypenguins_fp)::varchar AS pudgypenguins_pnl,
+                      (pnl.milady_pnl + fp.milady_fp)::varchar AS milady_pnl
+                FROM (SELECT "userAddress", 
+                    (SUM(wcryptopunks_pnl) / (10^18))             AS wcryptopunks_pnl,
+                    (SUM(bayc_pnl)         / (10^18))             AS bayc_pnl,
+                    (SUM(azuki_pnl)        / (10^18))             AS azuki_pnl,
+                    (SUM(mayc_pnl)         / (10^18))             AS mayc_pnl,
+                    (SUM(degods_pnl)       / (10^18))             AS degods_pnl,
+                    (SUM(thecaptiainz_pnl) / (10^18))       	  AS thecaptiainz_pnl, 
+                    (SUM(pudgypenguins_pnl)/ (10^18))       	  AS pudgypenguins_pnl, 
+                    (SUM(milady_pnl)       / (10^18))             AS milady_pnl
+                FROM (SELECT "userAddress", 
+                      CASE 
+                    WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("realizedPnl") ELSE 0 END AS wcryptopunks_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("realizedPnl") ELSE 0 END AS bayc_pnl,
+                    CASE	
+                    WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("realizedPnl") ELSE 0 END AS azuki_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("realizedPnl") ELSE 0 END AS mayc_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.degods} THEN SUM("realizedPnl") ELSE 0 END AS degods_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("realizedPnl") ELSE 0 END AS thecaptiainz_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("realizedPnl") ELSE 0 END AS pudgypenguins_pnl,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.milady} THEN SUM("realizedPnl") ELSE 0 END AS milady_pnl
+                    FROM api."Position"
+                    WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress", "ammAddress"
+                  ) t
+                GROUP BY t."userAddress") pnl
+                LEFT JOIN (SELECT "userAddress",
+                    (SUM(wcryptopunks_fp) / (10^18))             AS wcryptopunks_fp,
+                    (SUM(bayc_fp)         / (10^18))             AS bayc_fp,
+                    (SUM(azuki_fp)        / (10^18))             AS azuki_fp,
+                    (SUM(mayc_fp)         / (10^18))             AS mayc_fp,
+                    (SUM(degods_fp)       / (10^18))             AS degods_fp,
+                    (SUM(thecaptiainz_fp) / (10^18))             AS thecaptiainz_fp, 
+                    (SUM(pudgypenguins_fp)/ (10^18))             AS pudgypenguins_fp, 
+                    (SUM(milady_fp)       / (10^18))             AS milady_fp
+                FROM(SELECT "userAddress",
+                      CASE 
+                    WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("fundingPayment") ELSE 0 END AS wcryptopunks_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("fundingPayment") ELSE 0 END AS bayc_fp,
+                    CASE	
+                    WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("fundingPayment") ELSE 0 END AS azuki_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("fundingPayment") ELSE 0 END AS mayc_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.degods} THEN SUM("fundingPayment") ELSE 0 END AS degods_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("fundingPayment") ELSE 0 END AS thecaptiainz_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("fundingPayment") ELSE 0 END AS pudgypenguins_fp,
+                    CASE
+                    WHEN "ammAddress" = ${this.amms.milady} THEN SUM("fundingPayment") ELSE 0 END AS milady_fp
+                FROM api."PositionFundingPaymentHistory" WHERE "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress", "ammAddress")
+                t WHERE t."userAddress" = ${userAddress} GROUP BY t."userAddress") fp
+                ON fp."userAddress" = pnl."userAddress"`
     let goodTradeCount = goodTradeCountResult.length;
     let totalCloseTrades = totalCloseTradeResult.length == 0 ? 0 : totalCloseTradeResult[0].totalTrades
     let totalTradeVol = tradeVolResult.length == 0 ? 0 : tradeVolResult[0].tradeVolTotal
