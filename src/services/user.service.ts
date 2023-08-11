@@ -257,26 +257,37 @@ export class UserService {
         SUM(thecaptiainz_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS thecaptiainz_pnl, 
         SUM(pudgypenguins_pnl) / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS pudgypenguins_pnl, 
         SUM(milady_pnl) 		   / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
-    FROM (SELECT "userAddress",  
-          CASE 
-            WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("positionNotional") ELSE 0 END AS wcryptopunks_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("positionNotional") ELSE 0 END AS bayc_pnl,
-          CASE	
-            WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("positionNotional") ELSE 0 END AS azuki_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("positionNotional") ELSE 0 END AS mayc_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.degods} THEN SUM("positionNotional") ELSE 0 END AS degods_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("positionNotional") ELSE 0 END AS thecaptiainz_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("positionNotional") ELSE 0 END AS pudgypenguins_pnl,
-          CASE
-            WHEN "ammAddress" = ${this.amms.milady} THEN SUM("positionNotional") ELSE 0 END AS milady_pnl
-        FROM api."Position"
-        WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress", "ammAddress", "batchId"
-       ) t
+    FROM (SELECT  t2."userAddress",
+	CASE 
+		WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("positionNotional") ELSE 0 END AS wcryptopunks_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("positionNotional") ELSE 0 END AS bayc_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("positionNotional") ELSE 0 END AS azuki_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("positionNotional") ELSE 0 END AS mayc_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.degods} THEN SUM("positionNotional") ELSE 0 END AS degods_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("positionNotional") ELSE 0 END AS thecaptiainz_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("positionNotional") ELSE 0 END AS pudgypenguins_pnl,
+	CASE
+		WHEN "ammAddress" = ${this.amms.milady} THEN SUM("positionNotional") ELSE 0 END AS milady_pnl
+        FROM (SELECT "batchId", "positionNotional", "ammAddress", "isAdd", "isOpen", "userAddress" FROM (SELECT "batchId", "positionNotional", "ammAddress", "userAddress",
+		  CASE 
+			WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
+			THEN true 
+			ELSE false 
+		  END AS "isOpen",
+		  CASE
+			WHEN SIGN("exchangedPositionSize") = SIGN("size")
+			THEN true
+			ELSE false
+		  END AS "isAdd"
+      FROM api."Position" WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)) t1 WHERE t1."isOpen" = true OR t1."isAdd" = true) t2
+      WHERE t2."isOpen" = true OR t2."isAdd" = true
+	  GROUP BY t2."userAddress", t2."ammAddress") t
     GROUP BY t."userAddress"`
 
     let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "realizedPnl" > 0 AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)  GROUP BY "userAddress", "batchId"`
