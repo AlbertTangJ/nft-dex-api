@@ -4,7 +4,7 @@ import { Prisma, UserInfo } from "@prisma/client";
 import { recoverPersonalSignature } from "eth-sig-util";
 import { bufferToHex } from "ethereumjs-util";
 import { Decimal } from "@prisma/client/runtime";
-import { BigNumber, utils } from "ethers";
+import { BigNumber, ethers, utils } from "ethers";
 import { PointsService } from "./points.service";
 import axios from "axios";
 import { CompetitionService } from "./competition.service";
@@ -131,9 +131,10 @@ export class UserService {
                                                               END AS "isAdd"
                                                             FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)
                                                           ) t WHERE t."isOpen" = true OR t."isAdd" = true`
-    let pnlResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN (SUM("realizedPnl") + SUM(pfp."fundingPayment")) / (10^18) isnull THEN 0 ELSE (SUM("realizedPnl") + SUM(pfp."fundingPayment")) / (10^18) END AS pnl
-                                                  FROM api."Position" ps LEFT JOIN api."PositionFundingPaymentHistory" pfp 
-                                                  ON ps."userAddress" = pfp."userAddress" WHERE pfp."userAddress" = ${userAddress} AND ps."ammAddress" IN (${Prisma.join(ammAddressList)}) AND (ps."timestamp" >= 1686009600 AND ps."timestamp" <= 1689465600) `
+    let pnlResult = await prisma.$queryRaw<any[]>`WITH "totalFundingPaymentResult" AS (SELECT round(SUM("fundingPayment")) AS "totalFundingPayment", "userAddress" FROM api."PositionFundingPaymentHistory"  WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600) GROUP BY "userAddress")
+                                                  SELECT CASE WHEN (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) isnull THEN 0 ELSE (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) END AS pnl
+                                                  FROM api."Position" ps 
+                                                  WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686009600 AND ps."timestamp" <= 1689465600)`
     let collectionsWinRateResult = await prisma.$queryRaw<any[]>`
     SELECT
       CASE
