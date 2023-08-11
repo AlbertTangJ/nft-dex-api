@@ -64,6 +64,15 @@ export class UserService {
           { size: { equals: 0 } },
           {
             ammAddress: { in: ammAddressList },
+          },
+          {
+            timestamp: {
+              gte: 1686009600
+            }
+          }, {
+            timestamp: {
+              lte: 1689465600
+            }
           }
         ]
       }
