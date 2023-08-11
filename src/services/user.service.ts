@@ -80,39 +80,37 @@ export class UserService {
 
     let totalCloseTradeResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(totaltrades.trades) isnull THEN 0 ELSE SUM(totaltrades.trades) END AS "totalTrades" FROM (SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE 
     ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600) AND "userAddress" = ${userAddress} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress","batchId") totaltrades`
-    let highTrades = await prisma.$queryRaw<any[]>`
-    WITH "totalFundingPaymentResult" AS (SELECT round(SUM("fundingPayment")) AS "totalFundingPayment", "userAddress" FROM api."PositionFundingPaymentHistory"  WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600) GROUP BY "userAddress")
-    SELECT (p."positionCumulativeRealizedPnl" + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" FROM 
+    let highTrades = await prisma.$queryRaw<any[]>`SELECT p."positionCumulativeRealizedPnl" + t."fundingPayment" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" FROM 
                                                     (
                                                       SELECT MAX(id) AS id,
                                                         ps."userAddress" AS "userAddress",
                                                         MIN("timestamp") AS "openTime", 
                                                         MAX("timestamp") - MIN("timestamp") AS "period",
                                                         "ammAddress" AS "ammAddress",
-                                                        "batchId" AS "batchId"
+                                                        "batchId" AS "batchId",
+														                            SUM(ps."fundingPayment") AS "fundingPayment"
                                                       FROM "Position" ps
                                                       WHERE ps."userAddress" = ${userAddress} AND (ps.timestamp >= 1686009600 AND ps.timestamp <= 1689465600) GROUP BY ps."userAddress",ps."ammAddress",ps."batchId"
                                                     ) t
                                                     LEFT JOIN "Position" p
                                                     ON p.id = t.id
                                                     WHERE p."positionCumulativeRealizedPnl" > 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" DESC LIMIT 3`;
-    let lowestTrades = await prisma.$queryRaw<any[]>`
-    WITH "totalFundingPaymentResult" AS (SELECT round(SUM("fundingPayment")) AS "totalFundingPayment", "userAddress" FROM api."PositionFundingPaymentHistory"  WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600) GROUP BY "userAddress")
-    SELECT (p."positionCumulativeRealizedPnl" + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
-    FROM 
-     (
-       SELECT MAX(id) AS id,
-         ps."userAddress" AS "userAddress",
-         MIN("timestamp") AS "openTime", 
-         MAX("timestamp") - MIN("timestamp") AS "period",
-         "ammAddress" AS "ammAddress",
-         "batchId" AS "batchId"
-       FROM "Position" ps
-       WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686009600 AND ps."timestamp" <= 1689465600) GROUP BY ps."userAddress",ps."ammAddress",ps."batchId"
-    ) t
-   LEFT JOIN "Position" p
-   ON p.id = t.id
-   WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
+    let lowestTrades = await prisma.$queryRaw<any[]>`SELECT p."positionCumulativeRealizedPnl" + t."fundingPayment" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
+                                                     FROM 
+                                                      (
+                                                        SELECT MAX(ps.id) AS id,
+                                                          ps."userAddress" AS "userAddress",
+                                                          MIN(ps."timestamp") AS "openTime", 
+                                                          MAX(ps."timestamp") - MIN(ps."timestamp") AS "period",
+                                                          ps."ammAddress" AS "ammAddress",
+                                                          ps."batchId" AS "batchId",
+                                                          SUM(ps."fundingPayment") AS "fundingPayment"
+                                                        FROM "Position" ps
+                                                        WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686009600 AND ps."timestamp" <= 1689465600) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
+                                                      ) t
+                                                    LEFT JOIN "Position" p
+                                                    ON p.id = t.id
+                                                    WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
     let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)`
     let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") isnull THEN 0 ELSE SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") END AS "avgLeverage"
                                                           FROM
