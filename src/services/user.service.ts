@@ -232,9 +232,10 @@ export class UserService {
             GROUP BY "userAddress", "ammAddress", "batchId") g GROUP BY g."userAddress"
         ) p
     ON c."userAddress" = p."userAddress"`
-    let collectionsOpenNotionalAllocationResult = await prisma.$queryRaw<any[]>`WITH "totalOpenNotionalResult" AS (SELECT SUM(t."openNotional") AS "totalOpenNotional"
+
+    let collectionsOpenNotionalAllocationResult = await prisma.$queryRaw<any[]>`WITH "totalOpenNotionalResult" AS (SELECT SUM(t."positionNotional") AS "totalOpenNotional"
     FROM 
-    (SELECT id, "openNotional",
+    (SELECT id, "positionNotional",
       CASE 
       WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
       THEN true 
@@ -258,21 +259,21 @@ export class UserService {
         SUM(milady_pnl) 		   / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS milady_pnl
     FROM (SELECT "userAddress",  
           CASE 
-            WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("openNotional") ELSE 0 END AS wcryptopunks_pnl,
+            WHEN "ammAddress" = ${this.amms.wcryptopunks} THEN SUM("positionNotional") ELSE 0 END AS wcryptopunks_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("openNotional") ELSE 0 END AS bayc_pnl,
+            WHEN "ammAddress" = ${this.amms.bayc} THEN SUM("positionNotional") ELSE 0 END AS bayc_pnl,
           CASE	
-            WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("openNotional") ELSE 0 END AS azuki_pnl,
+            WHEN "ammAddress" = ${this.amms.azuki} THEN SUM("positionNotional") ELSE 0 END AS azuki_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("openNotional") ELSE 0 END AS mayc_pnl,
+            WHEN "ammAddress" = ${this.amms.mayc} THEN SUM("positionNotional") ELSE 0 END AS mayc_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.degods} THEN SUM("openNotional") ELSE 0 END AS degods_pnl,
+            WHEN "ammAddress" = ${this.amms.degods} THEN SUM("positionNotional") ELSE 0 END AS degods_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("openNotional") ELSE 0 END AS thecaptiainz_pnl,
+            WHEN "ammAddress" = ${this.amms.thecaptiainz} THEN SUM("positionNotional") ELSE 0 END AS thecaptiainz_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("openNotional") ELSE 0 END AS pudgypenguins_pnl,
+            WHEN "ammAddress" = ${this.amms.pudgypenguins} THEN SUM("positionNotional") ELSE 0 END AS pudgypenguins_pnl,
           CASE
-            WHEN "ammAddress" = ${this.amms.milady} THEN SUM("openNotional") ELSE 0 END AS milady_pnl
+            WHEN "ammAddress" = ${this.amms.milady} THEN SUM("positionNotional") ELSE 0 END AS milady_pnl
         FROM api."Position"
         WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress", "ammAddress", "batchId"
        ) t
