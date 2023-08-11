@@ -112,21 +112,21 @@ export class UserService {
                                                     ON p.id = t.id
                                                     WHERE p."positionCumulativeRealizedPnl" < 0 AND p.size = 0 ORDER BY "positionCumulativeRealizedPnl" ASC LIMIT 3`;
     let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)`
-    let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") isnull THEN 0 ELSE SUM(t."positionNotional") / SUM(t.amount + t."fundingPayment") END AS "avgLeverage"
-                                                          FROM
-                                                          (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
-                                                            CASE 
-                                                              WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
-                                                              THEN true 
-                                                              ELSE false 
-                                                              END AS "isOpen",
-                                                            CASE
-                                                              WHEN SIGN("exchangedPositionSize") = SIGN("size")
-                                                              THEN true
-                                                              ELSE false
-                                                              END AS "isAdd"
-                                                            FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)
-                                                          ) t WHERE t."isOpen" = true OR t."isAdd" = true`
+    let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(a."avgLeverage") / count(a."avgLeverage") AS "avgLeverage" FROM (SELECT CASE WHEN t."positionNotional" / (t.amount + t."fundingPayment") isnull THEN 0 ELSE t."positionNotional" / (t.amount + t."fundingPayment") END AS "avgLeverage" 
+    FROM
+    (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
+      CASE 
+        WHEN "exchangedPositionSize" = "size" AND "exchangedPositionSize" > 0 AND "size" > 0 
+        THEN true 
+        ELSE false 
+        END AS "isOpen",
+      CASE
+        WHEN SIGN("exchangedPositionSize") = SIGN("size")
+        THEN true
+        ELSE false
+        END AS "isAdd"
+      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600)
+    ) t WHERE t."isOpen" = true OR t."isAdd" = true ) a WHERE a."avgLeverage" > 0`
     let pnlResult = await prisma.$queryRaw<any[]>`WITH "totalFundingPaymentResult" AS (SELECT round(SUM("fundingPayment")) AS "totalFundingPayment", "userAddress" FROM api."PositionFundingPaymentHistory"  WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686009600 AND "timestamp" <= 1689465600) GROUP BY "userAddress")
                                                   SELECT CASE WHEN (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) isnull THEN 0 ELSE (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) END AS pnl
                                                   FROM api."Position" ps 
