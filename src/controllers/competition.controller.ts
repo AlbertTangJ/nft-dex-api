@@ -416,6 +416,7 @@ export class CompetitionController {
         username: userRecord?.username ?? "",
         rank: userRecord?.rank?.toString() ?? "0",
         totalVolume: userRecord?.totalVolume ?? "0",
+        refereeCount: userRecord?.refereeCount ?? 0,
         teamPointPrize: totalPointPrize,
         teamUsdtPrize: totalUsdtPrize,
         pointPrize: (totalPointPrize ?? 0) * 0.4,
