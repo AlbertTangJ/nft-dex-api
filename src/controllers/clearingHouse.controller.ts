@@ -19,7 +19,7 @@ import { TradeData, Position, AmmFundingPayment } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime";
 
 const COMPETITION_START_TIME: number = isNaN(Number(process.env.COMPETITION_START_TIME))
-  ? 1686042000
+  ? 1692072000
   : Number(process.env.COMPETITION_START_TIME);
 
 @JsonController()
