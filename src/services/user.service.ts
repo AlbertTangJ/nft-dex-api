@@ -406,6 +406,14 @@ export class UserService {
     });
   }
 
+  async getUserInfo(address: string) {
+    return await prisma.userInfo.findFirst({
+      where: {
+        userAddress: address.toLowerCase()
+      }
+    });
+  }
+
   async userInfoByReferralCode(referralCode: string) {
     return await prisma.userInfo.findFirst({
       where: {
