@@ -10,6 +10,8 @@ import axios from "axios";
 import { CompetitionService } from "./competition.service";
 import { BigNumber as BigNumber1 } from "bignumber.js";
 
+const syncId: number = isNaN(Number(process.env.SYNC_ID)) ? 0 : Number(process.env.SYNC_ID);
+
 type Follower = { followerAddress: string; followers: number; ranking: number; points: number; userAddress: string };
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -79,8 +81,8 @@ export class UserService {
       }
     })
     
-    let totalCloseTradeResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(totaltrades.trades) isnull THEN 0 ELSE SUM(totaltrades.trades) END AS "totalTrades" FROM (SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE 
-    ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "userAddress" = ${userAddress} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress","batchId") totaltrades`
+    let totalCloseTradeResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(totaltrades.trades) isnull THEN 0 ELSE SUM(totaltrades.trades) END AS "totalTrades" FROM (SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades 
+    FROM "Position" WHERE ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId} AND "userAddress" = ${userAddress} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress","batchId") totaltrades`
     let highTrades = await prisma.$queryRaw<any[]>`SELECT t."realizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
                                                    FROM 
                                                     (
@@ -92,7 +94,7 @@ export class UserService {
                                                           ps."batchId" AS "batchId",
                                                         SUM("realizedPnl") - SUM(ps."fundingPayment") AS "realizedPnl"
                                                         FROM "Position" ps
-                                                        WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
+                                                        WHERE ps."userAddress" = ${userAddress} AND ps."syncId" = ${syncId} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
                                                     ) t
                                                   LEFT JOIN "Position" p
                                                   ON p."batchId" = t."batchId"
@@ -108,12 +110,12 @@ export class UserService {
                                                             ps."batchId" AS "batchId",
                                                           SUM("realizedPnl") - SUM(ps."fundingPayment") AS "realizedPnl"
                                                           FROM "Position" ps
-                                                          WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
+                                                          WHERE ps."userAddress" = ${userAddress} AND ps."syncId" = ${syncId} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
                                                       ) t
                                                     LEFT JOIN "Position" p
                                                     ON p."batchId" = t."batchId"
-                                                    WHERE p.size = 0 AND t."realizedPnl" < 0 ORDER BY t."realizedPnl" ASC LIMIT 3`;
-    let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)`
+                                                    WHERE p.size = 0 p."syncId" = ${syncId} AND t."realizedPnl" < 0 ORDER BY t."realizedPnl" ASC LIMIT 3`;
+    let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId}`
     let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(a."avgLeverage") / count(a."avgLeverage") AS "avgLeverage" FROM (SELECT CASE WHEN (t.amount + t."fundingPayment") = 0 OR t."positionNotional" / (t.amount + t."fundingPayment") isnull THEN 0 ELSE t."positionNotional" / (t.amount + t."fundingPayment") END AS "avgLeverage" 
     FROM
     (SELECT id, "openNotional", "margin", amount, "fundingPayment", "positionNotional",
@@ -127,13 +129,13 @@ export class UserService {
         THEN true
         ELSE false
         END AS "isAdd"
-      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)
+      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId}
     ) t WHERE t."isOpen" = true OR t."isAdd" = true ) a WHERE a."avgLeverage" > 0`
     
     let pnlResult = await prisma.$queryRaw<any[]>`WITH "totalFundingPaymentResult" AS (SELECT round(SUM("fundingPayment")) AS "totalFundingPayment", "userAddress" FROM api."PositionFundingPaymentHistory"  WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) GROUP BY "userAddress")
                                                   SELECT CASE WHEN (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) isnull THEN 0 ELSE (SUM("realizedPnl") + (SELECT "totalFundingPayment" FROM "totalFundingPaymentResult")) / (10^18) END AS pnl
                                                   FROM api."Position" ps 
-                                                  WHERE ps."userAddress" = ${userAddress} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000)`
+                                                  WHERE ps."userAddress" = ${userAddress} AND ps."syncId" = ${syncId} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000)`
     let collectionsWinRateResult = await prisma.$queryRaw<any[]>`
     SELECT
       CASE
@@ -196,7 +198,7 @@ export class UserService {
                 CASE
                   WHEN "ammAddress" = ${this.amms.milady} THEN COUNT("ammAddress") ELSE 0 END AS milady_total
                 FROM "Position"
-        WHERE "userAddress" = ${userAddress} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) GROUP BY "userAddress","ammAddress","batchId") t GROUP BY t."userAddress") c
+        WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) GROUP BY "userAddress","ammAddress","batchId") t GROUP BY t."userAddress") c
      LEFT JOIN (
         SELECT  g."userAddress" 		  AS "userAddress",
             SUM(wcryptopunks_gt)      AS wcryptopunks_gt,
@@ -226,7 +228,7 @@ export class UserService {
                 CASE
                   WHEN "ammAddress" = ${this.amms.milady} THEN COUNT("ammAddress") ELSE 0 END AS milady_gt 
             FROM "Position" 
-            WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)})
+            WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND "ammAddress" IN (${Prisma.join(ammAddressList)})
             AND 
             size = 0 
             AND 
@@ -249,7 +251,7 @@ export class UserService {
       THEN true
       ELSE false
       END AS "isAdd"
-      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)
+      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)
     ) t WHERE t."isOpen" = true OR t."isAdd" = true)
     SELECT
         SUM(wcryptopunks_pnl)  / (SELECT "totalOpenNotional" FROM "totalOpenNotionalResult")    AS wcryptopunks_pnl,
@@ -288,12 +290,12 @@ export class UserService {
 			THEN true
 			ELSE false
 		  END AS "isAdd"
-      FROM api."Position" WHERE "userAddress" = ${userAddress} AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)) t1 WHERE t1."isOpen" = true OR t1."isAdd" = true) t2
+      FROM api."Position" WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)) t1 WHERE t1."isOpen" = true OR t1."isAdd" = true) t2
       WHERE t2."isOpen" = true OR t2."isAdd" = true
 	  GROUP BY t2."userAddress", t2."ammAddress") t
     GROUP BY t."userAddress"`
 
-    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "realizedPnl" > 0 AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)  GROUP BY "userAddress", "batchId"`
+    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "cumulativeRealizedPnl" > 0 AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)  GROUP BY "userAddress", "batchId"`
     let collectionsPnlResult = await prisma.$queryRaw<any[]>`SELECT (pnl.wcryptopunks_pnl + fp.wcryptopunks_fp)::varchar AS wcryptopunks_pnl,
                       (pnl.bayc_pnl + fp.bayc_fp)::varchar AS bayc_pnl,
                       (pnl.azuki_pnl + fp.azuki_fp)::varchar AS azuki_pnl,
