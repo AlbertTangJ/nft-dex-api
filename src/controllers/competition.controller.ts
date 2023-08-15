@@ -434,7 +434,7 @@ export class CompetitionController {
 
         if (referee.tradedVolume == "0") multiplier = 0;
 
-        referee.distribution = new BigNumber(referee.tradedVolume ?? "0").div(totalVolume).multipliedBy(100).toNumber();
+        referee.distribution = (new BigNumber(referee.tradedVolume ?? "0").div(totalVolume).multipliedBy(100).toNumber()) ?? 0;
         referee.pointPrize = Number((totalPointPrize * multiplier).toFixed(2));
         referee.usdtPrize = Number((totalUsdtPrize * multiplier).toFixed(2));
       }
