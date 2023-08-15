@@ -83,38 +83,26 @@ export class UserService {
     
     let totalCloseTradeResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM(totaltrades.trades) isnull THEN 0 ELSE SUM(totaltrades.trades) END AS "totalTrades" FROM (SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades 
     FROM "Position" WHERE ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId} AND "userAddress" = ${userAddress} AND size = 0 AND "ammAddress" IN (${Prisma.join(ammAddressList)}) GROUP BY "userAddress","batchId") totaltrades`
-    let highTrades = await prisma.$queryRaw<any[]>`SELECT t."realizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
-                                                   FROM 
-                                                    (
-                                                        SELECT MAX(ps.id) AS id,
-                                                          ps."userAddress" AS "userAddress",
-                                                          MIN(ps."timestamp") AS "openTime", 
-                                                          MAX(ps."timestamp") - MIN(ps."timestamp") AS "period",
-                                                          ps."ammAddress" AS "ammAddress",
-                                                          ps."batchId" AS "batchId",
-                                                        SUM("realizedPnl") - SUM(ps."fundingPayment") AS "realizedPnl"
-                                                        FROM "Position" ps
-                                                        WHERE ps."userAddress" = ${userAddress} AND ps."syncId" = ${syncId} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
-                                                    ) t
-                                                  LEFT JOIN "Position" p
-                                                  ON p."batchId" = t."batchId"
-                                                  WHERE p.size = 0 AND p."syncId" = ${syncId} AND t."realizedPnl" > 0 ORDER BY t."realizedPnl" DESC LIMIT 3`;
-    let lowestTrades = await prisma.$queryRaw<any[]>`SELECT t."realizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
-                                                      FROM 
-                                                      (
-                                                          SELECT MAX(ps.id) AS id,
-                                                            ps."userAddress" AS "userAddress",
-                                                            MIN(ps."timestamp") AS "openTime", 
-                                                            MAX(ps."timestamp") - MIN(ps."timestamp") AS "period",
-                                                            ps."ammAddress" AS "ammAddress",
-                                                            ps."batchId" AS "batchId",
-                                                          SUM("realizedPnl") - SUM(ps."fundingPayment") AS "realizedPnl"
-                                                          FROM "Position" ps
-                                                          WHERE ps."userAddress" = ${userAddress} AND ps."syncId" = ${syncId} AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) GROUP BY ps."userAddress", ps."ammAddress", ps."batchId"
-                                                      ) t
-                                                    LEFT JOIN "Position" p
-                                                    ON p."batchId" = t."batchId"
-                                                    WHERE p.size = 0 AND p."syncId" = ${syncId} AND t."realizedPnl" < 0 ORDER BY t."realizedPnl" ASC LIMIT 3`;
+    let highTrades = await prisma.$queryRaw<any[]>`SELECT  t."culRealizedPnl" AS "realizedPnl", p."openTime" AS "openTime", p."period" AS "period", t."ammAddress" AS "ammAddress" 
+    FROM (
+        SELECT  ps."ammAddress" AS "ammAddress",
+            ps."batchId" AS "batchId",
+            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") / (10^18) AS "culRealizedPnl"
+        FROM "Position" ps
+        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."cumulativeRealizedPnl" - ps."cumulativeFundingPayment") > 0 ORDER BY "culRealizedPnl" DESC LIMIT 3
+    ) t
+    LEFT JOIN (SELECT ps."batchId" AS "batchId", MIN(ps."timestamp") AS "openTime", MAX(ps."timestamp") - MIN(ps."timestamp") AS "period" FROM "Position" ps GROUP BY ps."userAddress", ps."ammAddress", ps."batchId") p
+    ON p."batchId" = t."batchId"`;
+    let lowestTrades = await prisma.$queryRaw<any[]>`SELECT  t."culRealizedPnl" AS "realizedPnl", p."openTime" AS "openTime", p."period" AS "period", t."ammAddress" AS "ammAddress" 
+    FROM (
+        SELECT  ps."ammAddress" AS "ammAddress",
+            ps."batchId" AS "batchId",
+            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") / (10^18) AS "culRealizedPnl"
+        FROM "Position" ps
+        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."cumulativeRealizedPnl" - ps."cumulativeFundingPayment") < 0 ORDER BY "culRealizedPnl" ASC LIMIT 3
+    ) t
+    LEFT JOIN (SELECT ps."batchId" AS "batchId", MIN(ps."timestamp") AS "openTime", MAX(ps."timestamp") - MIN(ps."timestamp") AS "period" FROM "Position" ps GROUP BY ps."userAddress", ps."ammAddress", ps."batchId") p
+    ON p."batchId" = t."batchId"`;
     let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId}`
     let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(a."avgLeverage") / count(a."avgLeverage") AS "avgLeverage" FROM (SELECT CASE WHEN (t.amount + t."fundingPayment") = 0 OR t."positionNotional" / (t.amount + t."fundingPayment") isnull THEN 0 ELSE t."positionNotional" / (t.amount + t."fundingPayment") END AS "avgLeverage" 
     FROM
