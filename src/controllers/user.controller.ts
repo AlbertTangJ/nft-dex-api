@@ -272,7 +272,7 @@ export class UserController {
       return new ApiResponse(ResponseStatus.Failure).setErrorMessage(error.message);
     }
 
-    let result = await this.userService.fetchUserInfoV1(user, targetUser);
+    let result = await this.userService.fetchUserInfo(user, targetUser);
     if (result != null) {
       return new ApiResponse(ResponseStatus.Success).setData(result);
     }
