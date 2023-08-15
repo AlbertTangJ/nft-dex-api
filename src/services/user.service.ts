@@ -98,7 +98,7 @@ export class UserService {
                                                     ) t
                                                   LEFT JOIN "Position" p
                                                   ON p."batchId" = t."batchId"
-                                                  WHERE p.size = 0 AND t."realizedPnl" > 0 ORDER BY t."realizedPnl" DESC LIMIT 3`;
+                                                  WHERE p.size = 0 AND p."syncId" = ${syncId} AND t."realizedPnl" > 0 ORDER BY t."realizedPnl" DESC LIMIT 3`;
     let lowestTrades = await prisma.$queryRaw<any[]>`SELECT t."realizedPnl" AS "realizedPnl", t."openTime" AS "openTime", t."period" AS "period", t."ammAddress" AS "ammAddress" 
                                                       FROM 
                                                       (
@@ -114,7 +114,7 @@ export class UserService {
                                                       ) t
                                                     LEFT JOIN "Position" p
                                                     ON p."batchId" = t."batchId"
-                                                    WHERE p.size = 0 p."syncId" = ${syncId} AND t."realizedPnl" < 0 ORDER BY t."realizedPnl" ASC LIMIT 3`;
+                                                    WHERE p.size = 0 AND p."syncId" = ${syncId} AND t."realizedPnl" < 0 ORDER BY t."realizedPnl" ASC LIMIT 3`;
     let tradeVolResult = await prisma.$queryRaw<any[]>`SELECT CASE WHEN SUM("positionNotional") / (10^18)  isnull THEN 0 ELSE SUM("positionNotional") / (10^18) END AS "tradeVolTotal" FROM api."Position" WHERE "userAddress" = ${userAddress} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND action='Trade' AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000) AND "syncId" = ${syncId}`
     let avgLeverageResult = await prisma.$queryRaw<any[]>`SELECT SUM(a."avgLeverage") / count(a."avgLeverage") AS "avgLeverage" FROM (SELECT CASE WHEN (t.amount + t."fundingPayment") = 0 OR t."positionNotional" / (t.amount + t."fundingPayment") isnull THEN 0 ELSE t."positionNotional" / (t.amount + t."fundingPayment") END AS "avgLeverage" 
     FROM
