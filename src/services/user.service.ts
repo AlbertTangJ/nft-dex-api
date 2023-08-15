@@ -87,9 +87,9 @@ export class UserService {
     FROM (
         SELECT  ps."ammAddress" AS "ammAddress",
             ps."batchId" AS "batchId",
-            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") / (10^18) AS "culRealizedPnl"
+            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") AS "culRealizedPnl"
         FROM "Position" ps
-        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."cumulativeRealizedPnl" - ps."cumulativeFundingPayment") > 0 ORDER BY "culRealizedPnl" DESC LIMIT 3
+        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") > 0 ORDER BY "culRealizedPnl" DESC LIMIT 3
     ) t
     LEFT JOIN (SELECT ps."batchId" AS "batchId", MIN(ps."timestamp") AS "openTime", MAX(ps."timestamp") - MIN(ps."timestamp") AS "period" FROM "Position" ps GROUP BY ps."userAddress", ps."ammAddress", ps."batchId") p
     ON p."batchId" = t."batchId"`;
@@ -97,9 +97,9 @@ export class UserService {
     FROM (
         SELECT  ps."ammAddress" AS "ammAddress",
             ps."batchId" AS "batchId",
-            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") / (10^18) AS "culRealizedPnl"
+            (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment")  AS "culRealizedPnl"
         FROM "Position" ps
-        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."cumulativeRealizedPnl" - ps."cumulativeFundingPayment") < 0 ORDER BY "culRealizedPnl" ASC LIMIT 3
+        WHERE ps."userAddress" = ${userAddress} AND ps."size" = 0 AND ps."syncId" = 1 AND (ps."timestamp" >= 1686042000 AND ps."timestamp" < 1689498000) AND (ps."positionCumulativeRealizedPnl" - ps."positionCumulativeFundingPayment") < 0 ORDER BY "culRealizedPnl" ASC LIMIT 3
     ) t
     LEFT JOIN (SELECT ps."batchId" AS "batchId", MIN(ps."timestamp") AS "openTime", MAX(ps."timestamp") - MIN(ps."timestamp") AS "period" FROM "Position" ps GROUP BY ps."userAddress", ps."ammAddress", ps."batchId") p
     ON p."batchId" = t."batchId"`;
@@ -220,7 +220,7 @@ export class UserService {
             AND 
             size = 0 
             AND 
-            "cumulativeRealizedPnl" > 0 
+            "positionCumulativeRealizedPnl" > 0 
             AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)
             GROUP BY "userAddress", "ammAddress", "batchId") g GROUP BY g."userAddress"
         ) p
@@ -283,7 +283,7 @@ export class UserService {
 	  GROUP BY t2."userAddress", t2."ammAddress") t
     GROUP BY t."userAddress"`
 
-    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "cumulativeRealizedPnl" > 0 AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)  GROUP BY "userAddress", "batchId"`
+    let goodTradeCountResult = await prisma.$queryRaw<any[]>`SELECT "userAddress" AS "userAddress", COUNT("userAddress") AS trades FROM "Position" WHERE "userAddress" = ${userAddress} AND "syncId" = ${syncId} AND "ammAddress" IN (${Prisma.join(ammAddressList)}) AND size = 0 AND "positionCumulativeRealizedPnl" > 0 AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)  GROUP BY "userAddress", "batchId"`
     let collectionsPnlResult = await prisma.$queryRaw<any[]>`SELECT (pnl.wcryptopunks_pnl + fp.wcryptopunks_fp)::varchar AS wcryptopunks_pnl,
                       (pnl.bayc_pnl + fp.bayc_fp)::varchar AS bayc_pnl,
                       (pnl.azuki_pnl + fp.azuki_fp)::varchar AS azuki_pnl,
