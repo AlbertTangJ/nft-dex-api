@@ -412,9 +412,10 @@ export class CompetitionController {
     }
 
     if (result != null) {
+      const userInfo = await this.userService.getUserInfo(user)
       userObj = {
-        userAddress: userRecord?.userAddress,
-        username: userRecord?.username ?? "",
+        userAddress: user.toLowerCase(),
+        username: userInfo?.username ?? "",
         rank: userRecord?.rank?.toString() ?? "0",
         totalVolume: userRecord?.totalVolume ?? "0",
         teamPointPrize: totalPointPrize,
