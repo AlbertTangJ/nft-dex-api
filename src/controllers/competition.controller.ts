@@ -213,9 +213,10 @@ export class CompetitionController {
         userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
         const rank = userRecord?.rank ?? 0;
         const prize = Prize.topGainerPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        const userInfo = await this.userService.getUserInfo(user);
         userObj = {
-          userAddress: userRecord?.userAddress,
-          username: userRecord?.username ?? "",
+          userAddress: user.toLowerCase(),
+          username: userInfo?.username ?? "",
           rank: userRecord?.rank?.toString() ?? "0",
           pnl: userRecord?.pnl ?? "0",
           pointPrize: prize?.points ?? 0,
@@ -258,9 +259,10 @@ export class CompetitionController {
         userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
         const rank = userRecord?.rank ?? 0;
         const prize = Prize.topFundingPaymentPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        const userInfo = await this.userService.getUserInfo(user);
         userObj = {
-          userAddress: userRecord?.userAddress,
-          username: userRecord?.username ?? "",
+          userAddress: user.toLowerCase(),
+          username: userInfo?.username ?? "",
           rank: userRecord?.rank?.toString() ?? "0",
           fundingPayment: userRecord?.fundingPayment ?? "0",
           pointPrize: prize?.points ?? 0,
@@ -310,9 +312,10 @@ export class CompetitionController {
         userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
         const rank = userRecord?.rank ?? 0;
         const prize = Prize.tradedVolumePrize.find(prize => prize.start <= rank && prize.end >= rank);
+        const userInfo = await this.userService.getUserInfo(user);
         userObj = {
-          userAddress: userRecord?.userAddress,
-          username: userRecord?.username ?? "",
+          userAddress: user.toLowerCase(),
+          username: userInfo?.username ?? "",
           rank: userRecord?.rank?.toString() ?? "0",
           weeklyTradedVolume: userRecord?.weeklyTradedVolume ?? "0",
           pointPrize: prize?.points ?? 0,
@@ -355,9 +358,10 @@ export class CompetitionController {
         userRecord = result.find(record => record.userAddress.toLowerCase() == user.toLowerCase());
         const rank = userRecord?.rank ?? 0;
         const prize = Prize.topReferralPrize.find(prize => prize.start <= rank && prize.end >= rank);
+        const userInfo = await this.userService.getUserInfo(user);
         userObj = {
-          userAddress: userRecord?.userAddress,
-          username: userRecord?.username ?? "",
+          userAddress: user.toLowerCase(),
+          username: userInfo?.username ?? "",
           rank: userRecord?.rank?.toString() ?? "0",
           totalVolume: userRecord?.totalVolume ?? "0",
           refereeCount: userRecord?.refereeCount ?? 0,
@@ -412,7 +416,7 @@ export class CompetitionController {
     }
 
     if (result != null) {
-      const userInfo = await this.userService.getUserInfo(user)
+      const userInfo = await this.userService.getUserInfo(user);
       userObj = {
         userAddress: user.toLowerCase(),
         username: userInfo?.username ?? "",
@@ -437,7 +441,7 @@ export class CompetitionController {
 
         referee.distribution = new BigNumber(referee.tradedVolume ?? "0").div(totalVolume).multipliedBy(100).toNumber();
         if (isNaN(referee.distribution)) {
-          referee.distribution = 0
+          referee.distribution = 0;
         }
         referee.pointPrize = Number((totalPointPrize * multiplier).toFixed(2));
         referee.usdtPrize = Number((totalUsdtPrize * multiplier).toFixed(2));
