@@ -230,7 +230,7 @@ export class UserService {
             AND 
             size = 0 
             AND 
-            "realizedPnl" > 0 
+            "cumulativeRealizedPnl" > 0 
             AND ("timestamp" >= 1686042000 AND "timestamp" < 1689498000)
             GROUP BY "userAddress", "ammAddress", "batchId") g GROUP BY g."userAddress"
         ) p
