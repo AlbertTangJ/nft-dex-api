@@ -646,7 +646,7 @@ export class ClearingHouseController {
     }
     const startTime = resolutionLc == "competition" ? COMPETITION_START_TIME : dateArray[0].startTime;
 
-    const competitionEndTime = 1689498000;
+    const competitionEndTime = 1694520000;
 
     let positionHistory = await this.clearingHouseService.getTradeHistoryAfter(userAddress, startTime);
     let fundingPaymentHistory = await this.clearingHouseService.getPositionFundingPaymentHistoryAfter(userAddress, startTime);
